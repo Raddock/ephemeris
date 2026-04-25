@@ -209,7 +209,8 @@ struct SessionInspectorView: View {
             }
         }
 
-        if d.pixelScale != nil || d.exposureMs != nil || d.calibrationStepMs != nil || d.calibrationDistancePx != nil {
+        if d.pixelScale != nil || d.exposureMs != nil || d.calibrationStepMs != nil
+            || d.calibrationDistancePx != nil || d.assumeOrthogonalAxes != nil {
             InspectorCard("Configuration", systemImage: "gearshape") {
                 if let v = d.pixelScale {
                     LabeledContent("Pixel scale", value: String(format: "%.3f \"/px", v))
