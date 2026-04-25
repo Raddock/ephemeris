@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Calibration view">
+<meta name="description" content="Read the calibration plot, leg rates, and orthogonality.">
+<meta name="keywords" content="calibration, dx, dy, west, east, north, south, backlash, orthogonality, rate">
+<meta name="robots" content="anchors">
+<title>Calibration view</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Calibration view</p>
+<h1>Calibration view</h1>
+<p class="lede">A square XY plot of every calibration step, with reference rings to gauge step distances at a glance.</p>
+
+<h2>What you see</h2>
+<ul>
+    <li><span class="tag-ra">West / East</span> &mdash; RA legs, in red.</li>
+    <li><span class="tag-dec">North / South</span> &mdash; Dec legs, in blue.</li>
+    <li>Backlash steps &mdash; orange.</li>
+    <li>The origin crosshair shows the lock position.</li>
+    <li>Concentric dashed rings mark round-number distances from origin (1, 2, 5, 10 px and multiples), so you can read step sizes without staring at the axis labels.</li>
+    <li>The endpoint of each leg is annotated with its direction letter (W, E, N, S) and step number.</li>
+</ul>
+
+<h2>What good calibration looks like</h2>
+<ul>
+    <li>RA and Dec legs roughly perpendicular to each other.</li>
+    <li>Each leg is a clean straight line of evenly spaced points.</li>
+    <li>Return legs (East after West, South after North) overlap the outbound legs.</li>
+    <li>Backlash steps (if shown) are clustered tightly &mdash; PHD2 detected and compensated.</li>
+</ul>
+
+<h2>Header readouts</h2>
+<p>Above the plot, a row of stats shows:</p>
+<ul>
+    <li><strong>Device</strong> &mdash; Mount or AO.</li>
+    <li><strong>Steps</strong> &mdash; total calibration steps recorded.</li>
+    <li><strong>Started</strong> &mdash; calibration start time.</li>
+    <li><strong>RA rate</strong> &mdash; pixels per second along the West leg, parsed from PHD2's calibration completion message.</li>
+    <li><strong>Dec rate</strong> &mdash; same, for the North leg.</li>
+    <li><strong>Ortho error</strong> &mdash; the deviation of the West-vs-North angle from 90°. Highlighted in orange when greater than 5°.</li>
+</ul>
+
+<div class="warn"><strong>If ortho error &gt; 5°:</strong> Calibration may have run during high seeing or with mount slop. Re-running calibration near the meridian and the celestial equator usually fixes it.</div>
+</body>
+</html>

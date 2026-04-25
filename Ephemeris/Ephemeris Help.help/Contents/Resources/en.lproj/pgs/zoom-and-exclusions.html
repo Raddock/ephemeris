@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Zoom and manual exclusions">
+<meta name="description" content="Drag-to-zoom and drag-to-exclude on the chart.">
+<meta name="keywords" content="zoom, exclude, drag, range, exclusion, frames">
+<meta name="robots" content="anchors">
+<title>Zoom and manual exclusions</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Zoom and manual exclusions</p>
+<h1>Zoom and manual exclusions</h1>
+<p class="lede">Drag a range across the chart to zoom in, or to mark a span of frames as excluded from statistics.</p>
+
+<h2>Drag mode</h2>
+<p>The two-button toggle in the chart-controls bar selects what dragging does:</p>
+<ul>
+    <li><strong>Zoom</strong> (magnifying glass) &mdash; the dragged range becomes the visible time range.</li>
+    <li><strong>Exclude</strong> (dashed rectangle) &mdash; the dragged range is added to the manual exclusion list, and frames inside it are removed from RMS, peak, drift, and aggregate calculations.</li>
+</ul>
+
+<h2>Zoom workflow</h2>
+<ol>
+    <li>Set Drag mode to <strong>Zoom</strong>.</li>
+    <li>Click and drag horizontally across the chart to define the range.</li>
+    <li>Press <kbd>⌘0</kbd> or click <strong>Reset zoom</strong> in the toolbar to restore the full session.</li>
+</ol>
+
+<h2>Exclusion workflow</h2>
+<ol>
+    <li>Set Drag mode to <strong>Exclude</strong>.</li>
+    <li>Drag across the noisy frames you want to ignore. The range appears as a translucent orange band.</li>
+    <li>Statistics in the strip and inspector update immediately.</li>
+    <li>Click <strong>Clear exclusions</strong> in the toolbar to remove all manual exclusions for the session.</li>
+</ol>
+
+<h2>What exclusions affect</h2>
+<ul>
+    <li>Per-session RMS, peak, drift, and polar-alignment estimate.</li>
+    <li>The aggregate (frame-count-weighted) RMS in the Summary view.</li>
+    <li>The scatter-cluster overlay.</li>
+    <li>Frequency-analysis input.</li>
+</ul>
+
+<h2>What exclusions do <em>not</em> affect</h2>
+<ul>
+    <li>The chart lines themselves &mdash; the data is still drawn so you can see what was excluded.</li>
+    <li>Exported frame CSV &mdash; the full per-frame data is exported. Excluded ranges only filter aggregated statistics CSVs.</li>
+    <li>The original log file. Exclusions are only stored in memory for the open session.</li>
+</ul>
+
+<div class="tip"><strong>Tip:</strong> If your session contains a clear cloud pass with very low SNR, dragging an exclusion across that range gives you a more representative RMS for the rest of the night.</div>
+</body>
+</html>

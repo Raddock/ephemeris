@@ -1,0 +1,63 @@
+PHD2 version 2.6.14 [Windows], Log version 2.5. Log enabled at 2026-04-21 19:07:26
+INFO: Guiding parameter change, MultiStar = true
+
+Guiding Begins at 2026-04-21 21:31:36
+Equipment Profile = Edge-10m
+Dither = both axes, Dither scale = 1.000, Image noise reduction = none, Guide-frame time lapse = 0, Server enabled
+Pixel scale = 0.62 arc-sec/px, Binning = 1, Focal length = 1960 mm
+Search region = 15 px, Star mass tolerance disabled, Multi-star mode, list size = 12
+ Camera = ZWO ASI174MM Mini (ASCOM), full size = 1936 x 1216, have dark, dark dur = 4000, no defect map, pixel size = 5.9 um
+Exposure = 4000 ms
+Mount = 10Micron Mount Driver (ASCOM), connected, guiding enabled, xAngle = -7.8, xRate = 13.113, yAngle = -85.5, yRate = 16.532, parity = +/+
+Norm rates RA = 8.3"/s @ dec 0, Dec = 10.2"/s; ortho.err. = 12.2 deg
+X guide algorithm = Lowpass2, Aggressiveness = 20.000, Minimum move = 0.500
+Y guide algorithm = Lowpass2, Aggressiveness = 20.000, Minimum move = 0.500
+Backlash comp = disabled, pulse = 20 ms
+Max RA duration = 2500, Max DEC duration = 2500, DEC guide mode = Auto
+RA Guide Speed = 7.5 a-s/s, Dec Guide Speed = 7.5 a-s/s, Cal Dec = 0.0, Last Cal Issue = None, Timestamp = 4/14/2026 9:46:04 PM
+RA = 12.64 hr, Dec = 13.0 deg, Hour angle = -2.36 hr, Pier side = West, Rotator pos = N/A, Alt = 52.4 deg, Az = 112.3 deg
+Lock position = 192.342, 754.496, Star position = 192.342, 754.496, HFD = 5.64 px
+Frame,Time,mount,dx,dy,RARawDistance,DECRawDistance,RAGuideDistance,DECGuideDistance,RADuration,RADirection,DECDuration,DECDirection,XStep,YStep,StarMass,SNR,ErrorCode
+INFO: SETTLING STATE CHANGE, Settling started
+1,7.481,"Mount",-0.156,0.683,-0.246,-0.589,0.000,-0.118,0,,7,N,,,1288508,532.50,0
+2,12.403,"Mount",-0.369,0.530,-0.437,-0.372,0.000,0.000,0,,0,,,,1295911,524.39,0
+3,18.463,"Mount",0.268,1.738,0.032,-1.725,0.000,-0.345,0,,21,N,,,1268656,517.31,0
+4,26.236,"Mount",-0.603,1.372,-0.783,-1.084,-0.091,-0.227,7,E,14,N,,,1266018,562.85,0
+5,34.337,"Mount",-0.409,1.160,-0.561,-0.950,-0.098,-0.143,7,E,9,N,,,1214666,476.27,0
+6,40.962,"Mount",-0.047,1.513,-0.251,-1.406,0.000,-0.178,0,,11,N,,,1188102,550.53,0
+7,48.897,"Mount",-0.246,2.065,-0.523,-1.856,-0.052,-0.255,4,E,15,N,,,1205915,530.81,0
+INFO: Guiding parameter change, Exposure = 5000 ms
+8,55.500,"Mount",-0.200,1.777,-0.438,-1.602,0.000,-0.256,0,,15,N,,,1246564,497.86,0
+9,64.016,"Mount",-0.497,1.705,-0.722,-1.432,-0.074,-0.229,6,E,14,N,,,1290132,588.63,0
+10,72.008,"Mount",0.068,1.936,-0.194,-1.842,0.000,-0.253,0,,15,N,,,1553700,583.28,0
+11,79.527,"Mount",0.098,1.404,-0.093,-1.353,0.000,-0.167,0,,10,N,,,1572505,563.82,0
+12,87.223,"Mount",0.085,2.028,-0.190,-1.935,0.000,-0.098,0,,6,N,,,1555197,560.51,0
+INFO: SETTLING STATE CHANGE, Settling failed
+13,94.233,"Mount",-0.270,1.488,-0.468,-1.306,0.000,-0.102,0,,6,N,,,1522499,592.04,0
+Guiding Ends at 2026-04-21 21:33:10
+
+Guiding Begins at 2026-04-21 21:36:46
+Equipment Profile = Edge-10m
+Dither = both axes, Dither scale = 1.000, Image noise reduction = none, Guide-frame time lapse = 0, Server enabled
+Pixel scale = 0.62 arc-sec/px, Binning = 1, Focal length = 1960 mm
+Search region = 15 px, Star mass tolerance disabled, Multi-star mode, list size = 8
+ Camera = ZWO ASI174MM Mini (ASCOM), full size = 1936 x 1216, have dark, dark dur = 5000, no defect map, pixel size = 5.9 um
+Exposure = 5000 ms
+Mount = 10Micron Mount Driver (ASCOM), connected, guiding enabled, xAngle = -7.8, xRate = 13.113, yAngle = -85.5, yRate = 16.532, parity = +/+
+Norm rates RA = 8.3"/s @ dec 0, Dec = 10.2"/s; ortho.err. = 12.2 deg
+X guide algorithm = Lowpass2, Aggressiveness = 20.000, Minimum move = 0.500
+Y guide algorithm = Lowpass2, Aggressiveness = 20.000, Minimum move = 0.500
+Backlash comp = disabled, pulse = 20 ms
+Max RA duration = 2500, Max DEC duration = 2500, DEC guide mode = Auto
+RA Guide Speed = 7.5 a-s/s, Dec Guide Speed = 7.5 a-s/s, Cal Dec = 0.0, Last Cal Issue = None, Timestamp = 4/14/2026 9:46:04 PM
+RA = 12.64 hr, Dec = 13.0 deg, Hour angle = -2.27 hr, Pier side = West, Rotator pos = N/A, Alt = 53.5 deg, Az = 113.6 deg
+Lock position = 710.301, 252.773, Star position = 710.301, 252.773, HFD = 5.70 px
+Frame,Time,mount,dx,dy,RARawDistance,DECRawDistance,RAGuideDistance,DECGuideDistance,RADuration,RADirection,DECDuration,DECDirection,XStep,YStep,StarMass,SNR,ErrorCode
+INFO: SETTLING STATE CHANGE, Settling started
+1,8.293,"Mount",0.232,-0.675,0.321,0.555,0.000,0.111,0,,7,S,,,91144,129.01,0
+INFO: SETTLING STATE CHANGE, Settling complete
+2,15.943,"Mount",0.611,0.963,0.476,-1.114,0.000,-0.223,0,,13,N,,,96010,135.51,0
+Guiding Ends at 2026-04-21 21:37:02
+
+Log Summary: calcnt:0 gcnt:2 gdur:110 gacnt:0
+Log closed at 2026-04-22 20:47:44

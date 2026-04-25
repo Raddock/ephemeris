@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Frequency analysis">
+<meta name="description" content="Find periodic error using FFT-based frequency analysis.">
+<meta name="keywords" content="FFT, frequency, period, periodic error, periodogram, drift, gear">
+<meta name="robots" content="anchors">
+<title>Frequency analysis</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Frequency analysis</p>
+<h1>Frequency analysis</h1>
+<p class="lede">A periodogram of the RA or Dec deviation that surfaces dominant periods &mdash; useful for finding worm gear errors, mount resonances, or seeing-driven oscillations.</p>
+
+<h2>Open the analysis</h2>
+<p>With a guiding session selected, click <strong>Frequency analysis</strong> in the toolbar (<kbd>⌘F</kbd>). A modal sheet opens with the chart and controls.</p>
+<p>The session must contain at least 32 included frames. Shorter sessions don't produce a meaningful spectrum.</p>
+
+<h2>Reading the chart</h2>
+<p>X axis is <strong>period in seconds</strong>, on a log scale &mdash; longer periods on the right, shorter on the left. Y axis is the magnitude of that frequency component (arbitrary units; relative comparisons are meaningful, absolute values are not).</p>
+<p>The dominant period is annotated with a vertical rule and a label showing its period in seconds.</p>
+
+<h2>Axis picker</h2>
+<p>Choose <strong>RA</strong> or <strong>Dec</strong>. RA usually shows worm-gear periodic error; Dec is dominated by drift and seeing.</p>
+
+<h2>Drift correct</h2>
+<p>Toggle on to subtract a linear trend before the FFT. Without this, low-frequency leakage from a slow drift dominates the spectrum and hides genuine periodic signals. Leave it on as the default.</p>
+
+<h2>Pipeline (technical)</h2>
+<ol>
+    <li>Filter to included frames only.</li>
+    <li>Resample to a uniform time grid (cubic interpolation).</li>
+    <li>Optionally subtract the linear-regression trend.</li>
+    <li>Subtract mean.</li>
+    <li>Apply a Hann window (reduces spectral leakage at the boundaries).</li>
+    <li>Zero-pad to the next power of two.</li>
+    <li>Real FFT via Accelerate's <code>vDSP_fft_zripD</code>.</li>
+    <li>Take magnitudes; convert bin index to period using <code>period = N · dt / i</code>.</li>
+</ol>
+
+<div class="tip"><strong>Tip:</strong> A persistent spike near 480&nbsp;s on RA is a classic worm-gear signature for many mounts. Comparing that across nights tells you whether your PEC training is still good.</div>
+</body>
+</html>

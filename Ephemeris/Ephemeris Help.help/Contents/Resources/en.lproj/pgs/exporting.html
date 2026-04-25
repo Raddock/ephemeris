@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Exporting">
+<meta name="description" content="Export the chart as PNG, or session and frame data as CSV.">
+<meta name="keywords" content="export, share, PNG, CSV, image, frames, statistics">
+<meta name="robots" content="anchors">
+<title>Exporting</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Exporting</p>
+<h1>Exporting</h1>
+<p class="lede">Share the chart as an image, or extract data as CSV for analysis in another tool.</p>
+
+<h2>Open the export menu</h2>
+<p>With a guiding session selected, click <strong>Share</strong> in the toolbar (<kbd>⌘E</kbd>). A menu opens with every available export.</p>
+
+<h2>Available exports</h2>
+<ul>
+    <li><strong>Chart (PNG)</strong> &mdash; renders the current chart at 2× resolution (typically 2560 × 1200&nbsp;px). Reflects your current units, axes, Y scale, and overlay choices, but with no hover/selection rule for a clean image.</li>
+    <li><strong>Session stats (CSV)</strong> &mdash; one row of summary numbers for the current session (RMS RA, RMS Dec, Total RMS, peaks, drift, polar align). Manual exclusions are reflected.</li>
+    <li><strong>Frame data (CSV)</strong> &mdash; one row per frame: frame number, time, RA / Dec / dx / dy, durations, star mass, SNR, included flag. Use this to do your own analysis.</li>
+    <li><strong>Log summary (CSV)</strong> &mdash; one row per guiding session in the log, with start time, frame count, and per-axis RMS. Useful for spreadsheet trend analysis across many nights.</li>
+</ul>
+
+<h2>How exports work</h2>
+<p>Every export is delivered through macOS's standard share sheet. From there you can:</p>
+<ul>
+    <li>Save the file to disk.</li>
+    <li>AirDrop it to another device.</li>
+    <li>Send via Mail or Messages.</li>
+    <li>Open in any registered destination (Numbers, Excel, etc.).</li>
+</ul>
+<p>The app does not require a download or save-files entitlement &mdash; everything goes through the share sheet, so the app stays sandboxed and read-only.</p>
+
+<h2>CSV format</h2>
+<p>RFC 4180 &mdash; comma-separated, double-quote-escaped fields. UTF-8. The first row is a header. Numeric values use a period as the decimal separator regardless of system locale, so the files are spreadsheet-portable.</p>
+</body>
+</html>

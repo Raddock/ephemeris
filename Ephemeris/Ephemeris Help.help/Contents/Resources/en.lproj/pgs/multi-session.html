@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Combining sessions">
+<meta name="description" content="Stitch consecutive guiding sections back into a single night view.">
+<meta name="keywords" content="combine, merge, multi, session, meridian flip, dither, night">
+<meta name="robots" content="anchors">
+<title>Combining sessions</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Combining sessions</p>
+<h1>Combining sessions</h1>
+<p class="lede">PHD2 starts a new section every time guiding stops &mdash; meridian flips, cloud breaks, dithering pauses. You can view several sections back-to-back as a single chart.</p>
+
+<h2>Select multiple sessions</h2>
+<ol>
+    <li>Click the first guiding session in the sidebar.</li>
+    <li><kbd>⇧</kbd>-click the last one to select the contiguous range, or <kbd>⌘</kbd>-click individual sessions to add them to the selection.</li>
+    <li>The detail pane switches to a combined view labelled <code>filename · N sessions combined</code>.</li>
+</ol>
+
+<h2>How sessions are stitched</h2>
+<p>If every selected session has a wall-clock start date in the log header, the merger:</p>
+<ul>
+    <li>Sorts sessions chronologically by start date.</li>
+    <li>Rebases each session's frame timestamps relative to the earliest start.</li>
+    <li>Preserves real-world gaps (so a meridian flip shows up as a flat span rather than a fake jump).</li>
+    <li>Renumbers frames sequentially so the inspector's frame counts stay coherent.</li>
+</ul>
+<p>If start dates are missing from the log header, the merger falls back to sequencing &mdash; sessions are concatenated in sidebar order with a 1-second nominal gap.</p>
+
+<h2>What still works on combined sessions</h2>
+<ul>
+    <li>RMS, peak, drift, and polar-alignment statistics &mdash; computed on the merged dataset.</li>
+    <li>Hover, zoom, manual exclusions, frequency analysis.</li>
+    <li>Chart and CSV export &mdash; the export filename includes &ldquo;combined&rdquo;.</li>
+</ul>
+
+<h2>Single-session selection</h2>
+<p>Clicking a single session row collapses the combined view back to a single-session chart. Selecting <strong>Summary</strong> always returns to the overview.</p>
+
+<div class="note"><strong>Note:</strong> Calibration sections are not part of the combined chart. Selecting them while guiding sessions are also selected will route to the most recently selected one.</div>
+</body>
+</html>

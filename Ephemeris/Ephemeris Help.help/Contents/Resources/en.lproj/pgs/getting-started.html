@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Getting started">
+<meta name="description" content="Open a PHD2 log and read the summary view.">
+<meta name="keywords" content="open, log, summary, sessions, PHD2">
+<meta name="robots" content="anchors">
+<title>Getting started</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Getting started</p>
+<h1>Getting started</h1>
+<p class="lede">Open a PHD2 <code>.txt</code> log and the app builds an indexed view of every guiding and calibration section it finds.</p>
+
+<h2>Open a log</h2>
+<ol>
+    <li>Choose <strong>File &rsaquo; Open</strong> (<kbd>⌘O</kbd>) and pick a PHD2 log file.</li>
+    <li>Or drag a <code>.txt</code> log onto the app icon in Finder or the Dock.</li>
+    <li>The window opens with the <strong>Summary</strong> selected in the sidebar.</li>
+</ol>
+<p>Logs are opened read-only. The app never writes to your original file.</p>
+
+<h2>Read the summary</h2>
+<p>The Summary view shows aggregate statistics across the whole log: total guiding time, frame counts, weighted RMS, and the best and worst sessions. The table below lists every guiding and calibration section in chronological order.</p>
+<ul>
+    <li>Click any row in the table to jump to that session.</li>
+    <li>Click the <strong>Best</strong> or <strong>Worst</strong> chip to jump to those sessions directly.</li>
+    <li>Sort the table by clicking column headers.</li>
+</ul>
+
+<h2>Pick a session in the sidebar</h2>
+<p>The left sidebar lists every section with a small icon: a crosshair for guiding, a target for calibration. Each row shows the start time and duration. Click one to open it; click <strong>Summary</strong> to return to the overview.</p>
+
+<div class="tip"><strong>Tip:</strong> A single PHD2 log often contains many short sections — meridian flips, cloud breaks, and dithering all start new sections. See <a href="multi-session.html">Combining sessions</a> for how to view a whole night as one chart.</div>
+
+<h2>Where PHD2 stores logs</h2>
+<ul>
+    <li><strong>macOS:</strong> <code>~/Documents/PHD2/</code></li>
+    <li><strong>Windows:</strong> <code>Documents\PHD2\</code> (copy across to Mac as-is — Windows line endings are handled)</li>
+</ul>
+<p>Filenames typically look like <code>PHD2_GuideLog_2026-04-24_205125.txt</code>.</p>
+</body>
+</html>

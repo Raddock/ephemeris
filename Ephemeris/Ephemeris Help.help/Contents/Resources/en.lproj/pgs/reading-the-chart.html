@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Reading the guide chart">
+<meta name="description" content="How to read the time-series guide chart, units, axes, and overlays.">
+<meta name="keywords" content="chart, RA, Dec, dx, dy, units, arc-seconds, pixels, hover, overlay, scatter">
+<meta name="robots" content="anchors">
+<title>Reading the guide chart</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Reading the guide chart</p>
+<h1>Reading the guide chart</h1>
+<p class="lede">The main chart plots the guide-star deviation over time. Two lines, one per axis, with optional overlays for corrections, diagnostics, and events.</p>
+
+<h2>Series</h2>
+<ul>
+    <li><span class="tag-ra">RA</span> &mdash; right-ascension deviation. Positive values mean the star drifted east of the lock position.</li>
+    <li><span class="tag-dec">Dec</span> &mdash; declination deviation. Positive means north.</li>
+</ul>
+<p>Toggle either series via <strong>Overlays &rsaquo; Series</strong> at the bottom of the chart.</p>
+
+<h2>Units</h2>
+<p>Switch between <strong>Pixels</strong> and <strong>Arc-sec</strong> with the segmented control on the chart-controls bar. The conversion uses the session's pixel scale, parsed from the log header. Arc-seconds are usually what you want when comparing nights — they're independent of camera and focal length.</p>
+
+<h2>Axes</h2>
+<p>Switch between <strong>RA / Dec</strong> and <strong>dx / dy</strong>:</p>
+<ul>
+    <li><strong>RA / Dec</strong> &mdash; mount-frame deviation, with PHD2's atmospheric-refraction and orientation transforms applied. Use this for guiding-quality analysis.</li>
+    <li><strong>dx / dy</strong> &mdash; raw camera-frame pixel offsets. Use this when investigating mechanical issues that present in the camera frame rather than along sky axes.</li>
+</ul>
+
+<h2>Y scale</h2>
+<p>The <strong>Y: Auto / ±0.5″ / ±1″ / ±2″ / ±5″ / ±10″</strong> menu controls the vertical range. Auto pads 10% above and below the largest deviation in the visible range. A fixed range is useful for comparing nights or for spotting outliers without the chart auto-zooming to fit a single spike.</p>
+
+<h2>Hover and selection</h2>
+<p>Move the pointer across the chart to see the readout for the frame closest to the cursor: time, RA / Dec values, SNR. Click a frame to pin the readout (a vertical rule stays at that location even when you move the pointer). Click an empty area to dismiss it.</p>
+
+<h2>Overlays</h2>
+<p>Open <strong>Overlays</strong> at the bottom right of the chart:</p>
+<ul>
+    <li><strong>Series:</strong> RA, Dec, Corrections (the bars showing pulse direction and magnitude per frame).</li>
+    <li><strong>Diagnostics:</strong> <span class="tag-mass">Star mass</span> and <span class="tag-snr">SNR</span> sub-charts below the main chart. Useful for finding cloud passes and dropped frames.</li>
+    <li><strong>Annotations:</strong> Events markers (settling, dither, frame drops), Limits (max guide-pulse), Grid, and the Scatter cluster overlay.</li>
+</ul>
+
+<h2>Scatter cluster overlay</h2>
+<p>A small RA/Dec scatter inset floats in the top-right of the chart, showing every visible frame as a yellow dot in a square XY plot. The cluster's shape tells you the wandering pattern at a glance — round means good seeing/balance, elongated means drift or backlash, sparse means few frames.</p>
+<p>The scatter respects the current axis mode (RA/Dec vs dx/dy), units, visible time range, and any manual exclusions.</p>
+
+<div class="tip"><strong>Tip:</strong> Use the chart's hover readout together with the inspector's Events list. Clicking an event jumps the chart's selection rule to that frame.</div>
+</body>
+</html>

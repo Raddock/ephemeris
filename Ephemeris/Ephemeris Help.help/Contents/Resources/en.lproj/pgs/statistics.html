@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Statistics and drift">
+<meta name="description" content="How RMS, peak, drift, and polar-alignment statistics are computed.">
+<meta name="keywords" content="RMS, peak, drift, polar alignment, statistics, König, declination">
+<meta name="robots" content="anchors">
+<title>Statistics and drift</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Statistics and drift</p>
+<h1>Statistics and drift</h1>
+<p class="lede">Each guiding session is reduced to a small set of numbers. Here is what they mean and how they are calculated.</p>
+
+<h2>RMS RA, RMS Dec, Total RMS</h2>
+<p>Standard deviation of the per-axis raw distance, in pixels (and arc-seconds when a pixel scale is available). Total RMS is the geometric sum:</p>
+<p><code>Total = √(RMS_RA² + RMS_DEC²)</code></p>
+<p>Excluded frames (PHD2 errors and any manual exclusions you've added) are skipped. The frame count shown as <code>X / Y</code> means <code>X</code> included out of <code>Y</code> total.</p>
+
+<h2>Peak RA, Peak Dec</h2>
+<p>The largest absolute deviation on each axis across included frames. A peak much larger than three-times the RMS often points to a single bad frame rather than a guiding problem.</p>
+
+<h2>Drift RA, Drift Dec</h2>
+<p>Linear-regression slope over the session, expressed in <strong>arc-seconds per minute</strong> (and <strong>pixels per minute</strong>). A drift larger than ~0.5″/min usually means polar misalignment, mount flexure, or differential refraction.</p>
+
+<h2>Polar alignment estimate</h2>
+<p>Computed from declination drift using König's method:</p>
+<p><code>PA_arcmin ≈ 3.82 × |drift_dec_arcsec_per_min| / cos(δ)</code></p>
+<p>Where <code>δ</code> is the target declination from the session header. The estimate is suppressed near the celestial pole (the <code>cos(δ)</code> term explodes), and it ignores the sign — direction of misalignment cannot be derived from a single session.</p>
+
+<div class="warn"><strong>Caveat:</strong> A polar-alignment estimate from one session is approximate. PHD2's drift-align tool measures two stars near the meridian and equator and is more accurate.</div>
+
+<h2>Aggregate statistics (Summary view)</h2>
+<p>The Summary aggregates per-session RMS using a frame-count-weighted formula:</p>
+<p><code>Aggregate RMS = √(Σ(RMS_i² · n_i) / Σn_i)</code></p>
+<p>This is what you'd get if you concatenated every session's data and computed RMS on the whole stream. Sessions with more frames contribute proportionally more.</p>
+
+<h2>Best and worst session</h2>
+<p>The session with the smallest Total RMS is tagged <strong>Best</strong>; the largest is <strong>Worst</strong>. Both are clickable shortcuts to jump straight to that session's chart.</p>
+</body>
+</html>
