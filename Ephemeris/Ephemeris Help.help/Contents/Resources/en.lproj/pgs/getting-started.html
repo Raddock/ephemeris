@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="../shrd/styles.css">
 </head>
 <body>
+<div class="wrap">
 <p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Getting started</p>
 <h1>Getting started</h1>
 <p class="lede">Open a PHD2 <code>.txt</code> log and the app builds an indexed view of every guiding and calibration section it finds.</p>
@@ -23,10 +24,12 @@
 <p>Logs are opened read-only. The app never writes to your original file.</p>
 
 <h2>Read the summary</h2>
-<p>The Summary view shows aggregate statistics across the whole log: total guiding time, frame counts, weighted RMS, and the best and worst sessions. The table below lists every guiding and calibration section in chronological order.</p>
+<p>The Summary view shows aggregate statistics across the whole log: total guiding time, frame counts, weighted RMS, plus pill-shaped <span class="pill best"><span class="dot"></span>Best</span> and <span class="pill worst"><span class="dot"></span>Worst</span> session shortcuts in the header. The table below lists every guiding section in chronological order.</p>
 <ul>
-    <li>Click any row in the table to jump to that session.</li>
-    <li>Click the <strong>Best</strong> or <strong>Worst</strong> chip to jump to those sessions directly.</li>
+    <li>Click any row to jump to that session.</li>
+    <li>Each row's <strong>Total RMS</strong> column shows a thin quality bar scaled to the worst session in the log — outliers pop visually without having to read numbers across rows.</li>
+    <li>Best and worst rows are tagged with a green ★ or orange ⚠︎ chip in the leading column, and their RMS values are colour-tinted to match.</li>
+    <li>Click the <strong>Best</strong> or <strong>Worst</strong> capsule in the header to jump to those sessions directly.</li>
     <li>Sort the table by clicking column headers.</li>
 </ul>
 
@@ -41,5 +44,6 @@
     <li><strong>Windows:</strong> <code>Documents\PHD2\</code> (copy across to Mac as-is — Windows line endings are handled)</li>
 </ul>
 <p>Filenames typically look like <code>PHD2_GuideLog_2026-04-24_205125.txt</code>.</p>
+</div>
 </body>
 </html>

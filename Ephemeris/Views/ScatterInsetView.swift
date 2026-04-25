@@ -77,8 +77,8 @@ struct ScatterInsetView: View {
                     y: .value("Y", p.y)
                 )
                 .symbol(.circle)
-                .symbolSize(p.active ? 28 : 14)
-                .foregroundStyle(p.active ? Color(nsColor: .systemYellow)
+                .symbolSize(p.active ? 40 : 14)
+                .foregroundStyle(p.active ? Color(nsColor: .systemGreen)
                                           : Color(nsColor: .systemYellow).opacity(0.55))
             }
         }
@@ -86,8 +86,8 @@ struct ScatterInsetView: View {
         .chartYScale(domain: domain)
         .chartXAxis {
             AxisMarks(values: .automatic(desiredCount: 3)) { value in
-                AxisGridLine().foregroundStyle(.secondary.opacity(0.15))
-                AxisTick().foregroundStyle(.secondary.opacity(0.4))
+                AxisGridLine().foregroundStyle(.secondary.opacity(0.35))
+                AxisTick().foregroundStyle(.secondary.opacity(0.55))
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
                         Text(format(v)).font(.system(size: 9))
@@ -97,8 +97,8 @@ struct ScatterInsetView: View {
         }
         .chartYAxis {
             AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { value in
-                AxisGridLine().foregroundStyle(.secondary.opacity(0.15))
-                AxisTick().foregroundStyle(.secondary.opacity(0.4))
+                AxisGridLine().foregroundStyle(.secondary.opacity(0.35))
+                AxisTick().foregroundStyle(.secondary.opacity(0.55))
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
                         Text(format(v)).font(.system(size: 9))
@@ -107,6 +107,16 @@ struct ScatterInsetView: View {
             }
         }
         .chartLegend(.hidden)
+        .chartBackground { proxy in
+            GeometryReader { geo in
+                if let plotFrame = proxy.plotFrame {
+                    let frame = geo[plotFrame]
+                    Canvas { ctx, _ in
+                        drawReferenceRings(in: ctx, plotFrame: frame, proxy: proxy)
+                    }
+                }
+            }
+        }
         .aspectRatio(1, contentMode: .fit)
         .overlay(alignment: .bottomTrailing) {
             Text(unitsSuffix)
@@ -174,6 +184,45 @@ struct ScatterInsetView: View {
         switch chartState.units {
         case .pixels: return String(format: "%.1f", v)
         case .arcsec: return String(format: "%.1f", v)
+        }
+    }
+
+    /// Concentric reference rings every 0.5 of the current display unit
+    /// (arc-seconds or pixels), mirroring PHD2's scatter target overlay so the
+    /// reader can read each point's distance from the lock position at a glance.
+    private func drawReferenceRings(in ctx: GraphicsContext, plotFrame: CGRect, proxy: ChartProxy) {
+        guard let centerXPos = proxy.position(forX: 0.0),
+              let centerYPos = proxy.position(forY: 0.0) else { return }
+        let center = CGPoint(
+            x: plotFrame.minX + centerXPos,
+            y: plotFrame.minY + centerYPos
+        )
+        let outer = max(abs(domain.lowerBound), abs(domain.upperBound))
+        let strokeColor = GraphicsContext.Shading.color(.secondary.opacity(0.28))
+        let labelColor = Color.secondary.opacity(0.6)
+
+        var r = 0.5
+        while r <= outer + 0.001 {
+            guard let edgeX = proxy.position(forX: r) else { r += 0.5; continue }
+            let pixelRadius = abs(edgeX - centerXPos)
+            let rect = CGRect(
+                x: center.x - pixelRadius,
+                y: center.y - pixelRadius,
+                width: pixelRadius * 2,
+                height: pixelRadius * 2
+            )
+            ctx.stroke(
+                Path(ellipseIn: rect),
+                with: strokeColor,
+                style: StrokeStyle(lineWidth: 0.5, dash: [3, 2])
+            )
+            // Label the ring on the right edge with its radius and unit suffix.
+            let labelText = String(format: "%.1f%@", r, unitsSuffix == "\"" ? "\"" : "")
+            let label = Text(labelText)
+                .font(.system(size: 8))
+                .foregroundColor(labelColor)
+            ctx.draw(label, at: CGPoint(x: center.x + pixelRadius - 2, y: center.y - 7), anchor: .trailing)
+            r += 0.5
         }
     }
 }

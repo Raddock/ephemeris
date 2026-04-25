@@ -22,9 +22,27 @@ import SwiftUI
 
 @main
 struct EphemerisApp: App {
+    @Environment(\.openWindow) private var openWindow
+
     var body: some Scene {
         DocumentGroup(viewing: GuideLogDocument.self) { file in
             ContentView(document: file.document)
         }
+        .commands {
+            // Replace the system About panel with our custom window so we can
+            // show a larger icon, tagline, and Documentation/Support links.
+            CommandGroup(replacing: .appInfo) {
+                Button("About Ephemeris") {
+                    openWindow(id: "about")
+                }
+            }
+        }
+
+        Window("About Ephemeris", id: "about") {
+            AboutView()
+        }
+        .windowResizability(.contentSize)
+        .windowStyle(.hiddenTitleBar)
+        .defaultPosition(.center)
     }
 }

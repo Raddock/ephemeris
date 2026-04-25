@@ -118,7 +118,7 @@ struct LogSummaryView: View {
             TableColumn("") { r in
                 qualityChip(for: r.highlight)
             }
-            .width(56)
+            .width(76)
 
             TableColumn("Started") { r in
                 Text(r.startedText).monospacedDigit()

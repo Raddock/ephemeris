@@ -51,8 +51,17 @@ enum GuideSessionMerger {
     ) -> GuideSession {
         var merged = baseSession(from: sorted, startedAt: baseDate)
         var maxFrame = 0
-        for session in sorted {
+        for (i, session) in sorted.enumerated() {
             let offset = session.startedAt!.timeIntervalSince(baseDate)
+            // Insert a sentinel between sessions so SwiftUI Charts breaks the
+            // RA/Dec lines at session boundaries instead of drawing a long
+            // straight line across the wall-clock gap.
+            if i > 0, let prevTime = merged.entries.last?.time,
+               let firstEntry = session.entries.first {
+                let boundaryTime = (prevTime + firstEntry.time + offset) / 2
+                merged.entries.append(makeBoundaryEntry(at: boundaryTime, frame: maxFrame + 1))
+                maxFrame += 1
+            }
             for var entry in session.entries {
                 entry.time += offset
                 entry.frame += maxFrame
@@ -71,7 +80,11 @@ enum GuideSessionMerger {
         var merged = baseSession(from: sorted, startedAt: sorted.first?.startedAt)
         var offset = 0.0
         var maxFrame = 0
-        for session in sorted {
+        for (i, session) in sorted.enumerated() {
+            if i > 0, let prevTime = merged.entries.last?.time {
+                merged.entries.append(makeBoundaryEntry(at: prevTime + 0.5, frame: maxFrame + 1))
+                maxFrame += 1
+            }
             for var entry in session.entries {
                 entry.time += offset
                 entry.frame += maxFrame
@@ -87,6 +100,25 @@ enum GuideSessionMerger {
             }
         }
         return merged
+    }
+
+    /// A non-included entry placed between two source sessions. The NaN values
+    /// cause Swift Charts to break the line at this point; `included = false`
+    /// keeps it out of stats, scatter, hover lookup, and CSV exports.
+    private static func makeBoundaryEntry(at time: Double, frame: Int) -> GuideEntry {
+        GuideEntry(
+            frame: frame,
+            time: time,
+            deviceKind: .mount,
+            dx: .nan, dy: .nan,
+            raRawDistance: .nan, decRawDistance: .nan,
+            raGuideDistance: .nan, decGuideDistance: .nan,
+            raDuration: 0, decDuration: 0,
+            xStep: nil, yStep: nil,
+            starMass: 0, snr: 0, errorCode: 0,
+            included: false, guiding: false,
+            info: nil
+        )
     }
 
     /// Use the first session's metadata as the canonical descriptor for the

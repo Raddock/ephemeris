@@ -12,37 +12,37 @@
 			containerPortal = 5F9BE2A52F9C5F1D00DD97D8 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 5F9BE2AC2F9C5F1D00DD97D8;
-			remoteInfo = "Ephemeris";
+			remoteInfo = Ephemeris;
 		};
 		5F9BE2C52F9C5F1E00DD97D8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 5F9BE2A52F9C5F1D00DD97D8 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 5F9BE2AC2F9C5F1D00DD97D8;
-			remoteInfo = "Ephemeris";
+			remoteInfo = Ephemeris;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		5F9BE2AD2F9C5F1D00DD97D8 /* Ephemeris.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ephemeris.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		5F9BE2BA2F9C5F1E00DD97D8 /* EphemerisTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "EphemerisTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		5F9BE2C42F9C5F1E00DD97D8 /* EphemerisUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "EphemerisUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5F9BE2AD2F9C5F1D00DD97D8 /* Ephemeris.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ephemeris.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5F9BE2BA2F9C5F1E00DD97D8 /* EphemerisTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EphemerisTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5F9BE2C42F9C5F1E00DD97D8 /* EphemerisUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EphemerisUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		5F9BE2AF2F9C5F1D00DD97D8 /* Ephemeris */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Ephemeris";
+			path = Ephemeris;
 			sourceTree = "<group>";
 		};
 		5F9BE2BD2F9C5F1E00DD97D8 /* EphemerisTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "EphemerisTests";
+			path = EphemerisTests;
 			sourceTree = "<group>";
 		};
 		5F9BE2C72F9C5F1E00DD97D8 /* EphemerisUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "EphemerisUITests";
+			path = EphemerisUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -102,6 +102,7 @@
 				5F9BE2A92F9C5F1D00DD97D8 /* Sources */,
 				5F9BE2AA2F9C5F1D00DD97D8 /* Frameworks */,
 				5F9BE2AB2F9C5F1D00DD97D8 /* Resources */,
+				5FA1B00112345678ABCDEF02 /* Copy AppIcon.icon to bundle */,
 			);
 			buildRules = (
 			);
@@ -110,10 +111,10 @@
 			fileSystemSynchronizedGroups = (
 				5F9BE2AF2F9C5F1D00DD97D8 /* Ephemeris */,
 			);
-			name = "Ephemeris";
+			name = Ephemeris;
 			packageProductDependencies = (
 			);
-			productName = "Ephemeris";
+			productName = Ephemeris;
 			productReference = 5F9BE2AD2F9C5F1D00DD97D8 /* Ephemeris.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -133,10 +134,10 @@
 			fileSystemSynchronizedGroups = (
 				5F9BE2BD2F9C5F1E00DD97D8 /* EphemerisTests */,
 			);
-			name = "EphemerisTests";
+			name = EphemerisTests;
 			packageProductDependencies = (
 			);
-			productName = "EphemerisTests";
+			productName = EphemerisTests;
 			productReference = 5F9BE2BA2F9C5F1E00DD97D8 /* EphemerisTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -156,10 +157,10 @@
 			fileSystemSynchronizedGroups = (
 				5F9BE2C72F9C5F1E00DD97D8 /* EphemerisUITests */,
 			);
-			name = "EphemerisUITests";
+			name = EphemerisUITests;
 			packageProductDependencies = (
 			);
-			productName = "EphemerisUITests";
+			productName = EphemerisUITests;
 			productReference = 5F9BE2C42F9C5F1E00DD97D8 /* EphemerisUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
@@ -230,6 +231,30 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		5FA1B00112345678ABCDEF02 /* Copy AppIcon.icon to bundle */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Ephemeris/AppIcon.icon",
+			);
+			name = "Copy AppIcon.icon to bundle";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(WRAPPER_NAME)/Contents/Resources/AppIcon.icon",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "SRC=\"${SRCROOT}/Ephemeris/AppIcon.icon\"\nDST=\"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/Contents/Resources/AppIcon.icon\"\nif [ ! -d \"$SRC\" ]; then\n  echo \"warning: AppIcon.icon source not found at $SRC\"\n  exit 0\nfi\nrm -rf \"$DST\"\nmkdir -p \"$(dirname \"$DST\")\"\ncp -R \"$SRC\" \"$DST\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		5F9BE2A92F9C5F1D00DD97D8 /* Sources */ = {
@@ -396,9 +421,10 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Ephemeris/Info.plist";
+				INFOPLIST_FILE = Ephemeris/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
@@ -426,9 +452,10 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Ephemeris/Info.plist";
+				INFOPLIST_FILE = Ephemeris/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
@@ -509,7 +536,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = "Ephemeris";
+				TEST_TARGET_NAME = Ephemeris;
 			};
 			name = Debug;
 		};
@@ -531,7 +558,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = "Ephemeris";
+				TEST_TARGET_NAME = Ephemeris;
 			};
 			name = Release;
 		};

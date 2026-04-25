@@ -3,44 +3,90 @@
 <head>
 <meta charset="UTF-8">
 <meta name="AppleTitle" content="Ephemeris Help">
-<meta name="AppleIcon" content="../../SharedGlobalArt/AppIcon.png">
+<meta name="AppleIcon" content="shrd/AppIcon.png">
 <meta name="description" content="Help and reference for Ephemeris, a native macOS tool for analyzing PHD2 guiding logs.">
-<meta name="keywords" content="PHD2, guiding, log, viewer, astrophotography, RMS, drift, calibration, polar align">
+<meta name="keywords" content="Ephemeris, PHD2, guiding, log, viewer, astrophotography, RMS, drift, calibration, polar align">
 <meta name="robots" content="anchors">
 <title>Ephemeris Help</title>
 <link rel="stylesheet" href="shrd/styles.css">
 </head>
 <body>
-<h1>Ephemeris Help</h1>
-<p class="lede">A native macOS reader for PHD2 guiding and calibration logs. Open a <code>.txt</code> log from PHD2 and review your night session-by-session, with RMS, drift, FFT, and visual cluster analysis.</p>
 
-<h2>Topics</h2>
-<ul class="toc">
-    <li><a href="pgs/getting-started.html">Getting started</a>
-        <span class="desc">Open a log, find your sessions, and read the summary.</span></li>
-    <li><a href="pgs/interface.html">The main window</a>
-        <span class="desc">Sidebar, chart, inspector, and toolbar at a glance.</span></li>
-    <li><a href="pgs/reading-the-chart.html">Reading the guide chart</a>
-        <span class="desc">RA &amp; Dec lines, units, axes, hovering, and overlays.</span></li>
-    <li><a href="pgs/statistics.html">Statistics and drift</a>
-        <span class="desc">RMS, peak, drift, and polar-alignment readouts.</span></li>
-    <li><a href="pgs/zoom-and-exclusions.html">Zoom and manual exclusions</a>
-        <span class="desc">Drag to zoom or exclude noisy frame ranges from stats.</span></li>
-    <li><a href="pgs/multi-session.html">Combining sessions</a>
-        <span class="desc">Stitch multiple guiding sections back into one night.</span></li>
-    <li><a href="pgs/frequency-analysis.html">Frequency analysis</a>
-        <span class="desc">Find periodic error and tracking issues with FFT.</span></li>
-    <li><a href="pgs/calibration.html">Calibration view</a>
-        <span class="desc">Read the dx/dy plot, leg rates, and orthogonality.</span></li>
-    <li><a href="pgs/exporting.html">Exporting</a>
-        <span class="desc">Share charts as PNG and stats or frames as CSV.</span></li>
-    <li><a href="pgs/shortcuts.html">Keyboard shortcuts</a>
-        <span class="desc">Every shortcut in one place.</span></li>
-</ul>
+<header class="hero">
+    <img class="app-icon" src="shrd/AppIcon.png" alt="Ephemeris">
+    <h1>Ephemeris Help</h1>
+    <p class="tagline">Read your PHD2 guide logs the Mac way</p>
+</header>
 
-<h2>About Ephemeris</h2>
+<main class="wrap">
+
+<h2 class="section-title">Getting started</h2>
+<div class="card-grid">
+    <a class="card" href="pgs/getting-started.html">
+        <span class="card-icon">→</span>
+        <h3>Open your first log</h3>
+        <p>Find PHD2 logs on disk, drop one onto the app, and read the summary view.</p>
+    </a>
+    <a class="card" href="pgs/interface.html">
+        <span class="card-icon">▦</span>
+        <h3>The main window</h3>
+        <p>Sidebar, chart, inspector, and toolbar — what each pane does at a glance.</p>
+    </a>
+</div>
+
+<h2 class="section-title">Reading your data</h2>
+<div class="card-grid">
+    <a class="card" href="pgs/reading-the-chart.html">
+        <span class="card-icon">∿</span>
+        <h3>The guide chart</h3>
+        <p>RA &amp; Dec lines, units, axes, hover readout, and overlay options.</p>
+    </a>
+    <a class="card" href="pgs/statistics.html">
+        <span class="card-icon">σ</span>
+        <h3>Statistics &amp; drift</h3>
+        <p>How RMS, peak, drift, and the polar-alignment estimate are computed.</p>
+    </a>
+    <a class="card" href="pgs/zoom-and-exclusions.html">
+        <span class="card-icon">⤢</span>
+        <h3>Zoom &amp; exclusions</h3>
+        <p>Drag-to-zoom, drag-to-exclude, and what each affects in the stats.</p>
+    </a>
+    <a class="card" href="pgs/calibration.html">
+        <span class="card-icon">◎</span>
+        <h3>Calibration view</h3>
+        <p>Read the dx/dy plot, target rings, leg rates, and orthogonality.</p>
+    </a>
+</div>
+
+<h2 class="section-title">Going deeper</h2>
+<div class="card-grid">
+    <a class="card" href="pgs/multi-session.html">
+        <span class="card-icon">≣</span>
+        <h3>Combining sessions</h3>
+        <p>Stitch multiple guiding sections back into a single night view.</p>
+    </a>
+    <a class="card" href="pgs/frequency-analysis.html">
+        <span class="card-icon">ƒ</span>
+        <h3>Frequency analysis</h3>
+        <p>FFT periodogram for finding worm-gear and tracking issues.</p>
+    </a>
+    <a class="card" href="pgs/exporting.html">
+        <span class="card-icon">↥</span>
+        <h3>Exporting</h3>
+        <p>Share charts as PNG and stats or per-frame data as CSV.</p>
+    </a>
+    <a class="card" href="pgs/shortcuts.html">
+        <span class="card-icon">⌘</span>
+        <h3>Keyboard shortcuts</h3>
+        <p>Every shortcut in one place.</p>
+    </a>
+</div>
+
+<h2 class="section-title">About Ephemeris</h2>
 <p>Ephemeris is a Universal app built specifically for Apple silicon and Intel Macs. It does not require Rosetta or any external dependencies. Logs are opened read-only — your original files are never modified.</p>
 
-<div class="tip"><strong>Tip:</strong> PHD2 typically saves logs to <code>~/Documents/PHD2/</code> (Mac) or the equivalent <code>Documents\PHD2</code> folder if you copied them from a Windows acquisition machine. Either format is supported.</div>
+<div class="tip"><strong>Tip:</strong> PHD2 typically saves logs to <code>~/Documents/PHD2/</code> on Mac, or the equivalent <code>Documents\PHD2\</code> folder if you copied them from a Windows acquisition machine. Either format is supported, including Windows CRLF line endings.</div>
+
+</main>
 </body>
 </html>

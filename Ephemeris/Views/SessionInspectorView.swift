@@ -27,32 +27,38 @@ struct SessionInspectorView: View {
     let manualExclusions: [ClosedRange<Double>]
 
     var body: some View {
-        Form {
-            switch section {
-            case .summary:
-                EmptyView()
-            case .guide(let i):
-                guideContent(log.guideSessions[i])
-            case .calibration(let i):
-                calibrationContent(log.calibrations[i])
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                switch section {
+                case .summary:
+                    EmptyView()
+                case .guide(let i):
+                    guideContent(log.guideSessions[i])
+                case .calibration(let i):
+                    calibrationContent(log.calibrations[i])
+                }
             }
+            .padding(.horizontal, 12)
+            .padding(.top, 12)
+            .padding(.bottom, 16)
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
+        // 12pt trailing gutter matches Mail.app's inspector — keeps the
+        // scrollbar from sitting flush against the rounded card edges.
+        .contentMargins(.trailing, 12, for: .scrollContent)
     }
 
     @ViewBuilder
     private func guideContent(_ s: GuideSession) -> some View {
         let stats = SessionStatsCalculator.calculate(s, manualExclusionRanges: manualExclusions)
-        Section {
+        InspectorCard("Session", systemImage: "calendar") {
             LabeledContent("Frames", value: framesValue(stats: stats, total: s.frameCount))
             LabeledContent("Duration", value: formatDuration(s.duration))
             if let date = s.startedAt {
                 LabeledContent("Started", value: date.formatted(date: .abbreviated, time: .shortened))
             }
-        } header: { sectionHeader("Session", systemImage: "calendar") }
+        }
 
-        Section {
+        InspectorCard("Statistics", systemImage: "chart.bar.xaxis") {
             colorStatRow("RMS RA", value: distance(stats.rmsRA, scale: s.pixelScale), tint: raTint)
             colorStatRow("RMS Dec", value: distance(stats.rmsDec, scale: s.pixelScale), tint: decTint)
             LabeledContent("Total RMS") {
@@ -65,16 +71,16 @@ struct SessionInspectorView: View {
             colorStatRow("Drift RA", value: drift(stats.driftRA, scale: s.pixelScale), tint: raTint)
             colorStatRow("Drift Dec", value: drift(stats.driftDec, scale: s.pixelScale), tint: decTint)
             LabeledContent("Polar align", value: polarAlign(stats.polarAlignErrorArcmin))
-        } header: { sectionHeader("Statistics", systemImage: "chart.bar.xaxis") }
+        }
 
-        Section {
+        InspectorCard("Optics", systemImage: "camera.aperture") {
             LabeledContent("Pixel scale", value: String(format: "%.3f \"/px", s.pixelScale))
             if s.declination != 0 {
                 LabeledContent("Declination", value: String(format: "%.1f°", s.declination * 180.0 / .pi))
             }
-        } header: { sectionHeader("Optics", systemImage: "camera.aperture") }
+        }
 
-        Section {
+        InspectorCard("Mount", systemImage: "scope") {
             LabeledContent("Name", value: trimQuotes(s.mount.name).isEmpty ? "—" : trimQuotes(s.mount.name))
             LabeledContent("Guiding enabled", value: s.mount.guidingEnabled ? "Yes" : "No")
             if let mr = s.mount.maxRADuration {
@@ -95,10 +101,10 @@ struct SessionInspectorView: View {
             if let mm = s.mount.minMoveY {
                 colorLabeledRow("Dec min move", value: String(format: "%.3f px", mm), tint: decTint)
             }
-        } header: { sectionHeader("Mount", systemImage: "scope") }
+        }
 
         if let ao = s.ao {
-            Section {
+            InspectorCard("AO", systemImage: "lens") {
                 LabeledContent("Name", value: trimQuotes(ao.name))
                 if let alg = ao.xGuideAlgorithm {
                     colorLabeledRow("X algorithm", value: alg, tint: raTint)
@@ -106,11 +112,11 @@ struct SessionInspectorView: View {
                 if let alg = ao.yGuideAlgorithm {
                     colorLabeledRow("Y algorithm", value: alg, tint: decTint)
                 }
-            } header: { sectionHeader("AO", systemImage: "lens") }
+            }
         }
 
         if !s.infos.isEmpty {
-            Section {
+            InspectorCard("Events", systemImage: "bell", count: s.infos.count) {
                 ForEach(s.infos) { info in
                     let t = time(forInfoFrame: info.frame, in: s)
                     Button {
@@ -120,7 +126,7 @@ struct SessionInspectorView: View {
                     }
                     .buttonStyle(.plain)
                 }
-            } header: { sectionHeader("Events", systemImage: "bell", count: s.infos.count) }
+            }
         }
     }
 
@@ -188,7 +194,7 @@ struct SessionInspectorView: View {
     @ViewBuilder
     private func calibrationContent(_ c: Calibration) -> some View {
         let d = c.details
-        Section {
+        InspectorCard("Calibration", systemImage: "scope") {
             LabeledContent("Device", value: c.device == .ao ? "AO" : "Mount")
             LabeledContent("Steps", value: "\(c.entries.count)")
             if let date = c.startedAt {
@@ -201,10 +207,10 @@ struct SessionInspectorView: View {
                         .monospacedDigit()
                 }
             }
-        } header: { sectionHeader("Calibration", systemImage: "scope") }
+        }
 
         if d.pixelScale != nil || d.exposureMs != nil || d.calibrationStepMs != nil || d.calibrationDistancePx != nil {
-            Section {
+            InspectorCard("Configuration", systemImage: "gearshape") {
                 if let v = d.pixelScale {
                     LabeledContent("Pixel scale", value: String(format: "%.3f \"/px", v))
                 }
@@ -220,10 +226,10 @@ struct SessionInspectorView: View {
                 if let v = d.assumeOrthogonalAxes {
                     LabeledContent("Orthogonal axes", value: v ? "Assumed" : "Measured")
                 }
-            } header: { sectionHeader("Configuration", systemImage: "gearshape") }
+            }
         }
         if d.raGuideSpeedArcsecPerSec != nil || d.decGuideSpeedArcsecPerSec != nil || d.declinationRad != nil {
-            Section {
+            InspectorCard("Mount", systemImage: "scope") {
                 if let v = d.raGuideSpeedArcsecPerSec {
                     colorLabeledRow("RA guide speed", value: String(format: "%.2f \"/s", v), tint: raTint)
                 }
@@ -239,26 +245,26 @@ struct SessionInspectorView: View {
                 if let v = d.pierSide {
                     LabeledContent("Pier side", value: v.trimmingCharacters(in: .whitespaces))
                 }
-            } header: { sectionHeader("Mount", systemImage: "scope") }
+            }
         }
         if !d.legCompletions.isEmpty {
-            Section {
+            InspectorCard("Legs", systemImage: "arrow.triangle.branch") {
                 ForEach(directionOrder, id: \.self) { dir in
                     if let leg = d.legCompletions[dir] {
                         legRow(dir, leg)
                     }
                 }
-            } header: { sectionHeader("Legs", systemImage: "arrow.triangle.branch") }
+            }
         }
         let counts = Dictionary(grouping: c.entries, by: \.direction).mapValues(\.count)
         if !counts.isEmpty {
-            Section {
+            InspectorCard("Steps by direction", systemImage: "list.number") {
                 ForEach(directionOrder, id: \.self) { dir in
                     if let n = counts[dir], n > 0 {
                         LabeledContent(dir.rawValue.capitalized, value: "\(n)")
                     }
                 }
-            } header: { sectionHeader("Steps by direction", systemImage: "list.number") }
+            }
         }
     }
 
@@ -402,5 +408,66 @@ private struct EventRow: View {
         let s = total % 60
         if h > 0 { return String(format: "%d:%02d:%02d", h, m, s) }
         return String(format: "%d:%02d", m, s)
+    }
+}
+
+/// Bordered grouping for the inspector — darker fill and thin separator
+/// stroke so each card visually detaches from the inspector chrome. Header
+/// sits inside the card at the top, matching Final Cut / Logic / Laminar
+/// inspector conventions.
+private struct InspectorCard<Content: View>: View {
+    let title: String
+    let systemImage: String
+    let count: Int?
+    @ViewBuilder var content: () -> Content
+
+    init(
+        _ title: String,
+        systemImage: String,
+        count: Int? = nil,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.title = title
+        self.systemImage = systemImage
+        self.count = count
+        self.content = content
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.tint)
+                    .font(.callout)
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                if let count {
+                    Text("(\(count))")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 6) {
+                content()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.black.opacity(0.18))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(.separator.opacity(0.7), lineWidth: 0.5)
+        )
     }
 }

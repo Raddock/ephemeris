@@ -4,51 +4,60 @@
 <meta charset="UTF-8">
 <meta name="AppleTitle" content="Reading the guide chart">
 <meta name="description" content="How to read the time-series guide chart, units, axes, and overlays.">
-<meta name="keywords" content="chart, RA, Dec, dx, dy, units, arc-seconds, pixels, hover, overlay, scatter">
+<meta name="keywords" content="chart, RA, Dec, dx, dy, units, arc-seconds, pixels, hover, overlay, scatter, pin, target rings">
 <meta name="robots" content="anchors">
 <title>Reading the guide chart</title>
 <link rel="stylesheet" href="../shrd/styles.css">
 </head>
 <body>
+<div class="wrap">
 <p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Reading the guide chart</p>
 <h1>Reading the guide chart</h1>
-<p class="lede">The main chart plots the guide-star deviation over time. Two lines, one per axis, with optional overlays for corrections, diagnostics, and events.</p>
+<p class="lede">The main chart plots the guide-star deviation over time. Two solid lines, one per axis, with optional overlays for corrections, diagnostics, and events.</p>
 
 <h2>Series</h2>
 <ul>
     <li><span class="tag-ra">RA</span> &mdash; right-ascension deviation. Positive values mean the star drifted east of the lock position.</li>
     <li><span class="tag-dec">Dec</span> &mdash; declination deviation. Positive means north.</li>
 </ul>
-<p>Toggle either series via <strong>Overlays &rsaquo; Series</strong> at the bottom of the chart.</p>
+<p>Solid lines mean raw deviation, matching PHD2's on-screen convention. Toggle either series in <strong>Overlays &rsaquo; Series</strong>.</p>
 
 <h2>Units</h2>
-<p>Switch between <strong>Pixels</strong> and <strong>Arc-sec</strong> with the segmented control on the chart-controls bar. The conversion uses the session's pixel scale, parsed from the log header. Arc-seconds are usually what you want when comparing nights — they're independent of camera and focal length.</p>
+<p>Switch between <strong>Pixels</strong> and <strong>Arc-sec</strong> on the chart-controls bar. The conversion uses the session's pixel scale, parsed from the log header. Arc-seconds are usually more useful for night-to-night comparisons because they're independent of camera and focal length.</p>
 
 <h2>Axes</h2>
-<p>Switch between <strong>RA / Dec</strong> and <strong>dx / dy</strong>:</p>
 <ul>
-    <li><strong>RA / Dec</strong> &mdash; mount-frame deviation, with PHD2's atmospheric-refraction and orientation transforms applied. Use this for guiding-quality analysis.</li>
+    <li><strong>RA / Dec</strong> &mdash; mount-frame deviation, with PHD2's atmospheric-refraction and orientation transforms applied. The right axes for guiding-quality analysis.</li>
     <li><strong>dx / dy</strong> &mdash; raw camera-frame pixel offsets. Use this when investigating mechanical issues that present in the camera frame rather than along sky axes.</li>
 </ul>
 
 <h2>Y scale</h2>
-<p>The <strong>Y: Auto / ±0.5″ / ±1″ / ±2″ / ±5″ / ±10″</strong> menu controls the vertical range. Auto pads 10% above and below the largest deviation in the visible range. A fixed range is useful for comparing nights or for spotting outliers without the chart auto-zooming to fit a single spike.</p>
+<p>The <strong>Y: Auto / ±0.5″ / ±1″ / ±2″ / ±5″ / ±10″</strong> menu controls the vertical range. Auto pads 10% above and below the largest deviation in the visible range. A fixed range is useful for comparing nights or for spotting outliers without the chart auto-zooming to fit a single spike. Data that exceeds the fixed range is clipped to the plot area.</p>
 
-<h2>Hover and selection</h2>
-<p>Move the pointer across the chart to see the readout for the frame closest to the cursor: time, RA / Dec values, SNR. Click a frame to pin the readout (a vertical rule stays at that location even when you move the pointer). Click an empty area to dismiss it.</p>
+<h2>Hover and pinned selection</h2>
+<p>Move the pointer across the chart and a thin vertical rule tracks the closest frame. The hover readout card sits in the chart's top-left corner with the frame's time, RA / Dec, and SNR — its position is fixed so it doesn't move with the cursor and never falls off the bottom edge.</p>
+<p><strong>Click</strong> a frame to pin the selection. The rule turns accent-colored and slightly thicker, and small filled circles mark the RA and Dec values at that frame so the pin reads as "fixed" rather than "live cursor". Click an empty area to unpin.</p>
+<p>The hover readout can be turned off in <strong>Overlays &rsaquo; Annotations &rsaquo; Hover readout</strong> if you'd rather see an unobstructed chart.</p>
 
 <h2>Overlays</h2>
-<p>Open <strong>Overlays</strong> at the bottom right of the chart:</p>
+<p>Open <strong>Overlays</strong> at the bottom right of the chart-controls bar:</p>
 <ul>
     <li><strong>Series:</strong> RA, Dec, Corrections (the bars showing pulse direction and magnitude per frame).</li>
     <li><strong>Diagnostics:</strong> <span class="tag-mass">Star mass</span> and <span class="tag-snr">SNR</span> sub-charts below the main chart. Useful for finding cloud passes and dropped frames.</li>
-    <li><strong>Annotations:</strong> Events markers (settling, dither, frame drops), Limits (max guide-pulse), Grid, and the Scatter cluster overlay.</li>
+    <li><strong>Annotations:</strong> Events markers (settling, dither, frame drops), Limits (max guide-pulse), Grid, Scatter cluster, and the Hover readout card.</li>
 </ul>
 
 <h2>Scatter cluster overlay</h2>
-<p>A small RA/Dec scatter inset floats in the top-right of the chart, showing every visible frame as a yellow dot in a square XY plot. The cluster's shape tells you the wandering pattern at a glance — round means good seeing/balance, elongated means drift or backlash, sparse means few frames.</p>
-<p>The scatter respects the current axis mode (RA/Dec vs dx/dy), units, visible time range, and any manual exclusions.</p>
+<p>A small RA / Dec scatter inset floats translucently in the top-right of the chart, showing every visible frame as a yellow dot. The cluster's shape tells you the wandering pattern at a glance — round means good seeing, elongated means drift or backlash, sparse means few frames.</p>
+<p>Concentric dashed reference rings every <strong>0.5</strong> of the current display unit (so 0.5″, 1.0″, 1.5″ in arc-seconds, or 0.5px, 1.0px in pixels) make it easy to read each point's distance from lock — same convention PHD2 uses on its own scatter target.</p>
+<p>The frame closest to your cursor is highlighted in <strong>green</strong> and enlarged so you can see exactly where in the cluster it sits.</p>
+<p>The scatter respects the current axis mode (RA/Dec vs dx/dy), units, visible time range, and any manual exclusions. Toggle in <strong>Overlays &rsaquo; Annotations &rsaquo; Scatter cluster</strong>.</p>
 
-<div class="tip"><strong>Tip:</strong> Use the chart's hover readout together with the inspector's Events list. Clicking an event jumps the chart's selection rule to that frame.</div>
+<h2>Settling bands</h2>
+<p>When events are enabled, settling periods are drawn as faint translucent bands across the chart — orange when settling failed, neutral gray when it succeeded. They give you visual context for any noisy frames near a dither.</p>
+
+<div class="tip"><strong>Tip:</strong> Combine the chart's hover readout with the inspector's <strong>Events</strong> card. Click an event in the inspector to jump the chart's selection rule directly to that frame.</div>
+
+</div>
 </body>
 </html>

@@ -1,0 +1,160 @@
+{
+  "fill" : {
+    "automatic-gradient" : "display-p3:0.21825,0.08677,0.39992,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "hidden" : true,
+          "image-name" : "13_optional_Dec_blue_trace_fx_shadow_glow_transparent.png",
+          "name" : "13_optional_Dec_blue_trace_fx_shadow_glow_transparent",
+          "opacity" : 1
+        },
+        {
+          "hidden" : true,
+          "image-name" : "12_optional_RA_red_trace_fx_shadow_glow_transparent.png",
+          "name" : "12_optional_RA_red_trace_fx_shadow_glow_transparent"
+        },
+        {
+          "hidden" : false,
+          "image-name" : "11_optional_square_sheen_transparent.png",
+          "name" : "11_optional_square_sheen_transparent",
+          "position" : {
+            "scale" : 1.2,
+            "translation-in-points" : [
+              0,
+              72.9921875
+            ]
+          }
+        },
+        {
+          "image-name" : "10_Dec_blue_correction_bars_transparent.png",
+          "name" : "10_Dec_blue_correction_bars_transparent",
+          "position" : {
+            "scale" : 1.2,
+            "translation-in-points" : [
+              0,
+              72.9921875
+            ]
+          }
+        },
+        {
+          "glass" : true,
+          "image-name" : "09_RA_red_correction_bars_transparent.png",
+          "name" : "09_RA_red_correction_bars_transparent",
+          "position" : {
+            "scale" : 1.2,
+            "translation-in-points" : [
+              0,
+              72.9921875
+            ]
+          }
+        },
+        {
+          "glass" : false,
+          "image-name" : "08_correction_bar_baseline_transparent.png",
+          "name" : "08_correction_bar_baseline_transparent",
+          "position" : {
+            "scale" : 1.2,
+            "translation-in-points" : [
+              0,
+              72.9921875
+            ]
+          }
+        },
+        {
+          "blend-mode" : "normal",
+          "fill" : "automatic",
+          "glass" : false,
+          "image-name" : "07_Dec_blue_trace_clean_no_shadow_transparent 2.png",
+          "name" : "07_Dec_blue_trace_clean_no_shadow_transparent 2",
+          "position" : {
+            "scale" : 1.2,
+            "translation-in-points" : [
+              0,
+              72.9921875
+            ]
+          }
+        },
+        {
+          "glass" : false,
+          "image-name" : "06_RA_red_trace_clean_no_shadow_transparent 2.png",
+          "name" : "06_RA_red_trace_clean_no_shadow_transparent 2",
+          "position" : {
+            "scale" : 1.2,
+            "translation-in-points" : [
+              0,
+              72.9921875
+            ]
+          }
+        },
+        {
+          "glass" : false,
+          "image-name" : "05_chart_grid_transparent.png",
+          "name" : "05_chart_grid_transparent",
+          "position" : {
+            "scale" : 1.2,
+            "translation-in-points" : [
+              0,
+              72.9921875
+            ]
+          }
+        },
+        {
+          "glass" : false,
+          "image-name" : "04_yellow_target_graphic_transparent.png",
+          "name" : "04_yellow_target_graphic_transparent",
+          "position" : {
+            "scale" : 1.2,
+            "translation-in-points" : [
+              0,
+              72.9921875
+            ]
+          }
+        },
+        {
+          "glass" : false,
+          "image-name" : "03_yellow_target_glow_optional_transparent.png",
+          "name" : "03_yellow_target_glow_optional_transparent",
+          "position" : {
+            "scale" : 1.2,
+            "translation-in-points" : [
+              0,
+              72.9921875
+            ]
+          }
+        },
+        {
+          "image-name" : "02_starfield_transparent.png",
+          "name" : "02_starfield_transparent",
+          "position" : {
+            "scale" : 1.2,
+            "translation-in-points" : [
+              0,
+              72.9921875
+            ]
+          }
+        },
+        {
+          "image-name" : "01_background_opaque_square.png",
+          "name" : "01_background_opaque_square"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

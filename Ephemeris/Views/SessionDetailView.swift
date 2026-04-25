@@ -237,6 +237,7 @@ struct SessionDetailView: View {
                         Toggle("Limits", isOn: $bindable.showLimits)
                         Toggle("Grid", isOn: $bindable.showGrid)
                         Toggle("Scatter cluster", isOn: $bindable.showScatter)
+                        Toggle("Hover readout", isOn: $bindable.showHoverCard)
                     }
                 } label: {
                     Label("Overlays", systemImage: "slider.horizontal.3")
@@ -283,6 +284,18 @@ private struct GuideSessionDetail: View {
             statsStrip
             Divider()
             chartStack
+        }
+        .onChange(of: selectedTime) { _, new in
+            // When the inspector (or any other source) sets a pinned frame
+            // that falls outside the current zoom window, expand the chart
+            // back to the full session domain so the rule is visible. Without
+            // this the click looks like a no-op.
+            guard let t = new, let current = visibleDomain else { return }
+            if !current.contains(t) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    visibleDomain = nil
+                }
+            }
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

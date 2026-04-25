@@ -1,29 +1,45 @@
 :root {
     color-scheme: light dark;
     --bg: #ffffff;
+    --bg-card: #f5f5f7;
     --fg: #1d1d1f;
+    --fg-2: #424245;
     --muted: #6e6e73;
-    --rule: rgba(0,0,0,0.1);
+    --muted-2: #86868b;
+    --rule: rgba(0,0,0,0.10);
+    --rule-strong: rgba(0,0,0,0.18);
     --accent: #0066cc;
-    --code-bg: rgba(0,0,0,0.04);
+    --code-bg: rgba(0,0,0,0.06);
     --tip-bg: rgba(0,102,204,0.08);
     --warn-bg: rgba(255,149,0,0.10);
+    --note-bg: rgba(48,209,88,0.09);
     --kbd-bg: #f2f2f3;
-    --kbd-border: rgba(0,0,0,0.15);
+    --kbd-border: rgba(0,0,0,0.18);
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+    --ra: #ff453a;
+    --dec: #4ea3ff;
+    --mass: #ffd60a;
+    --snr: #30d158;
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg: #1e1e1e;
+        --bg: #1c1c1e;
+        --bg-card: rgba(255,255,255,0.05);
         --fg: #f5f5f7;
+        --fg-2: #e5e5e7;
         --muted: #a1a1a6;
-        --rule: rgba(255,255,255,0.12);
+        --muted-2: #8e8e93;
+        --rule: rgba(255,255,255,0.10);
+        --rule-strong: rgba(255,255,255,0.18);
         --accent: #4ea3ff;
-        --code-bg: rgba(255,255,255,0.06);
+        --code-bg: rgba(255,255,255,0.08);
         --tip-bg: rgba(78,163,255,0.10);
         --warn-bg: rgba(255,159,10,0.14);
+        --note-bg: rgba(48,209,88,0.10);
         --kbd-bg: #2c2c2e;
         --kbd-border: rgba(255,255,255,0.18);
+        --shadow: 0 1px 0 rgba(255,255,255,0.05), 0 8px 24px rgba(0,0,0,0.35);
     }
 }
 
@@ -34,61 +50,121 @@ html, body {
     padding: 0;
     background: var(--bg);
     color: var(--fg);
-    font: 13px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    font: 13.5px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
     -webkit-font-smoothing: antialiased;
 }
 
 body {
-    padding: 28px 36px 60px;
-    max-width: 720px;
+    padding: 0 0 80px;
 }
 
+.wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 36px;
+}
+
+/* ===== Hero (root page only) ===== */
+
+.hero {
+    text-align: center;
+    padding: 56px 36px 36px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 36px;
+}
+
+.hero img.app-icon {
+    width: 128px;
+    height: 128px;
+    border-radius: 28px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.08);
+    display: block;
+    margin: 0 auto 22px;
+}
+
+.hero h1 {
+    font: 600 32px/1.15 -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+    letter-spacing: -0.02em;
+    margin: 0 0 8px;
+}
+
+.hero .tagline {
+    font-size: 16px;
+    color: var(--muted);
+    margin: 0;
+    font-style: italic;
+}
+
+/* ===== Topic page header ===== */
+
 h1 {
-    font: 600 22px/1.25 -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
-    margin: 0 0 6px;
-    letter-spacing: -0.01em;
+    font: 600 26px/1.2 -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+    letter-spacing: -0.015em;
+    margin: 0 0 8px;
 }
 
 h2 {
-    font: 600 16px/1.3 -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
-    margin: 28px 0 8px;
-    letter-spacing: -0.005em;
+    font: 600 18px/1.3 -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+    margin: 32px 0 10px;
+    letter-spacing: -0.01em;
 }
 
 h3 {
-    font: 600 13px/1.3 -apple-system, BlinkMacSystemFont, sans-serif;
-    margin: 18px 0 4px;
-    color: var(--fg);
+    font: 600 14px/1.3 -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 22px 0 6px;
 }
 
-p { margin: 0 0 12px; }
-ul, ol { margin: 0 0 14px; padding-left: 22px; }
-li { margin-bottom: 4px; }
+.section-title {
+    font: 600 20px/1.25 -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+    margin: 36px 0 14px;
+    letter-spacing: -0.01em;
+}
+
+p { margin: 0 0 12px; color: var(--fg-2); }
+ul, ol { margin: 0 0 14px; padding-left: 22px; color: var(--fg-2); }
+li { margin-bottom: 5px; }
+strong { color: var(--fg); }
 
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 .lede {
     color: var(--muted);
-    font-size: 14px;
+    font-size: 15px;
     margin-bottom: 22px;
+    line-height: 1.5;
 }
 
 hr {
     border: none;
     border-top: 1px solid var(--rule);
-    margin: 24px 0;
+    margin: 28px 0;
 }
+
+/* ===== Code, kbd ===== */
 
 code, kbd, samp {
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
-    font-size: 0.9em;
+    font-size: 0.88em;
 }
 
 code {
     background: var(--code-bg);
-    padding: 1px 5px;
-    border-radius: 3px;
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+pre {
+    background: var(--code-bg);
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 0 0 14px;
+}
+
+pre code {
+    background: transparent;
+    padding: 0;
 }
 
 kbd {
@@ -101,14 +177,22 @@ kbd {
     white-space: nowrap;
 }
 
+/* ===== Callouts ===== */
+
 .tip, .note, .warn {
     border-left: 3px solid var(--accent);
-    padding: 10px 14px;
-    margin: 14px 0;
+    padding: 12px 16px;
+    margin: 16px 0;
     background: var(--tip-bg);
-    border-radius: 0 6px 6px 0;
+    border-radius: 0 8px 8px 0;
 }
-.tip strong, .note strong { color: var(--accent); }
+.tip strong { color: var(--accent); }
+
+.note {
+    border-left-color: #30d158;
+    background: var(--note-bg);
+}
+.note strong { color: #30d158; }
 
 .warn {
     border-left-color: #ff9500;
@@ -116,48 +200,127 @@ kbd {
 }
 .warn strong { color: #ff9500; }
 
-.toc {
-    list-style: none;
-    padding-left: 0;
-    margin: 14px 0 0;
-}
-.toc li {
-    padding: 6px 0;
-    border-bottom: 1px solid var(--rule);
-}
-.toc li:last-child { border-bottom: none; }
-.toc a { font-weight: 500; }
-.toc .desc {
-    display: block;
-    color: var(--muted);
-    font-size: 12px;
-    margin-top: 2px;
-    font-weight: 400;
+/* ===== Card grid (root page) ===== */
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+    margin: 0 0 18px;
 }
 
-table.shortcuts {
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--rule-strong);
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+    text-decoration: none;
+    color: var(--fg);
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+    display: block;
+}
+
+.card:hover {
+    transform: translateY(-1px);
+    text-decoration: none;
+    border-color: var(--accent);
+}
+
+.card .card-icon {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: white;
+    border-radius: 7px;
+    font-size: 14px;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.card h3 {
+    margin: 0 0 4px;
+    font: 600 15px/1.3 -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--fg);
+}
+
+.card p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+/* ===== Tables ===== */
+
+table.shortcuts, table.spec {
     border-collapse: collapse;
     width: 100%;
-    margin: 8px 0 14px;
+    margin: 8px 0 18px;
+    font-size: 13px;
 }
-table.shortcuts td {
-    padding: 6px 10px;
+
+table.shortcuts td, table.spec td {
+    padding: 8px 12px;
     border-bottom: 1px solid var(--rule);
     vertical-align: top;
+    color: var(--fg-2);
 }
+
 table.shortcuts td:first-child {
-    width: 160px;
+    width: 180px;
     white-space: nowrap;
+    color: var(--fg);
 }
+
+table.shortcuts tr:last-child td, table.spec tr:last-child td {
+    border-bottom: none;
+}
+
+/* ===== Crumb / breadcrumb ===== */
 
 .crumb {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--muted);
-    margin-bottom: 18px;
+    margin: 0 0 16px;
+    padding-top: 28px;
 }
 .crumb a { color: var(--muted); }
+.crumb a:hover { color: var(--accent); }
 
-.tag-ra { color: #ff453a; font-weight: 600; }
-.tag-dec { color: #4ea3ff; font-weight: 600; }
-.tag-mass { color: #ffd60a; font-weight: 600; }
-.tag-snr { color: #30d158; font-weight: 600; }
+/* ===== Inline series tags ===== */
+
+.tag-ra { color: var(--ra); font-weight: 600; }
+.tag-dec { color: var(--dec); font-weight: 600; }
+.tag-mass { color: var(--mass); font-weight: 600; }
+.tag-snr { color: var(--snr); font-weight: 600; }
+
+/* ===== Inline pill annotations ===== */
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 8px;
+    background: var(--code-bg);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--fg);
+}
+
+.pill .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+.pill.ra .dot { background: var(--ra); }
+.pill.dec .dot { background: var(--dec); }
+.pill.mass .dot { background: var(--mass); }
+.pill.snr .dot { background: var(--snr); }
+.pill.best .dot { background: #30d158; }
+.pill.worst .dot { background: #ff9500; }

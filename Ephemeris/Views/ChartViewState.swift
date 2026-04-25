@@ -125,6 +125,9 @@ final class ChartViewState {
     var showScatter: Bool {
         didSet { Self.defaults.set(showScatter, forKey: Keys.showScatter) }
     }
+    var showHoverCard: Bool {
+        didSet { Self.defaults.set(showHoverCard, forKey: Keys.showHoverCard) }
+    }
 
     init() {
         let d = Self.defaults
@@ -142,6 +145,7 @@ final class ChartViewState {
         showLimits = d.object(forKey: Keys.showLimits) as? Bool ?? false
         showGrid = d.object(forKey: Keys.showGrid) as? Bool ?? true
         showScatter = d.object(forKey: Keys.showScatter) as? Bool ?? true
+        showHoverCard = d.object(forKey: Keys.showHoverCard) as? Bool ?? true
     }
 
     private static let defaults = UserDefaults.standard
@@ -160,5 +164,6 @@ final class ChartViewState {
         static let showLimits = "chart.showLimits"
         static let showGrid = "chart.showGrid"
         static let showScatter = "chart.showScatter"
+        static let showHoverCard = "chart.showHoverCard"
     }
 }

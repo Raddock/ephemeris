@@ -82,9 +82,9 @@ struct GuideGraphView: View {
         .chartXAxis {
             AxisMarks(values: .automatic(desiredCount: 6)) { value in
                 if chartState.showGrid {
-                    AxisGridLine().foregroundStyle(.secondary.opacity(0.2))
+                    AxisGridLine().foregroundStyle(.secondary.opacity(0.35))
                 }
-                AxisTick().foregroundStyle(.secondary.opacity(0.5))
+                AxisTick().foregroundStyle(.secondary.opacity(0.55))
                 AxisValueLabel {
                     if let t = value.as(Double.self) {
                         Text(formatTime(t)).font(.caption)
@@ -95,9 +95,9 @@ struct GuideGraphView: View {
         .chartYAxis {
             AxisMarks(position: .leading, values: .automatic(desiredCount: 7)) { value in
                 if chartState.showGrid {
-                    AxisGridLine().foregroundStyle(.secondary.opacity(0.2))
+                    AxisGridLine().foregroundStyle(.secondary.opacity(0.35))
                 }
-                AxisTick().foregroundStyle(.secondary.opacity(0.5))
+                AxisTick().foregroundStyle(.secondary.opacity(0.55))
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
                         Text(formatY(v)).font(.caption)
@@ -107,6 +107,14 @@ struct GuideGraphView: View {
         }
         .chartLegend(.hidden)
         .chartPlotStyle { $0.clipped() }
+        .overlay(alignment: .topLeading) {
+            if chartState.showHoverCard, let entry = activeEntry {
+                HoverCard(entry: entry, session: session, chartState: chartState)
+                    .padding(.leading, 56) // clear the leading Y-axis labels
+                    .padding(.top, 12)
+                    .allowsHitTesting(false)
+            }
+        }
         .chartXSelection(value: $hoverTime)
         .chartXSelection(range: $dragRange)
         .onChange(of: dragRange) { old, new in
@@ -146,7 +154,7 @@ struct GuideGraphView: View {
             )
             .foregroundStyle(raColor)
             .interpolationMethod(.linear)
-            .lineStyle(StrokeStyle(lineWidth: 1.2))
+            .lineStyle(StrokeStyle(lineWidth: 2.0))
         }
     }
 
@@ -159,7 +167,7 @@ struct GuideGraphView: View {
             )
             .foregroundStyle(decColor)
             .interpolationMethod(.linear)
-            .lineStyle(StrokeStyle(lineWidth: 1.2))
+            .lineStyle(StrokeStyle(lineWidth: 2.0))
         }
     }
 
@@ -226,34 +234,43 @@ struct GuideGraphView: View {
     @ChartContentBuilder
     private func hoverMark(_ entry: GuideEntry, pinned: Bool) -> some ChartContent {
         RuleMark(x: .value("Hover", entry.time))
-            .foregroundStyle(pinned ? Color.accentColor.opacity(0.85) : .primary.opacity(0.35))
-            .lineStyle(StrokeStyle(lineWidth: pinned ? 1.5 : 1))
-            .annotation(
-                position: annotationPosition(for: entry),
-                alignment: .center,
-                spacing: 8,
-                overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))
-            ) {
-                HoverCard(entry: entry, session: session, chartState: chartState)
+            .foregroundStyle(pinned ? Color.accentColor.opacity(0.9) : .primary.opacity(0.45))
+            .lineStyle(StrokeStyle(lineWidth: pinned ? 2 : 1.5))
+
+        // Pinned state gets small filled dots at the data points so the
+        // selection reads as "fixed" rather than "live cursor".
+        if pinned {
+            if chartState.showRA {
+                PointMark(
+                    x: .value("Pinned", entry.time),
+                    y: .value("RA", display(rawX(entry)))
+                )
+                .symbolSize(60)
+                .foregroundStyle(raColor)
             }
+            if chartState.showDec {
+                PointMark(
+                    x: .value("Pinned", entry.time),
+                    y: .value("Dec", display(rawY(entry)))
+                )
+                .symbolSize(60)
+                .foregroundStyle(decColor)
+            }
+        }
     }
 
-    /// Flip the annotation to the opposite side when the entry sits in the
-    /// upper half of the visible Y range, so it doesn't clip off the top.
-    private func annotationPosition(for entry: GuideEntry) -> AnnotationPosition {
-        let raVal = display(rawX(entry))
-        let decVal = display(rawY(entry))
-        let upper = max(raVal, decVal)
-        let mid = (yDomain.lowerBound + yDomain.upperBound) / 2
-        return upper > mid ? .bottom : .top
-    }
 
     // MARK: - Hover/selection lookup
 
     private var activeEntry: GuideEntry? {
         guard let t = activeTime, !session.entries.isEmpty else { return nil }
-        // Binary search would be marginal here; entries are usually a few thousand.
-        return session.entries.min { abs($0.time - t) < abs($1.time - t) }
+        // Skip non-included entries — these include parser-flagged drops AND the
+        // NaN boundary sentinels inserted by `GuideSessionMerger` between merged
+        // sessions. Hovering the gap between two merged sessions otherwise
+        // returns a NaN-valued readout.
+        return session.entries.lazy
+            .filter(\.included)
+            .min { abs($0.time - t) < abs($1.time - t) }
     }
 
     // MARK: - Data conversion

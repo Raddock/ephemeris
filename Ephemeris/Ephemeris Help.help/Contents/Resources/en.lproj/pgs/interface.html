@@ -4,56 +4,65 @@
 <meta charset="UTF-8">
 <meta name="AppleTitle" content="The main window">
 <meta name="description" content="Sidebar, chart, inspector, and toolbar layout.">
-<meta name="keywords" content="window, sidebar, inspector, toolbar, layout">
+<meta name="keywords" content="window, sidebar, inspector, toolbar, layout, cards">
 <meta name="robots" content="anchors">
 <title>The main window</title>
 <link rel="stylesheet" href="../shrd/styles.css">
 </head>
 <body>
+<div class="wrap">
 <p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; The main window</p>
 <h1>The main window</h1>
 <p class="lede">A standard three-pane macOS layout: sessions on the left, chart in the middle, session metadata on the right.</p>
 
 <h2>Sidebar (left)</h2>
-<p>Lists the Summary plus every guiding and calibration section in the log. Multi-select with <kbd>⌘</kbd>-click or <kbd>⇧</kbd>-click to combine consecutive guiding sessions into one continuous chart — see <a href="multi-session.html">Combining sessions</a>.</p>
-<p>Hide or show the sidebar with the toggle in the toolbar.</p>
+<p>Lists the Summary plus every guiding and calibration section in the log. Each row shows the start time, type (guiding crosshair or calibration target), and duration.</p>
+<ul>
+    <li>Click any row to open that section in the detail pane.</li>
+    <li><kbd>⌘</kbd>-click or <kbd>⇧</kbd>-click to combine consecutive guiding sessions — see <a href="multi-session.html">Combining sessions</a>.</li>
+    <li>Toggle the sidebar with the icon in the toolbar.</li>
+</ul>
 
 <h2>Detail pane (center)</h2>
 <p>Shows whichever section is selected:</p>
 <ul>
-    <li><strong>Summary:</strong> aggregate stats and a sortable table of every section.</li>
-    <li><strong>Guiding:</strong> the time-series chart, statistics strip, and chart controls bar.</li>
-    <li><strong>Calibration:</strong> the dx/dy XY plot with concentric reference rings.</li>
+    <li><strong>Summary</strong> — aggregate stats and a sortable table of every session, with <span class="pill best"><span class="dot"></span>Best</span> and <span class="pill worst"><span class="dot"></span>Worst</span> chips on the matching rows and a Total RMS quality bar visualising relative quality across the night.</li>
+    <li><strong>Guiding</strong> — the time-series chart, statistics strip, and chart controls bar.</li>
+    <li><strong>Calibration</strong> — the dx/dy XY plot with concentric reference rings.</li>
 </ul>
 
 <h2>Inspector (right)</h2>
-<p>Always shows context for the selected section:</p>
+<p>Shows context for whatever is selected, organized as bordered cards. Each card has its own SF Symbol icon, title, and a thin border so sections don't run into each other:</p>
 <ul>
-    <li>Session start time, frame counts, duration.</li>
-    <li>Statistics: <span class="tag-ra">RMS RA</span>, <span class="tag-dec">RMS Dec</span>, total RMS, peaks, drift, polar-alignment estimate.</li>
-    <li>Optics: pixel scale and declination.</li>
-    <li>Mount / AO: name, guide algorithms, guiding-enabled state.</li>
-    <li>Events: settling, dither, frame drops, lock changes — click any event to jump the chart to that frame.</li>
+    <li><strong>Session</strong> — start time, frame counts, duration.</li>
+    <li><strong>Statistics</strong> — <span class="tag-ra">RMS RA</span>, <span class="tag-dec">RMS Dec</span>, total RMS, peaks, drift, polar-alignment estimate. RA and Dec values are color-tinted to match the chart series.</li>
+    <li><strong>Optics</strong> — pixel scale and declination.</li>
+    <li><strong>Mount</strong> / <strong>AO</strong> — name, guide algorithms, guiding-enabled state, max durations, and minimum-move thresholds per axis.</li>
+    <li><strong>Events</strong> — settling, dither, frame drops, lock changes. Click any event to jump the chart's selection rule to that frame.</li>
 </ul>
 <p>Toggle the inspector with <kbd>⌥⌘I</kbd>.</p>
 
 <h2>Toolbar</h2>
 <ul>
-    <li><strong>Share / Export</strong> — chart PNG, session CSV, frame CSV, log summary CSV.</li>
-    <li><strong>Frequency analysis</strong> — opens an FFT sheet for the current session.</li>
-    <li><strong>Reset zoom</strong> — clears any drag-to-zoom range.</li>
-    <li><strong>Inspector toggle</strong>.</li>
+    <li><strong>Share / Export</strong> (<kbd>⌘E</kbd>) — chart PNG, session CSV, frame CSV, or log-summary CSV via the system share sheet.</li>
+    <li><strong>Frequency analysis</strong> (<kbd>⌘F</kbd>) — opens the FFT sheet for the current session.</li>
+    <li><strong>Reset zoom</strong> (<kbd>⌘0</kbd>) — clears any drag-to-zoom range.</li>
+    <li><strong>Inspector toggle</strong> (<kbd>⌥⌘I</kbd>).</li>
 </ul>
 
 <h2>Chart controls bar (bottom)</h2>
-<p>When a guiding session is open, a control strip appears below the chart for fast access to:</p>
+<p>When a guiding session is open, a control strip appears below the chart:</p>
 <ul>
     <li><strong>Units</strong> — pixels or arc-seconds.</li>
-    <li><strong>Axes</strong> — RA/Dec or dx/dy.</li>
+    <li><strong>Axes</strong> — RA / Dec or dx / dy.</li>
     <li><strong>Drag mode</strong> — zoom or exclude.</li>
     <li><strong>Y scale</strong> — Auto, ±0.5″, ±1″, ±2″, ±5″, ±10″.</li>
-    <li><strong>Overlays</strong> — series, diagnostics, annotations, scatter cluster.</li>
+    <li><strong>Overlays</strong> — RA / Dec, corrections, star mass, SNR, events, limits, grid, scatter cluster, hover readout.</li>
 </ul>
-<p>All of these preferences persist between launches.</p>
+<p>All preferences persist between launches.</p>
+
+<div class="tip"><strong>Tip:</strong> Most controls in the chart bar are persistent per-app, not per-document — set them once and they stay across logs.</div>
+
+</div>
 </body>
 </html>

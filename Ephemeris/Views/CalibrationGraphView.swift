@@ -156,8 +156,8 @@ struct CalibrationGraphView: View {
 
     private func axisMarks(label: String, leading: Bool = false) -> some AxisContent {
         AxisMarks(position: leading ? .leading : .bottom, values: .automatic(desiredCount: 7)) { value in
-            AxisGridLine().foregroundStyle(.secondary.opacity(0.18))
-            AxisTick().foregroundStyle(.secondary.opacity(0.5))
+            AxisGridLine().foregroundStyle(.secondary.opacity(0.35))
+            AxisTick().foregroundStyle(.secondary.opacity(0.55))
             AxisValueLabel {
                 if let v = value.as(Double.self) {
                     Text(String(format: "%.1f", v)).font(.caption2)

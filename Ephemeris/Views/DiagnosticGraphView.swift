@@ -54,21 +54,21 @@ struct DiagnosticGraphView: View {
                     y: .value(kind.label, value(for: entry))
                 )
                 .foregroundStyle(kind.color)
-                .lineStyle(StrokeStyle(lineWidth: 1.0))
+                .lineStyle(StrokeStyle(lineWidth: 1.6))
             }
 
             if let t = activeTime {
                 RuleMark(x: .value("Active", t))
-                    .foregroundStyle(.primary.opacity(0.25))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
+                    .foregroundStyle(.primary.opacity(0.4))
+                    .lineStyle(StrokeStyle(lineWidth: 1.5))
             }
         }
         .chartXScale(domain: visibleDomain)
         .chartXAxis(.hidden)
         .chartYAxis {
             AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
-                AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
-                AxisTick().foregroundStyle(.secondary.opacity(0.35))
+                AxisGridLine().foregroundStyle(.secondary.opacity(0.35))
+                AxisTick().foregroundStyle(.secondary.opacity(0.55))
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
                         Text(yLabel(v)).font(.caption2)

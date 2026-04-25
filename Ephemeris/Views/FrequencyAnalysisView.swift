@@ -99,7 +99,7 @@ struct FrequencyAnalysisView: View {
                 )
                 .foregroundStyle(Color(nsColor: .systemBlue))
                 .interpolationMethod(.linear)
-                .lineStyle(StrokeStyle(lineWidth: 1.2))
+                .lineStyle(StrokeStyle(lineWidth: 2.0))
             }
             ForEach(points) { p in
                 AreaMark(
@@ -125,15 +125,15 @@ struct FrequencyAnalysisView: View {
             }
             if let hp = hoverPeriod {
                 RuleMark(x: .value("Hover", hp))
-                    .foregroundStyle(.primary.opacity(0.35))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
+                    .foregroundStyle(.primary.opacity(0.45))
+                    .lineStyle(StrokeStyle(lineWidth: 1.5))
             }
         }
         .chartXScale(domain: spectrum.xDomain, type: .log)
         .chartXAxis {
             AxisMarks(values: spectrum.xTickValues) { value in
-                AxisGridLine().foregroundStyle(.secondary.opacity(0.18))
-                AxisTick().foregroundStyle(.secondary.opacity(0.5))
+                AxisGridLine().foregroundStyle(.secondary.opacity(0.35))
+                AxisTick().foregroundStyle(.secondary.opacity(0.55))
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
                         Text(formatPeriod(v)).font(.caption2)
@@ -143,8 +143,8 @@ struct FrequencyAnalysisView: View {
         }
         .chartYAxis {
             AxisMarks(position: .leading, values: [0, 0.25, 0.5, 0.75, 1.0]) { value in
-                AxisGridLine().foregroundStyle(.secondary.opacity(0.18))
-                AxisTick().foregroundStyle(.secondary.opacity(0.5))
+                AxisGridLine().foregroundStyle(.secondary.opacity(0.35))
+                AxisTick().foregroundStyle(.secondary.opacity(0.55))
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
                         Text(String(format: "%.2f", v)).font(.caption2)
