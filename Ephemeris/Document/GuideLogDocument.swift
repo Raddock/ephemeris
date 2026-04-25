@@ -21,8 +21,60 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// Errors a `GuideLogDocument` can throw during open. Surfaced to the user via
+/// `GuideLogErrorView` (see ContentView) when SwiftUI fails to instantiate the
+/// document. Each case carries enough context to render a friendly alert.
+enum GuideLogLoadError: LocalizedError {
+    /// File is not a recognizable PHD2 guide log (text, but wrong content).
+    case notPHD2Log
+    /// File appears to be a binary blob (PNG, archive, etc.).
+    case binaryFile
+    /// File exceeds the hard refusal threshold.
+    case fileTooLarge(bytes: Int)
+    /// File can't be read as UTF-8 / ASCII text.
+    case unreadable
+
+    var errorDescription: String? {
+        switch self {
+        case .notPHD2Log:
+            return "This file isn't a PHD2 guide log."
+        case .binaryFile:
+            return "This file isn't a text file."
+        case .fileTooLarge:
+            return "This file is too large to load."
+        case .unreadable:
+            return "This file can't be read."
+        }
+    }
+
+    var recoverySuggestion: String? {
+        switch self {
+        case .notPHD2Log:
+            return "Ephemeris reads guide log files produced by PHD2 (PHD2_GuideLog_*.txt). The file you opened doesn't appear to be one. Make sure you're opening a .txt file from PHD2's log directory."
+        case .binaryFile:
+            return "Ephemeris reads PHD2 guide logs, which are plain text. The file you opened appears to be binary."
+        case .fileTooLarge(let bytes):
+            let mb = Double(bytes) / 1_000_000
+            return String(format: "This file is %.0f MB. PHD2 guide logs are typically under 50 MB — loading a file this large could exhaust available memory.", mb)
+        case .unreadable:
+            return "Ephemeris couldn't read this file as text. It may be using an unusual character encoding. PHD2 guide logs are saved in standard text format (UTF-8 or ASCII)."
+        }
+    }
+}
+
 struct GuideLogDocument: FileDocument {
-    static var readableContentTypes: [UTType] { [.plainText, .log, .text] }
+    /// Hard limits on file size before we refuse to even read it.
+    /// PHD2 logs in normal use are well under 50 MB; > 500 MB is almost
+    /// certainly an accident or a wrong file.
+    private static let maxLoadBytes = 500_000_000
+
+    static var readableContentTypes: [UTType] {
+        // Accept the canonical .txt UTI and the .log fallback. The PHD2
+        // signature check (`PHD2LogSignature.classify`) is the actual gatekeeper —
+        // it runs in `init(configuration:)` and rejects non-PHD2 content
+        // regardless of file extension.
+        [.plainText, .log, .text]
+    }
     static var writableContentTypes: [UTType] { [] }
 
     let log: GuideLog
@@ -37,7 +89,36 @@ struct GuideLogDocument: FileDocument {
         guard let data = configuration.file.regularFileContents else {
             throw CocoaError(.fileReadCorruptFile)
         }
-        let text = String(decoding: data, as: UTF8.self)
+
+        // Empty file: open as an empty document. ContentView's existing
+        // "No PHD2 sessions" empty state handles the rest.
+        if data.isEmpty {
+            self.log = GuideLog()
+            self.filename = configuration.file.preferredFilename
+            return
+        }
+
+        // Hard refusal at 500 MB — protects against accidentally opening a
+        // huge wrong file.
+        if data.count > Self.maxLoadBytes {
+            throw GuideLogLoadError.fileTooLarge(bytes: data.count)
+        }
+
+        // Signature gate runs on the head of the file, before committing to
+        // a full parse.
+        switch PHD2LogSignature.classify(data) {
+        case .binary:
+            throw GuideLogLoadError.binaryFile
+        case .notPHD2:
+            throw GuideLogLoadError.notPHD2Log
+        case .confirmed, .likely:
+            break
+        }
+
+        guard let text = String(data: data, encoding: .utf8) else {
+            throw GuideLogLoadError.unreadable
+        }
+
         self.log = GuideLogParser.parse(text)
         self.filename = configuration.file.preferredFilename
     }
@@ -48,5 +129,7 @@ struct GuideLogDocument: FileDocument {
 }
 
 extension UTType {
-    static var log: UTType { UTType(filenameExtension: "log", conformingTo: .plainText) ?? .plainText }
+    static var log: UTType {
+        UTType(filenameExtension: "log", conformingTo: .plainText) ?? .plainText
+    }
 }
