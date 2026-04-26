@@ -217,7 +217,7 @@ struct ScatterInsetView: View {
                 style: StrokeStyle(lineWidth: 0.5, dash: [3, 2])
             )
             // Label the ring on the right edge with its radius and unit suffix.
-            let labelText = String(format: "%.1f%@", r, unitsSuffix == "\"" ? "\"" : "")
+            let labelText = String(format: "%.1f%@", r, unitsSuffix)
             let label = Text(labelText)
                 .font(.system(size: 8))
                 .foregroundColor(labelColor)

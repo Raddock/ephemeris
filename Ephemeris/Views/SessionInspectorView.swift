@@ -130,28 +130,10 @@ struct SessionInspectorView: View {
         }
     }
 
-    // MARK: - Section header + colored row helpers
+    // MARK: - Colored row helpers
 
     private var raTint: Color { Color(nsColor: .systemRed) }
     private var decTint: Color { Color(nsColor: .systemBlue) }
-
-    private func sectionHeader(_ title: String, systemImage: String, count: Int? = nil) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.tint)
-                .font(.callout)
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.primary)
-            if let count {
-                Text("(\(count))")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .textCase(nil)
-    }
 
     private func colorStatRow(_ label: String, value: String, tint: Color) -> some View {
         LabeledContent {

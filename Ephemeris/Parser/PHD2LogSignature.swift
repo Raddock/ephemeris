@@ -54,7 +54,10 @@ enum PHD2LogSignature {
         // 4. Banner is the strongest signal.
         if text.hasPrefix("PHD2 version ") { return .confirmed }
 
-        // Some logs may have leading whitespace or BOM. Check the first non-blank line.
+        // Tolerate leading whitespace on the first line. (PHD2 itself never
+        // writes a BOM, so we don't try to strip U+FEFF; a hypothetical
+        // BOM-prefixed file would still classify as `.likely` via the
+        // section-marker fallback below.)
         let firstLine = text.split(whereSeparator: { $0.isNewline }).first.map(String.init) ?? ""
         if firstLine.trimmingCharacters(in: .whitespaces).hasPrefix("PHD2 version ") {
             return .confirmed

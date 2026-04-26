@@ -21,9 +21,10 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Errors a `GuideLogDocument` can throw during open. Surfaced to the user via
-/// `GuideLogErrorView` (see ContentView) when SwiftUI fails to instantiate the
-/// document. Each case carries enough context to render a friendly alert.
+/// Errors a `GuideLogDocument` can throw during open. SwiftUI's `DocumentGroup`
+/// renders these via its standard error alert by reading the `LocalizedError`
+/// `errorDescription` (alert title) and `recoverySuggestion` (alert body)
+/// properties — no custom presentation layer needed.
 enum GuideLogLoadError: LocalizedError {
     /// File is not a recognizable PHD2 guide log (text, but wrong content).
     case notPHD2Log
