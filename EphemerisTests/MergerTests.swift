@@ -110,6 +110,92 @@ struct MergerTests {
         #expect(merged.entries.filter { !$0.included }.isEmpty)
     }
 
+    // MARK: - Sentinel vs dropped-frame discriminator
+
+    /// Regression test for the M1/M3 fix: code that walks `session.entries`
+    /// must filter by `!raRawDistance.isNaN` rather than `\.included` so it
+    /// distinguishes a parser-flagged dropped frame (real, finite, but
+    /// `included = false`) from a merger-inserted boundary sentinel
+    /// (synthetic, NaN-valued).
+    @Test func sentinelAndDroppedFrameAreDistinguishable() {
+        var s = GuideSession()
+        s.startedAt = Date(timeIntervalSince1970: 1_700_000_000)
+        s.entries = [
+            makeEntry(frame: 1, time: 0),
+            makeDroppedEntry(frame: 2, time: 5),  // real PHD2 drop, finite values
+            makeEntry(frame: 3, time: 10),
+        ]
+        // Real dropped frames must have finite raRawDistance even though
+        // included = false, so the NaN discriminator KEEPS them.
+        let droppedFrame = s.entries[1]
+        #expect(droppedFrame.included == false)
+        #expect(droppedFrame.raRawDistance.isFinite)
+
+        // Now merge with a second session — boundary sentinel is inserted.
+        var s2 = GuideSession()
+        s2.startedAt = s.startedAt!.addingTimeInterval(600)
+        s2.entries = [makeEntry(frame: 1, time: 0)]
+        let merged = GuideSessionMerger.merge([s, s2])
+
+        // Filter by `\.included`: drops both the dropped frame AND the sentinel — too coarse.
+        let includedFiltered = merged.entries.filter(\.included)
+        #expect(includedFiltered.count == 3)  // only frames 1, 3, and session 2's frame
+
+        // Filter by `!raRawDistance.isNaN`: keeps the dropped frame, drops only the sentinel.
+        let nanFiltered = merged.entries.filter { !$0.raRawDistance.isNaN }
+        #expect(nanFiltered.count == 4)  // frames 1, 2 (dropped), 3, and session 2's frame
+        #expect(nanFiltered.contains(where: { !$0.included && $0.raRawDistance.isFinite }))
+    }
+
+    @Test func mergedSessionFrameCountExcludesSentinels() {
+        let t0 = Date(timeIntervalSince1970: 1_700_000_000)
+        let a = makeSession(start: t0, times: [0, 5, 10])
+        let b = makeSession(start: t0.addingTimeInterval(600), times: [0, 5, 10])
+        let merged = GuideSessionMerger.merge([a, b])
+        // frameCount must report only real frames so the inspector doesn't
+        // claim "200 / 201 frames · 1 excluded" when nothing was actually dropped.
+        #expect(merged.frameCount == 6)
+        #expect(merged.entries.count == 7)  // includes the sentinel
+    }
+
+    @Test func mergedSessionStatsExcludeSentinelsFromCounts() {
+        let t0 = Date(timeIntervalSince1970: 1_700_000_000)
+        let a = makeSession(start: t0, times: [0, 5, 10])
+        let b = makeSession(start: t0.addingTimeInterval(600), times: [0, 5, 10])
+        let merged = GuideSessionMerger.merge([a, b])
+        let stats = SessionStatsCalculator.calculate(merged)
+        #expect(stats.includedFrames == 6)
+        #expect(stats.excludedFrames == 0)  // sentinel must NOT count as excluded
+    }
+
+    @Test func mergedSessionCSVContainsNoNaNTokens() {
+        let t0 = Date(timeIntervalSince1970: 1_700_000_000)
+        let a = makeSession(start: t0, times: [0, 5])
+        let b = makeSession(start: t0.addingTimeInterval(600), times: [0, 5])
+        let merged = GuideSessionMerger.merge([a, b])
+        let csv = CSVExporter.frameDataCSV(merged)
+        #expect(!csv.lowercased().contains("nan"),
+                "Frame data CSV must not contain NaN tokens — sentinels should be filtered")
+        // Header line + 4 data rows = 5 lines plus a trailing newline.
+        let lines = csv.split(separator: "\n")
+        #expect(lines.count == 5)
+    }
+
+    /// A dropped-frame entry as the parser would produce: real positional
+    /// data but `included = false` because PHD2 reported `errorCode > 1`.
+    private func makeDroppedEntry(frame: Int, time: Double) -> GuideEntry {
+        GuideEntry(
+            frame: frame, time: time, deviceKind: .mount,
+            dx: 0.5, dy: 0.5,
+            raRawDistance: 0.5, decRawDistance: 0.5,
+            raGuideDistance: 0, decGuideDistance: 0,
+            raDuration: 0, decDuration: 0,
+            xStep: nil, yStep: nil,
+            starMass: 100, snr: 5.0, errorCode: 2,
+            included: false, guiding: true, info: "Star lost"
+        )
+    }
+
     // MARK: - Helpers
 
     private func makeSession(start: Date, times: [Double]) -> GuideSession {

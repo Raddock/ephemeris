@@ -264,12 +264,13 @@ struct GuideGraphView: View {
 
     private var activeEntry: GuideEntry? {
         guard let t = activeTime, !session.entries.isEmpty else { return nil }
-        // Skip non-included entries — these include parser-flagged drops AND the
-        // NaN boundary sentinels inserted by `GuideSessionMerger` between merged
-        // sessions. Hovering the gap between two merged sessions otherwise
-        // returns a NaN-valued readout.
+        // Skip only the NaN-valued boundary sentinels inserted by
+        // `GuideSessionMerger`. Filtering on `\.included` would also drop
+        // parser-flagged frames (errorCode > 1, e.g. star lost), which the
+        // hover card explicitly wants to surface via the orange "Excluded"
+        // badge.
         return session.entries.lazy
-            .filter(\.included)
+            .filter { !$0.raRawDistance.isNaN }
             .min { abs($0.time - t) < abs($1.time - t) }
     }
 
@@ -412,12 +413,15 @@ struct GuideGraphView: View {
     }
 
     private func entryTime(forFrame frame: Int) -> Double? {
-        guard !session.entries.isEmpty else { return nil }
-        if frame <= 0 { return session.entries.first?.time }
-        if let entry = session.entries.first(where: { $0.frame >= frame }) {
+        // Sentinel-safe lookup: skip NaN entries so settling bands and
+        // event rules anchor to real frames, never to the inter-session gap.
+        let realEntries = session.entries.filter { !$0.raRawDistance.isNaN }
+        guard !realEntries.isEmpty else { return nil }
+        if frame <= 0 { return realEntries.first?.time }
+        if let entry = realEntries.first(where: { $0.frame >= frame }) {
             return entry.time
         }
-        return session.entries.last?.time
+        return realEntries.last?.time
     }
 
     // MARK: - Formatters

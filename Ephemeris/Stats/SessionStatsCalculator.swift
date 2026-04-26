@@ -28,14 +28,19 @@ enum SessionStatsCalculator {
         _ session: GuideSession,
         manualExclusionRanges: [ClosedRange<Double>] = []
     ) -> SessionStats {
-        let included = session.entries.filter { entry in
+        // Filter out boundary sentinels (NaN-valued non-included entries
+        // inserted by `GuideSessionMerger`) before counting anything — they
+        // are not real PHD2 frames and must not contribute to either the
+        // included or excluded totals.
+        let realEntries = session.entries.filter { !$0.raRawDistance.isNaN }
+        let included = realEntries.filter { entry in
             guard entry.included else { return false }
             for r in manualExclusionRanges where r.contains(entry.time) { return false }
             return true
         }
         guard !included.isEmpty else {
             var s = SessionStats.empty
-            s.excludedFrames = session.entries.count
+            s.excludedFrames = realEntries.count
             return s
         }
 
@@ -66,7 +71,7 @@ enum SessionStatsCalculator {
 
         return SessionStats(
             includedFrames: included.count,
-            excludedFrames: session.entries.count - included.count,
+            excludedFrames: realEntries.count - included.count,
             rmsRA: rmsRA, rmsDec: rmsDec, rmsTotal: rmsTotal,
             peakRA: peakRA, peakDec: peakDec,
             driftRA: driftRApxPerMin, driftDec: driftDecPxPerMin,

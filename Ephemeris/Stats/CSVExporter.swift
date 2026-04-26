@@ -82,9 +82,13 @@ enum CSVExporter {
             "Info"
         ].joined(separator: ",")
 
+        // Skip boundary sentinels from `GuideSessionMerger`. Their NaN-valued
+        // numeric fields would otherwise serialise as the literal string "nan",
+        // which breaks spreadsheet-portable numeric column parsing.
+        let realEntries = session.entries.filter { !$0.raRawDistance.isNaN }
         var rows: [String] = []
-        rows.reserveCapacity(session.entries.count)
-        for e in session.entries {
+        rows.reserveCapacity(realEntries.count)
+        for e in realEntries {
             let row = [
                 "\(e.frame)",
                 String(format: "%.3f", e.time),

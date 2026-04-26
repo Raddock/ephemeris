@@ -32,7 +32,12 @@ struct GuideSession: Sendable, Identifiable {
     var infos: [InfoEntry] = []
 
     var duration: Double { entries.last?.time ?? 0 }
-    var frameCount: Int { entries.count }
+    /// Count of real frames only — boundary sentinels inserted by
+    /// `GuideSessionMerger` (NaN-valued, non-included) are excluded so the
+    /// number matches what a user would say came from PHD2.
+    var frameCount: Int {
+        entries.lazy.filter { !$0.raRawDistance.isNaN }.count
+    }
 }
 
 struct GuideEntry: Sendable, Identifiable {

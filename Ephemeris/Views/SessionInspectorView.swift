@@ -183,12 +183,15 @@ struct SessionInspectorView: View {
     }
 
     private func time(forInfoFrame frame: Int, in s: GuideSession) -> Double? {
-        guard !s.entries.isEmpty else { return nil }
-        if frame <= 0 { return s.entries.first?.time }
-        if let entry = s.entries.first(where: { $0.frame >= frame }) {
+        // Sentinel-safe lookup: skip NaN entries so click-to-jump on an event
+        // resolves to a real frame, never to the inter-session gap.
+        let realEntries = s.entries.filter { !$0.raRawDistance.isNaN }
+        guard !realEntries.isEmpty else { return nil }
+        if frame <= 0 { return realEntries.first?.time }
+        if let entry = realEntries.first(where: { $0.frame >= frame }) {
             return entry.time
         }
-        return s.entries.last?.time
+        return realEntries.last?.time
     }
 
     @ViewBuilder

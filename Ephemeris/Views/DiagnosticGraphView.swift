@@ -46,9 +46,16 @@ struct DiagnosticGraphView: View {
     let activeTime: Double?
     let visibleDomain: ClosedRange<Double>
 
+    /// Skip boundary sentinels from `GuideSessionMerger`. Their `starMass`
+    /// and `snr` are zero (not NaN), so without filtering the line drops to
+    /// zero and back at every session boundary, producing a sharp V-dip.
+    private var realEntries: [GuideEntry] {
+        session.entries.filter { !$0.raRawDistance.isNaN }
+    }
+
     var body: some View {
         Chart {
-            ForEach(session.entries) { entry in
+            ForEach(realEntries) { entry in
                 LineMark(
                     x: .value("Time", entry.time),
                     y: .value(kind.label, value(for: entry))
@@ -100,8 +107,8 @@ struct DiagnosticGraphView: View {
     }
 
     private var activeEntry: GuideEntry? {
-        guard let t = activeTime, !session.entries.isEmpty else { return nil }
-        return session.entries.min { abs($0.time - t) < abs($1.time - t) }
+        guard let t = activeTime, !realEntries.isEmpty else { return nil }
+        return realEntries.min { abs($0.time - t) < abs($1.time - t) }
     }
 
     private func value(for entry: GuideEntry) -> Double {

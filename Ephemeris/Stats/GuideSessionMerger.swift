@@ -102,9 +102,34 @@ enum GuideSessionMerger {
         return merged
     }
 
-    /// A non-included entry placed between two source sessions. The NaN values
-    /// cause Swift Charts to break the line at this point; `included = false`
-    /// keeps it out of stats, scatter, hover lookup, and CSV exports.
+    /// A non-included sentinel placed between two source sessions. The NaN
+    /// raw-distance / dx / dy values cause Swift Charts to break the main
+    /// RA / Dec lines at this point.
+    ///
+    /// Sentinels must be filtered out of every read site that walks
+    /// `GuideSession.entries` directly. Filtering on `\.included` is too
+    /// coarse — it would also drop parser-flagged frames (errorCode > 1, e.g.
+    /// star lost), which the UI explicitly wants to surface. The correct
+    /// discriminator is `!entry.raRawDistance.isNaN` (only sentinels carry
+    /// NaN; real frames always have finite values).
+    ///
+    /// Current sentinel-aware read sites (all use the NaN discriminator):
+    /// 1. `GuideSession.frameCount`
+    /// 2. `SessionStatsCalculator.calculate` (the `realEntries` filter)
+    /// 3. `GuideGraphView.activeEntry` (chart hover / pin)
+    /// 4. `GuideGraphView.entryTime(forFrame:)` (settling bands, event rules)
+    /// 5. `SessionInspectorView.time(forInfoFrame:in:)` (click-to-jump)
+    /// 6. `DiagnosticGraphView.realEntries` (line marks + active-entry hover)
+    /// 7. `CSVExporter.frameDataCSV` (frame data export)
+    ///
+    /// `ScatterInsetView` is implicitly safe — it filters by `entry.included`
+    /// before plotting and a sentinel's `included` is false; if scatter ever
+    /// stops filtering by included, switch it to the NaN discriminator.
+    /// Non-`frameDataCSV` exporters (`sessionStatsCSV`, `aggregateCSV`) read
+    /// through `SessionStatsCalculator`, so they inherit the filter for free.
+    ///
+    /// When adding new code that walks `session.entries`, decide whether
+    /// sentinels should be visible there and add the filter if not.
     private static func makeBoundaryEntry(at time: Double, frame: Int) -> GuideEntry {
         GuideEntry(
             frame: frame,
