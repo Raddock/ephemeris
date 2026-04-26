@@ -175,16 +175,21 @@ The parser implements a 5-state machine recognising PHD2's section delimiters (`
 
 ## 8. Known limitations and rough edges
 
-- **Combined-session lines connect across gaps.** Multi-session merge produces a single `GuideSession` with one `entries` array, so `LineMark` draws a straight line across the gap between sessions. Functionally correct (the gap is real wall-clock dead time) but visually misleading. A multi-series refactor or session-boundary `RuleMark` would fix this.
+### Fixed in pre-launch hardening pass (Phases 1–5)
+
+- ~~**Combined-session lines connect across gaps.**~~ `GuideSessionMerger` now inserts a NaN-valued boundary sentinel between merged sessions; Swift Charts breaks `LineMark`s on NaN, producing a clean visual gap. Sentinels are filtered out of all seven downstream read sites (frame counts, stats, hover lookup, event/settling-band lookup, diagnostic sub-charts, CSV export, scatter overlay) via the `!raRawDistance.isNaN` discriminator. The discriminator distinguishes synthetic sentinels from parser-flagged dropped frames (which are real, finite, and still surface in the UI with the orange "Excluded" badge).
+- ~~**Frame-jump from an event in the inspector doesn't scroll the chart.**~~ `GuideSessionDetail` observes `selectedTime` and animates `visibleDomain = nil` (reset to full session) when the new pinned time falls outside the current zoom window.
+- ~~**About panel "Documentation" link points at GitHub README.**~~ Now calls `NSApplication.shared.showHelp(nil)` to open the in-app Help Book (matches ⌘?).
+- ~~**`assumeOrthogonalAxes` parsed but never displayed.**~~ The `Orthogonal axes: Assumed/Measured` row was already implemented; the bug was in the Configuration card's visibility predicate, which didn't include `assumeOrthogonalAxes` in its OR chain. Fixed.
+
+### Still present
+
 - **No cached analysis.** `SessionStats` is recomputed on every render. For typical logs this is fast, but a 30,000-frame combined-session view will recompute on every hover. Has not become a problem, but no caching layer exists.
-- **No test for the multi-session UI flow.** `MergerTests` covers the merger function; nothing covers the virtual-log routing in `ContentView.makeVirtualLog`.
-- **`assumeOrthogonalAxes` parsed but never displayed** in the calibration inspector card.
+- **No test for the multi-session UI flow.** `MergerTests` covers the merger function (now including the sentinel/dropped-frame discriminator); nothing covers the virtual-log routing in `ContentView.makeVirtualLog`.
 - **`hourAngleHours` and `pierSide`** parsed and stored on `CalibrationDetails`; surfaced in the calibration inspector but not used for any analysis.
 - **No multi-document comparison.** Each window is one log. Comparing nights requires opening two windows side by side; there's no built-in cross-night view.
 - **No keyboard shortcuts for series toggles.** RA / Dec / Corrections / Star mass / SNR / etc. are menu-only.
-- **Frame-jump from an event in the inspector** doesn't scroll the chart if the frame is outside the current zoom window. The selection rule is set but invisible.
 - **Settling-band detection** is heuristic — looks for adjacent "Settling started" + "Settling complete/failed" pairs. Settling events at session boundaries can be miscounted.
-- **About panel "Documentation" link** points at the GitHub README. There is no project website or hosted docs.
 - **Frequency analysis Y-axis** is unitless / unlabelled. Magnitudes are arbitrary; only relative comparisons are meaningful.
 - **Polar-align estimate is a single-session approximation.** Suppressed near the pole, but no warning when the session is short / drift fit is poor.
 - **No export of the FFT / periodogram data.** Frequency analysis is read-only.
@@ -192,6 +197,14 @@ The parser implements a 5-state machine recognising PHD2's section delimiters (`
 - **Build phase that copies `AppIcon.icon` into the bundle** runs after Xcode's CodeSign step, so the icon directory is not in `CodeResources`. macOS accepts this for non-executable resources, but App Store distribution may require a re-sign workaround.
 - **`CFBundleIconFile` and `CFBundleIconName`** both set to `AppIcon` by `actool`; runtime preference is intentional but not documented in-app.
 - **No high-DPI testing of help book CSS.** Verified visually in Safari but not in Help Viewer at scaled-up text-size accessibility settings.
+
+### Deferred from the hardening pass
+
+- **100 MB confirmation prompt.** Spec asked for a "Loading may take a while — continue?" alert at 100 MB; only the 500 MB hard refusal shipped. Interactive confirmation in `FileDocument.init(configuration:)` would require lifting document loading out of `DocumentGroup` into a custom `Window` scene with explicit alert presentation. Deferred until real-world demand surfaces — files in the 100–500 MB range are rare for PHD2 guide logs.
+
+### New since the hardening pass
+
+- **File loading hardened against non-PHD2 input.** `PHD2LogSignature` runs a head-of-file classification (returns `.confirmed` / `.likely` / `.notPHD2` / `.binary`) before the document parses. `GuideLogDocument` throws a typed `GuideLogLoadError` whose `LocalizedError` conformance feeds SwiftUI's standard `DocumentGroup` alert with a friendly title and recovery suggestion. Empty files open as a graceful empty document. Files > 500 MB are refused outright. 10 new tests in `SignatureTests.swift` cover real PHD2 logs, arbitrary text, source code, binary blobs, empty input, banner-stripped fragments, calibration-only files, CRLF logs, and the parser's empty-input contract.
 
 ## 9. Not-yet-implemented features the human has discussed
 
