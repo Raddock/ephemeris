@@ -29,7 +29,11 @@ Ephemeris is a Universal macOS app for astrophotographers who use [PHD2](https:/
 
 ## Installation
 
-<!-- TODO: download link once first release is tagged -->
+Download the latest release from the [GitHub Releases page](https://github.com/Raddock/ephemeris/releases/latest), unzip, and drag `Ephemeris.app` into your `Applications` folder.
+
+The app is signed with Developer ID and notarized by Apple — no Gatekeeper warnings on first launch.
+
+**Direct download (always-current):** [Ephemeris-1.0.zip](https://github.com/Raddock/ephemeris/releases/latest/download/Ephemeris-1.0.zip)
 
 ## Acknowledgments
 
