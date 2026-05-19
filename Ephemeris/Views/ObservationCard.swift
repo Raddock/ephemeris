@@ -8,22 +8,31 @@ struct ObservationCard: View {
     @State private var expanded: Bool = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             header
             if expanded {
-                Divider()
+                Divider().opacity(0.5)
                 content
             }
         }
-        .padding(12)
+        .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(nsColor: .controlBackgroundColor))
+            RoundedRectangle(cornerRadius: 10)
+                .fill(.regularMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(severityTint.opacity(0.3), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(severityTint.opacity(0.35), lineWidth: 1)
         )
+        .overlay(alignment: .leading) {
+            // Severity-color bar on the leading edge — consistent with metric cards
+            Rectangle()
+                .fill(severityTint)
+                .frame(width: 3)
+                .clipShape(
+                    UnevenRoundedRectangle(topLeadingRadius: 10, bottomLeadingRadius: 10)
+                )
+        }
         .contentShape(Rectangle())
         .onTapGesture {
             withAnimation(.easeInOut(duration: 0.2)) {
@@ -34,14 +43,12 @@ struct ObservationCard: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 10) {
-            Circle()
-                .fill(severityTint)
-                .frame(width: 9, height: 9)
-                .padding(.top, 5)
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
+                    severityBadge
                     Text(observation.title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.headline)
+                        .foregroundStyle(.primary)
                         .lineLimit(2)
                     Spacer(minLength: 0)
                     authorityBadge
@@ -50,11 +57,24 @@ struct ObservationCard: View {
                         .foregroundStyle(.secondary)
                 }
                 Text(observation.summary)
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                     .lineLimit(expanded ? nil : 3)
             }
         }
+    }
+
+    private var severityBadge: some View {
+        HStack(spacing: 3) {
+            Circle().fill(severityTint).frame(width: 6, height: 6)
+            Text(observation.severity.displayName.uppercased())
+                .font(.caption2.weight(.bold))
+                .tracking(0.5)
+                .foregroundStyle(severityTint)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(severityTint.opacity(0.15), in: Capsule())
     }
 
     @ViewBuilder

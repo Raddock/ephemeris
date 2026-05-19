@@ -127,6 +127,68 @@ struct GAFreshnessObserver: CrossNightGenerator {
     }
 }
 
+// MARK: - SubQualityDiscrepancyObserver
+
+/// Phase 10 + throughline #9: the imaging frame is ground truth, not the guide log.
+/// Fires when a night was rated `.trailed` or `.mixed` despite the guide RMS landing
+/// sub-pixel — that's the classic differential-flexure signature the guide log
+/// can't see on its own.
+struct SubQualityDiscrepancyObserver: CrossNightGenerator {
+    let identifier = "subQualityDiscrepancyObserver"
+    init() {}
+
+    func observe(context: CrossNightContext) -> [RecommenderObservation] {
+        var observations: [RecommenderObservation] = []
+        for night in context.nights {
+            guard let verdict = night.subQuality, verdict.isTrailedOrWorse else { continue }
+            // Compute the rig-relative or imaging-scale verdict for this night's RMS.
+            // The discrepancy that matters is "guide says good, image says bad".
+            let rms = night.medianRMSArcsec
+            let imagingScale = context.profile.imagingPixelScale
+            let guidedWell: Bool
+            if imagingScale > 0 {
+                guidedWell = rms < imagingScale * 0.8
+            } else {
+                let median = context.rigBaselineMedianRMS ?? rms
+                guidedWell = rms <= median
+            }
+            guard guidedWell else { continue }
+
+            observations.append(RecommenderObservation(
+                scope: .crossNight,
+                rigProfileId: context.profile.id,
+                nightRecordIds: [night.id],
+                category: .subQuality,
+                severity: verdict == .trailed ? .alert : .pattern,
+                title: "Trailed subs despite sub-pixel guide RMS",
+                summary: "On \(format(night.nightDate)), you rated the imaging frames \(verdict.displayName.lowercased()) but guide RMS was \(String(format: "%.2f″", rms)) — within or below this rig's typical baseline. The guide log can't see what the imaging frame sees; this gap is exactly what differential flexure looks like.",
+                evidence: [
+                    .init(label: "Date", value: format(night.nightDate)),
+                    .init(label: "User rating", value: verdict.displayName),
+                    .init(label: "Guide RMS", value: String(format: "%.2f″", rms)),
+                    .init(label: "Imaging scale", value: imagingScale > 0 ? String(format: "%.2f″", imagingScale) : "(not configured)"),
+                ],
+                candidateContributors: [
+                    "Differential flexure between the imaging camera and the guide camera (or OAG)",
+                    "OAG prism drift relative to the imaging sensor",
+                    "Camera-rotator slip or focuser sag between sessions",
+                    "Mirror flop on the imaging side (SCT cassegrains specifically)",
+                ],
+                suggestedResponse: "Check the optical-train flexure path — the OAG-to-imager interface or, on SCT/Edge rigs, mirror lock and primary-mirror flop. PHD2's guide log can't diagnose this; the differential flexure help topic in Ephemeris walks through the typical fix path.",
+                relatedHelpTopicIds: [HelpTopic.differentialFlexure.rawValue, HelpTopic.whatTheGuideLogCantTellYou.rawValue],
+                relatedPHD2Tools: [],
+                confidence: .high,
+                sourceAuthority: .ephemerisHeuristic
+            ))
+        }
+        return observations
+    }
+
+    private func format(_ date: Date) -> String {
+        date.formatted(date: .abbreviated, time: .omitted)
+    }
+}
+
 // MARK: - BaselineRegressionObserver
 
 /// When recent nights' RMS regresses materially from the rig's established baseline,

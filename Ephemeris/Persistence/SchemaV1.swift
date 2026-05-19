@@ -136,6 +136,12 @@ final class NightRecordEntity {
     var ingestedAt: Date = Date()
     var lastAnalyzedAt: Date = Date()
 
+    /// Phase 10: user-reported sub-quality verdict for this night's imaging frames.
+    /// Stored as the raw value of `SubQualityVerdict`; nil = not yet rated.
+    /// Per design §6.2 throughline #9: the imaging frame is ground truth, not the
+    /// guide log — this is the user's testimony that the engine can't otherwise observe.
+    var subQualityRaw: String? = nil
+
     @Relationship(deleteRule: .cascade, inverse: \ObservationEntity.nightRecord)
     var observations: [ObservationEntity]? = nil
 

@@ -191,8 +191,10 @@ struct LibraryDetailView: View {
 
     @Query private var nightRecords: [NightRecordEntity]
     @Query private var annotationEntities: [AnnotationEntity]
+    @Query private var gaResults: [GAResultEntity]
     @Environment(\.modelContext) private var modelContext
     @State private var annotatingRecord: NightRecordEntity?
+    @State private var forumExportInputs: ForumPostExporter.Inputs?
 
     init(profile: RigProfile, range: TimeRange) {
         self.profile = profile
@@ -211,6 +213,13 @@ struct LibraryDetailView: View {
                 ann.rigProfileId == rigID && ann.eventDate >= cutoff
             },
             sort: \AnnotationEntity.eventDate,
+            order: .reverse
+        )
+        _gaResults = Query(
+            filter: #Predicate<GAResultEntity> { result in
+                result.nightRecord?.rigProfile?.id == rigID
+            },
+            sort: \GAResultEntity.runAt,
             order: .reverse
         )
     }
@@ -244,6 +253,25 @@ struct LibraryDetailView: View {
         nightRecords.reversed().map { NightSummary(entity: $0) }
     }
 
+    private func prepareForumExport() {
+        let summaries = nightRecords.reversed().map { NightSummary(entity: $0) }
+        let annotations = annotationEntities.compactMap { Annotation(entity: $0) }
+        let context = CrossNightContext(
+            profile: profile,
+            nights: summaries,
+            annotations: annotations
+        )
+        let observations = CrossNightEngine.default.analyze(context: context)
+        forumExportInputs = ForumPostExporter.Inputs(
+            profile: profile,
+            summaries: summaries,
+            observations: observations,
+            annotations: annotations,
+            format: .markdown,
+            userQuestion: nil
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -256,6 +284,10 @@ struct LibraryDetailView: View {
                     )
                 } else {
                     metricsRow
+                    PHD2HygieneStrip(
+                        nightRecords: Array(nightRecords),
+                        gaResults: Array(gaResults)
+                    )
                     TrendChartView(
                         nights: chronologicalNights,
                         imagingPixelScale: profile.imagingPixelScale,
@@ -288,6 +320,15 @@ struct LibraryDetailView: View {
                     .font(.title.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
+                Button {
+                    prepareForumExport()
+                } label: {
+                    Label("Share for help…", systemImage: "square.and.arrow.up")
+                        .labelStyle(.iconOnly)
+                }
+                .buttonStyle(.borderless)
+                .disabled(nightRecords.isEmpty)
+                .help("Generate a Markdown summary of this rig — paste into a forum, Discord, or Claude chat to ask for help.")
                 if profile.isImagingScaleConfigured {
                     HStack(spacing: 4) {
                         Image(systemName: "camera.aperture")
@@ -439,6 +480,14 @@ struct LibraryDetailView: View {
                 persistAnnotation(saved, for: record)
             }
         }
+        .sheet(isPresented: Binding(
+            get: { forumExportInputs != nil },
+            set: { if !$0 { forumExportInputs = nil } }
+        )) {
+            if let inputs = forumExportInputs {
+                ForumExportSheet(inputs: inputs)
+            }
+        }
     }
 
     @ViewBuilder
@@ -476,7 +525,95 @@ struct LibraryDetailView: View {
                 .font(.callout.weight(.semibold).monospacedDigit())
                 .foregroundStyle(verdict.tint)
                 .frame(width: 60, alignment: .trailing)
+            subQualityChip(for: record)
         }
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) {
+            openOriginalLog(for: record)
+        }
+        .contextMenu {
+            Button {
+                openOriginalLog(for: record)
+            } label: {
+                Label("Open log…", systemImage: "doc.text")
+            }
+            .disabled(record.sourceFilePath.isEmpty)
+            Button {
+                annotatingRecord = record
+            } label: {
+                Label("Add annotation…", systemImage: "text.bubble")
+            }
+        }
+    }
+
+    /// Opens the source PHD2 log file in a new document window. Uses NSWorkspace so the
+    /// existing DocumentGroup flow takes over — auto-ingest dedups, recommender runs, etc.
+    /// Handles the file-moved case gracefully with a quick alert.
+    private func openOriginalLog(for record: NightRecordEntity) {
+        guard !record.sourceFilePath.isEmpty else { return }
+        let url = URL(fileURLWithPath: record.sourceFilePath)
+        let fm = FileManager.default
+        if fm.fileExists(atPath: url.path) {
+            NSWorkspace.shared.open(url)
+        } else {
+            let alert = NSAlert()
+            alert.messageText = "Original log not found"
+            alert.informativeText = "The file at \(url.path) is no longer there — it may have been moved or deleted. The analytical data Ephemeris ingested from it is still in the library."
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
+    }
+
+    @ViewBuilder
+    private func subQualityChip(for record: NightRecordEntity) -> some View {
+        let current = record.subQualityRaw.flatMap { SubQualityVerdict(rawValue: $0) }
+        Menu {
+            ForEach(SubQualityVerdict.allCases, id: \.self) { option in
+                Button {
+                    setSubQuality(option, for: record)
+                } label: {
+                    Label(option.displayName, systemImage: option.symbolName)
+                }
+            }
+            if current != nil {
+                Divider()
+                Button("Clear rating", role: .destructive) {
+                    setSubQuality(nil, for: record)
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: current?.symbolName ?? "circle.dashed")
+                    .font(.caption2)
+                if let c = current {
+                    Text(c.displayName)
+                        .font(.caption2)
+                }
+            }
+            .foregroundStyle(current?.tint ?? .secondary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+                (current?.tint ?? .secondary).opacity(0.12),
+                in: Capsule()
+            )
+            .overlay(
+                Capsule().stroke((current?.tint ?? .secondary).opacity(0.35), lineWidth: 0.5)
+            )
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(current == nil
+              ? "Rate this night's imaging frames"
+              : "Imaging frames: \(current!.displayName)")
+    }
+
+    private func setSubQuality(_ verdict: SubQualityVerdict?, for record: NightRecordEntity) {
+        record.subQualityRaw = verdict?.rawValue
+        record.lastAnalyzedAt = .now
+        try? modelContext.save()
     }
 
     @ViewBuilder

@@ -48,6 +48,9 @@ struct ContentView: View {
                 rigProfile: profile
             )
             print("[Library] Ingested night \(result.nightRecordId.uuidString.prefix(8)) — \(result.observationCount) observations \(result.didCreate ? "(new)" : "(updated)")")
+            if result.didCreate {
+                LibraryDiscoveryTipBootstrap.recordIngestedNight()
+            }
         } catch {
             print("[Library] Ingest failed: \(error)")
         }

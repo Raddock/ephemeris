@@ -44,6 +44,12 @@ struct EphemerisApp: App {
     // reads the active importer back out via @Environment.
     @State private var importCoordinator = ImportCoordinator()
 
+    init() {
+        // Initialize TipKit at launch so the library-discovery tip is ready when the
+        // third NightRecord lands.
+        LibraryDiscoveryTipBootstrap.configure()
+    }
+
     var body: some Scene {
         DocumentGroup(viewing: GuideLogDocument.self) { file in
             ContentView(document: file.document)
@@ -79,6 +85,7 @@ struct EphemerisApp: App {
             CommandGroup(after: .windowList) {
                 Button("Library") {
                     openWindow(id: "library")
+                    LibraryDiscoveryTipBootstrap.dismissTip()
                 }
                 .keyboardShortcut("L", modifiers: [.command, .shift])
             }

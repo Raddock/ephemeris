@@ -15,6 +15,9 @@ struct NightSummary: Sendable, Identifiable {
     let calibrationOrthogonalityDeg: Double?
     /// Did a Guiding Assistant run during this night? Used by GAFreshnessObserver.
     let guidingAssistantRan: Bool
+    /// Phase 10: user-reported imaging-frame quality. Surfaces the throughline #9
+    /// "imaging frame is ground truth" signal that the guide log alone can't see.
+    let subQuality: SubQualityVerdict?
 
     init(id: UUID = UUID(),
          nightDate: Date,
@@ -24,7 +27,8 @@ struct NightSummary: Sendable, Identifiable {
          bestSessionRMSArcsec: Double = 0,
          worstSessionRMSArcsec: Double = 0,
          calibrationOrthogonalityDeg: Double? = nil,
-         guidingAssistantRan: Bool = false) {
+         guidingAssistantRan: Bool = false,
+         subQuality: SubQualityVerdict? = nil) {
         self.id = id
         self.nightDate = nightDate
         self.sessionsCount = sessionsCount
@@ -34,6 +38,7 @@ struct NightSummary: Sendable, Identifiable {
         self.worstSessionRMSArcsec = worstSessionRMSArcsec
         self.calibrationOrthogonalityDeg = calibrationOrthogonalityDeg
         self.guidingAssistantRan = guidingAssistantRan
+        self.subQuality = subQuality
     }
 
     @MainActor
@@ -47,6 +52,7 @@ struct NightSummary: Sendable, Identifiable {
         self.worstSessionRMSArcsec = entity.worstSessionRMSArcsec
         self.calibrationOrthogonalityDeg = nil  // Phase 7+ will extract from calibrationData
         self.guidingAssistantRan = (entity.gaResults?.isEmpty == false)
+        self.subQuality = entity.subQualityRaw.flatMap { SubQualityVerdict(rawValue: $0) }
     }
 }
 
@@ -96,6 +102,7 @@ struct CrossNightEngine: Sendable {
     static let `default` = CrossNightEngine(generators: [
         CalibrationAngleShiftObserver(),
         GAFreshnessObserver(),
+        SubQualityDiscrepancyObserver(),
         BaselineRegressionObserver(),
     ])
 

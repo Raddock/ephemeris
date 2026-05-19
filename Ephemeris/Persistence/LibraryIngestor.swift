@@ -52,6 +52,30 @@ actor LibraryIngestor {
         record.lastAnalyzedAt = .now
 
         try removeExistingObservations(for: record)
+        try removeExistingGAResults(for: record)
+
+        // Parse Guiding Assistant runs from each session's INFO entries and persist
+        // them as GAResultEntity records attached to this NightRecord. Picked up by
+        // the cross-night GAFreshnessObserver and exposed via the MCP server.
+        for session in log.guideSessions {
+            for parsed in GAResultParser.parse(session: session) {
+                let entity = GAResultEntity()
+                entity.id = UUID()
+                entity.nightRecord = record
+                entity.runAt = parsed.runAt
+                entity.durationSec = parsed.durationSec
+                entity.recommendedRAMinMovePx = parsed.recommendedRAMinMovePx
+                entity.recommendedDecMinMovePx = parsed.recommendedDecMinMovePx
+                entity.recommendedExposureSec = parsed.recommendedExposureSec
+                entity.polarAlignErrorArcmin = parsed.polarAlignErrorArcmin
+                entity.decBacklashMs = parsed.decBacklashMs
+                entity.raPeakToPeakArcsec = parsed.raPeakToPeakArcsec
+                entity.raMaxRateOfChangeArcsecPerSec = parsed.raMaxRateOfChangeArcsecPerSec
+                entity.highFreqStarMotionArcsecRMS = parsed.highFreqStarMotionArcsecRMS
+                entity.rawText = parsed.rawText
+                modelContext.insert(entity)
+            }
+        }
         let observations = RecommenderEngine.default.analyze(log: log, profile: rigProfile)
         for obs in observations {
             let entity = ObservationEntity()
@@ -131,6 +155,17 @@ actor LibraryIngestor {
         let existing = try modelContext.fetch(fetch)
         for obs in existing {
             modelContext.delete(obs)
+        }
+    }
+
+    private func removeExistingGAResults(for record: NightRecordEntity) throws {
+        let recordId = record.id
+        let fetch = FetchDescriptor<GAResultEntity>(
+            predicate: #Predicate { $0.nightRecord?.id == recordId }
+        )
+        let existing = try modelContext.fetch(fetch)
+        for result in existing {
+            modelContext.delete(result)
         }
     }
 
