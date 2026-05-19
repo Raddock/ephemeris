@@ -45,13 +45,16 @@ struct TrendChartView: View {
 
     private var chartContent: some View {
         Chart {
-            // Area gradient under the curve — soft visual weight without competing with points
+            // Area gradient under the curve — soft visual weight without competing with points.
+            // Monotone interpolation (not catmullRom) so the curve can't overshoot above the
+            // data at chart boundaries — Catmull-Rom needs phantom control points at the edges
+            // and was generating a vertical wedge artifact at the leftmost point.
             ForEach(nights) { night in
                 AreaMark(
                     x: .value("Night", night.nightDate),
                     y: .value("RMS", night.medianRMSArcsec)
                 )
-                .interpolationMethod(.catmullRom)
+                .interpolationMethod(.monotone)
                 .foregroundStyle(
                     LinearGradient(
                         colors: [.accentColor.opacity(0.25), .accentColor.opacity(0.02)],
@@ -76,13 +79,14 @@ struct TrendChartView: View {
                     }
             }
 
-            // RMS line — accent color for visual continuity
+            // RMS line — accent color for visual continuity. Monotone matches the AreaMark
+            // so they don't separate at the boundaries.
             ForEach(nights) { night in
                 LineMark(
                     x: .value("Night", night.nightDate),
                     y: .value("RMS", night.medianRMSArcsec)
                 )
-                .interpolationMethod(.catmullRom)
+                .interpolationMethod(.monotone)
                 .foregroundStyle(Color.accentColor)
                 .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
             }
