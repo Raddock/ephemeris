@@ -11,10 +11,10 @@ import AppKit
 struct LibraryWindow: View {
     @Environment(RigProfileStore.self) private var rigStore
     @Environment(\.ephemerisLibrary) private var library
+    @Environment(\.importCoordinator) private var importCoordinator
+    @Environment(\.openWindow) private var openWindow
     @State private var selectedRigID: RigProfile.ID?
     @State private var range: TimeRange = .month
-    @State private var importer: LibraryBulkImporter?
-    @State private var showingImportSheet = false
     @State private var rigToDelete: RigProfile?
 
     var body: some View {
@@ -37,11 +37,6 @@ struct LibraryWindow: View {
         .onAppear {
             if selectedRigID == nil {
                 selectedRigID = rigStore.profiles.first?.id
-            }
-        }
-        .sheet(isPresented: $showingImportSheet) {
-            if let imp = importer {
-                LibraryImportSheet(importer: imp)
             }
         }
         .toolbar {
@@ -80,7 +75,7 @@ struct LibraryWindow: View {
     }
 
     private func chooseFolderAndImport() {
-        guard let library else { return }
+        guard let library, let importCoordinator else { return }
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
@@ -90,8 +85,8 @@ struct LibraryWindow: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         let imp = LibraryBulkImporter(library: library, rigStore: rigStore)
-        self.importer = imp
-        self.showingImportSheet = true
+        importCoordinator.active = imp
+        openWindow(id: "library-import")
         imp.importFolder(url)
     }
 

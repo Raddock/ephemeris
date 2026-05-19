@@ -39,11 +39,17 @@ struct EphemerisApp: App {
     // when the library is available. URL is surfaced in the MCP Server preferences pane.
     @State private var mcpServer: MCPEmbeddedServer? = nil
 
+    // Shared coordinator for the bulk-import progress window. The LibraryWindow
+    // sets `coordinator.active` and opens the import-progress window; that window
+    // reads the active importer back out via @Environment.
+    @State private var importCoordinator = ImportCoordinator()
+
     var body: some Scene {
         DocumentGroup(viewing: GuideLogDocument.self) { file in
             ContentView(document: file.document)
                 .environment(rigProfileStore)
                 .environment(\.ephemerisLibrary, library)
+                .environment(\.importCoordinator, importCoordinator)
                 .environment(mcpServer)
                 .task {
                     if mcpServer == nil, let library {
@@ -114,9 +120,21 @@ struct EphemerisApp: App {
             LibraryWindow()
                 .environment(rigProfileStore)
                 .environment(\.ephemerisLibrary, library)
+                .environment(\.importCoordinator, importCoordinator)
         }
         .windowResizability(.contentSize)
         .defaultSize(width: 980, height: 720)
+        .defaultPosition(.center)
+
+        // Bulk-import progress window. Standalone Window scene (not a sheet) — macOS
+        // sheets were collapsing to ~120×120 in this OS version regardless of .frame
+        // hints. A real Window scene gets proper sizing rules.
+        Window("Importing PHD2 logs", id: "library-import") {
+            LibraryImportWindow()
+                .environment(\.importCoordinator, importCoordinator)
+        }
+        .windowResizability(.contentSize)
+        .defaultSize(width: 600, height: 460)
         .defaultPosition(.center)
     }
 }
