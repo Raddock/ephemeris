@@ -139,22 +139,32 @@ struct BaselineRegressionObserver: CrossNightGenerator {
 
     func observe(context: CrossNightContext) -> [RecommenderObservation] {
         // Need at least 10 nights for a meaningful baseline (§6.5: "established rigs")
-        guard context.nights.count >= 10,
-              let baseline = context.rigBaselineMedianRMS,
-              let p90 = context.rigP90RMS
-        else { return [] }
+        guard context.nights.count >= 10 else { return [] }
 
-        // Compute the median RMS of the most recent 3 nights (windowed signal,
-        // not a single night which would be too noisy).
-        let recent = context.nights.suffix(3).map { $0.medianRMSArcsec }.filter { $0 > 0 }.sorted()
-        guard recent.count >= 2 else { return [] }
-        let recentMedian = recent[recent.count / 2]
+        // Recent window: last 3 nights. Historical: everything else.
+        // Compare recent median against HISTORICAL p90 — using the full-corpus p90 would
+        // tautologically include the recent values and tie the comparison.
+        let recentWindow = context.nights.suffix(3)
+        let historical = context.nights.dropLast(3)
+        guard recentWindow.count >= 2, historical.count >= 7 else { return [] }
 
-        // Two-tier fire: pattern when recent exceeds p90; alert when recent > 2× baseline
-        let alertFloor = max(p90, baseline * 2)
-        guard recentMedian >= p90 else { return [] }
+        let recentSorted = recentWindow.map { $0.medianRMSArcsec }.filter { $0 > 0 }.sorted()
+        guard recentSorted.count >= 2 else { return [] }
+        let recentMedian = recentSorted[recentSorted.count / 2]
+
+        let historicalSorted = historical.map { $0.medianRMSArcsec }.filter { $0 > 0 }.sorted()
+        guard !historicalSorted.isEmpty else { return [] }
+        let historicalMedian = historicalSorted[historicalSorted.count / 2]
+        let historicalP90 = historicalSorted[Int(Double(historicalSorted.count) * 0.90)]
+
+        // Two-tier fire: pattern when recent strictly exceeds historical p90; alert when
+        // recent ≥ 2× historical median.
+        let alertFloor = historicalMedian * 2
+        guard recentMedian > historicalP90 else { return [] }
 
         let severity: RecommenderObservation.Severity = recentMedian >= alertFloor ? .alert : .pattern
+        let baseline = historicalMedian
+        let p90 = historicalP90
 
         return [RecommenderObservation(
             scope: .crossNight,

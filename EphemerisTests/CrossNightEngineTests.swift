@@ -88,8 +88,9 @@ final class CrossNightEngineTests: XCTestCase {
     // MARK: - GAFreshnessObserver
 
     func test_gaFreshness_firesWhenGANeverRun() {
+        // GA-never-run only fires if the corpus spans >= 30 days. Span the nights wider.
         let ctx = CrossNightContext(profile: profile(),
-                                    nights: nights(orthos: [2.0, 2.0, 2.0]),
+                                    nights: nights(orthos: [2.0, 2.0, 2.0], hasGA: false, daysApart: 20),
                                     annotations: [])
         let obs = CrossNightEngine.default.analyze(context: ctx)
         XCTAssertNotNil(obs.first { $0.title.contains("never been run") })
@@ -164,7 +165,7 @@ final class CrossNightEngineTests: XCTestCase {
                          medianRMSArcsec: Double(i) * 0.1)
         }
         let ctx = CrossNightContext(profile: profile(), nights: n, annotations: [])
-        XCTAssertEqual(ctx.rigBaselineMedianRMS, 0.6, accuracy: 0.01)
-        XCTAssertEqual(ctx.rigP90RMS, 1.0, accuracy: 0.1)
+        XCTAssertEqual(ctx.rigBaselineMedianRMS ?? 0, 0.6, accuracy: 0.01)
+        XCTAssertEqual(ctx.rigP90RMS ?? 0, 1.0, accuracy: 0.1)
     }
 }
