@@ -72,8 +72,38 @@ struct ObservationCard: View {
             if !observation.relatedPHD2Tools.isEmpty {
                 phd2ToolsSection
             }
+            if !observation.relatedHelpTopicIds.isEmpty {
+                helpTopicsSection
+            }
         }
         .padding(.leading, 19)  // align with header text after dot
+    }
+
+    @ViewBuilder
+    private var helpTopicsSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            sectionLabel("Learn more")
+            HStack(spacing: 8) {
+                ForEach(observation.relatedHelpTopicIds, id: \.self) { topicId in
+                    Button {
+                        HelpOpener.openByID(topicId)
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "questionmark.circle")
+                                .font(.caption2)
+                            Text(displayTitle(for: topicId))
+                                .font(.caption)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.blue)
+                }
+            }
+        }
+    }
+
+    private func displayTitle(for topicId: String) -> String {
+        HelpTopic(rawValue: topicId)?.displayTitle ?? topicId
     }
 
     private var evidenceSection: some View {

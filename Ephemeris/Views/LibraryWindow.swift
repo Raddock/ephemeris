@@ -112,6 +112,8 @@ struct LibraryDetailView: View {
     let range: TimeRange
 
     @Query private var nightRecords: [NightRecordEntity]
+    @Environment(\.modelContext) private var modelContext
+    @State private var annotatingRecord: NightRecordEntity?
 
     init(profile: RigProfile, range: TimeRange) {
         self.profile = profile
@@ -197,22 +199,76 @@ struct LibraryDetailView: View {
                 .tracking(0.5)
                 .foregroundStyle(.secondary)
             ForEach(nightRecords.prefix(20)) { record in
-                HStack {
-                    Text(record.nightDate.formatted(date: .abbreviated, time: .omitted))
-                        .frame(width: 110, alignment: .leading)
-                    Text("\(record.sessionsCount) sessions").foregroundStyle(.secondary)
-                    Spacer()
-                    Text(String(format: "%.0f min", record.totalIntegrationMinutes))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                    Text(String(format: "%.2f″", record.medianRMSArcsec))
-                        .monospacedDigit()
-                        .frame(width: 60, alignment: .trailing)
-                }
-                .font(.callout)
-                .padding(.vertical, 4)
+                nightRow(record)
                 Divider()
             }
         }
+        .sheet(item: $annotatingRecord) { record in
+            AnnotationSheet(
+                nightDate: record.nightDate,
+                rigProfileId: profile.id,
+                nightRecordId: record.id
+            ) { saved in
+                persistAnnotation(saved, for: record)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func nightRow(_ record: NightRecordEntity) -> some View {
+        HStack {
+            Text(record.nightDate.formatted(date: .abbreviated, time: .omitted))
+                .frame(width: 110, alignment: .leading)
+            Text("\(record.sessionsCount) sessions").foregroundStyle(.secondary)
+            annotationBadge(for: record)
+            Spacer()
+            Button {
+                annotatingRecord = record
+            } label: {
+                Image(systemName: "plus.circle")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Add an annotation for this night")
+            Text(String(format: "%.0f min", record.totalIntegrationMinutes))
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+            Text(String(format: "%.2f″", record.medianRMSArcsec))
+                .monospacedDigit()
+                .frame(width: 60, alignment: .trailing)
+        }
+        .font(.callout)
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func annotationBadge(for record: NightRecordEntity) -> some View {
+        if let annotations = record.annotations, !annotations.isEmpty {
+            HStack(spacing: 3) {
+                Image(systemName: "text.bubble").font(.caption2)
+                Text("\(annotations.count)").font(.caption2.monospacedDigit())
+            }
+            .foregroundStyle(.blue)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(Color.blue.opacity(0.12), in: Capsule())
+        }
+    }
+
+    private func persistAnnotation(_ annotation: Annotation, for record: NightRecordEntity) {
+        let entity = AnnotationEntity()
+        entity.id = annotation.id
+        entity.rigProfileId = annotation.rigProfileId
+        entity.nightRecord = record
+        entity.eventDate = annotation.eventDate
+        entity.categoriesData = (try? JSONEncoder().encode(annotation.categories.map { $0.rawValue })) ?? Data()
+        entity.label = annotation.label
+        entity.detail = annotation.detail
+        entity.isRigMutating = annotation.isRigMutating
+        entity.createdAt = annotation.createdAt
+        entity.modifiedAt = annotation.modifiedAt
+        modelContext.insert(entity)
+        try? modelContext.save()
     }
 }
+
