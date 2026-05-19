@@ -91,7 +91,8 @@ struct RigProfilesWindow: View {
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                     .disabled(selectedID == nil)
-                    .help("Delete the selected rig profile")
+                    .keyboardShortcut(.delete, modifiers: .command)
+                    .help("Delete the selected rig profile (⌘⌫)")
                     Spacer()
                     if hasUnsavedChanges {
                         Text("Unsaved changes")

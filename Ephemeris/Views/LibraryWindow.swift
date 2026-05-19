@@ -15,6 +15,7 @@ struct LibraryWindow: View {
     @State private var range: TimeRange = .month
     @State private var importer: LibraryBulkImporter?
     @State private var showingImportSheet = false
+    @State private var rigToDelete: RigProfile?
 
     var body: some View {
         NavigationSplitView {
@@ -54,6 +55,28 @@ struct LibraryWindow: View {
                 .help("Bulk-import every PHD2_GuideLog_*.txt from a folder. New rigs are created automatically from each log's PHD2 profile name.")
             }
         }
+        .confirmationDialog(
+            "Delete this rig profile?",
+            isPresented: Binding(
+                get: { rigToDelete != nil },
+                set: { if !$0 { rigToDelete = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: rigToDelete
+        ) { profile in
+            Button("Delete \"\(profile.effectiveName)\"", role: .destructive) {
+                try? rigStore.delete(profile)
+                if selectedRigID == profile.id {
+                    selectedRigID = rigStore.profiles.first?.id
+                }
+                rigToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                rigToDelete = nil
+            }
+        } message: { profile in
+            Text("PHD2 profile **\(profile.currentName)** — any night records and observations tied to this rig will also be removed. This can't be undone.")
+        }
     }
 
     private func chooseFolderAndImport() {
@@ -79,6 +102,11 @@ struct LibraryWindow: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(profile.effectiveName.isEmpty ? "(unnamed)" : profile.effectiveName)
                             .font(.headline)
+                        if profile.displayName?.isEmpty == false {
+                            Text(profile.currentName)
+                                .font(.caption2.monospaced())
+                                .foregroundStyle(.tertiary)
+                        }
                         if profile.isImagingScaleConfigured {
                             Text(String(format: "%.2f″/px imaging", profile.imagingPixelScale))
                                 .font(.caption)
@@ -89,6 +117,13 @@ struct LibraryWindow: View {
                             .foregroundStyle(.tertiary)
                     }
                     .tag(profile.id)
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            rigToDelete = profile
+                        } label: {
+                            Label("Delete \"\(profile.effectiveName)\"", systemImage: "trash")
+                        }
+                    }
                 }
             }
             Section("Range") {
@@ -103,6 +138,19 @@ struct LibraryWindow: View {
         }
         .listStyle(.sidebar)
         .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 360)
+        .background(
+            // Hidden Button captures ⌘⌫ to delete the selected rig.
+            Button("") { promptDeleteSelected() }
+                .keyboardShortcut(.delete, modifiers: .command)
+                .hidden()
+        )
+    }
+
+    private func promptDeleteSelected() {
+        guard let id = selectedRigID,
+              let profile = rigStore.profiles.first(where: { $0.id == id })
+        else { return }
+        rigToDelete = profile
     }
 
     private var rangeSubtitle: String {
