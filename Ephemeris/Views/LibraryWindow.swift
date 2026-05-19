@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import AppKit
 
 /// Multi-night library window per design doc §5.2 and §7.
 /// Phase 6 scaffold — full feature build (hero cards, trend chart, recent nights list)
@@ -12,6 +13,8 @@ struct LibraryWindow: View {
     @Environment(\.ephemerisLibrary) private var library
     @State private var selectedRigID: RigProfile.ID?
     @State private var range: TimeRange = .month
+    @State private var importer: LibraryBulkImporter?
+    @State private var showingImportSheet = false
 
     var body: some View {
         NavigationSplitView {
@@ -35,6 +38,40 @@ struct LibraryWindow: View {
                 selectedRigID = rigStore.profiles.first?.id
             }
         }
+        .sheet(isPresented: $showingImportSheet) {
+            if let imp = importer {
+                LibraryImportSheet(importer: imp)
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    chooseFolderAndImport()
+                } label: {
+                    Label("Import logs…", systemImage: "tray.and.arrow.down")
+                }
+                .disabled(library == nil)
+                .help(rigStore.profiles.isEmpty
+                      ? "Configure at least one rig profile first (⇧⌘,)"
+                      : "Bulk-import every PHD2_GuideLog_*.txt from a folder")
+            }
+        }
+    }
+
+    private func chooseFolderAndImport() {
+        guard let library else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.title = "Choose a folder of PHD2 logs"
+        panel.prompt = "Import"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        let imp = LibraryBulkImporter(library: library, rigStore: rigStore)
+        self.importer = imp
+        self.showingImportSheet = true
+        imp.importFolder(url)
     }
 
     private var sidebar: some View {

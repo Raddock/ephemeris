@@ -1,0 +1,162 @@
+import Foundation
+import Observation
+
+/// Bulk-import coordinator. Walks a folder, parses every `PHD2_GuideLog_*.txt`,
+/// matches against a `RigProfile` by PHD2 profile name, and pipes each log through
+/// the SwiftData `LibraryIngestor`. Per design doc §12 Q7 ("Scan a folder of logs").
+///
+/// Progress is exposed via `@Observable` so the progress sheet can render in real
+/// time. Cancellation is checked between files.
+@Observable
+@MainActor
+final class LibraryBulkImporter {
+
+    enum Status: Equatable, Sendable {
+        case idle
+        case running(currentFile: String, processed: Int, total: Int)
+        case completed(Summary)
+        case cancelled(Summary)
+    }
+
+    struct Summary: Equatable, Sendable {
+        var imported: Int = 0
+        var skippedExisting: Int = 0       // dedup hit on content hash
+        var skippedNoProfile: [String] = []  // PHD2 profile names with no matching rig
+        var skippedEmpty: [String] = []    // empty / 0-byte files (PHD2 placeholder logs)
+        var errors: [String] = []
+        var totalConsidered: Int = 0
+    }
+
+    var status: Status = .idle
+
+    private let library: EphemerisLibrary
+    private let rigStore: RigProfileStore
+    private var currentTask: Task<Void, Never>?
+
+    init(library: EphemerisLibrary, rigStore: RigProfileStore) {
+        self.library = library
+        self.rigStore = rigStore
+    }
+
+    /// Begin importing all PHD2 guide logs in the chosen folder. Recursive: walks
+    /// subdirectories. Idempotent: logs already in the store dedup on content hash.
+    func importFolder(_ folderURL: URL) {
+        guard currentTask == nil else { return }
+        currentTask = Task { @MainActor in
+            await runImport(folderURL: folderURL)
+            currentTask = nil
+        }
+    }
+
+    func cancel() {
+        currentTask?.cancel()
+    }
+
+    private func runImport(folderURL: URL) async {
+        var summary = Summary()
+        let urls = findGuideLogs(in: folderURL)
+        summary.totalConsidered = urls.count
+
+        guard !urls.isEmpty else {
+            status = .completed(summary)
+            return
+        }
+
+        let ingestor = LibraryIngestor(modelContainer: library.container)
+
+        for (index, url) in urls.enumerated() {
+            if Task.isCancelled {
+                status = .cancelled(summary)
+                return
+            }
+            status = .running(currentFile: url.lastPathComponent,
+                              processed: index,
+                              total: urls.count)
+
+            // Read bytes
+            guard let data = try? Data(contentsOf: url) else {
+                summary.errors.append("\(url.lastPathComponent): unreadable")
+                continue
+            }
+            guard !data.isEmpty else {
+                summary.skippedEmpty.append(url.lastPathComponent)
+                continue
+            }
+
+            // Parse
+            guard let text = String(data: data, encoding: .utf8) else {
+                summary.errors.append("\(url.lastPathComponent): not UTF-8")
+                continue
+            }
+            let log = GuideLogParser.parse(text)
+            if log.isEmpty {
+                summary.skippedEmpty.append(url.lastPathComponent)
+                continue
+            }
+
+            // Match rig profile by PHD2 profile name
+            guard let phd2Name = extractProfileName(from: log) else {
+                summary.skippedNoProfile.append(url.lastPathComponent)
+                continue
+            }
+            guard let profile = rigStore.profile(matchingPHD2Name: phd2Name) else {
+                summary.skippedNoProfile.append("\(url.lastPathComponent) (profile: \(phd2Name))")
+                continue
+            }
+
+            // Ingest
+            do {
+                let result = try await ingestor.ingest(
+                    log: log,
+                    sourceBytes: data,
+                    sourceFilePath: url.path,
+                    rigProfile: profile
+                )
+                if result.didCreate {
+                    summary.imported += 1
+                } else {
+                    summary.skippedExisting += 1
+                }
+            } catch {
+                summary.errors.append("\(url.lastPathComponent): \(error.localizedDescription)")
+            }
+        }
+
+        status = .completed(summary)
+    }
+
+    // MARK: - Helpers
+
+    private func findGuideLogs(in folderURL: URL) -> [URL] {
+        let fm = FileManager.default
+        guard let enumerator = fm.enumerator(
+            at: folderURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        ) else { return [] }
+        var urls: [URL] = []
+        for case let url as URL in enumerator {
+            let name = url.lastPathComponent
+            // PHD2 guide logs only — skip debug logs (PHD2_DebugLog_*.txt) which are
+            // out of scope per design doc §11
+            guard name.hasPrefix("PHD2_GuideLog_"),
+                  url.pathExtension == "txt"
+            else { continue }
+            urls.append(url)
+        }
+        return urls.sorted { $0.lastPathComponent < $1.lastPathComponent }
+    }
+
+    private func extractProfileName(from log: GuideLog) -> String? {
+        for session in log.guideSessions.reversed() {
+            for line in session.rawHeader {
+                if let range = line.range(of: "Equipment Profile = ") {
+                    let value = String(line[range.upperBound...])
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    return value.isEmpty ? nil : value
+                }
+            }
+        }
+        return nil
+    }
+}

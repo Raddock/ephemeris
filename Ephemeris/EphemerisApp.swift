@@ -76,6 +76,13 @@ struct EphemerisApp: App {
                 }
                 .keyboardShortcut("L", modifiers: [.command, .shift])
             }
+            CommandGroup(after: .newItem) {
+                Button("Import Folder of Logs…") {
+                    openWindow(id: "library")
+                }
+                .keyboardShortcut("i", modifiers: [.command, .shift])
+                .help("Opens the Library window. Use the Import button there to choose a folder of PHD2 logs.")
+            }
         }
 
         Window("About Ephemeris", id: "about") {
