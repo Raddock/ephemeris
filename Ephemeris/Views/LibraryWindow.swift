@@ -272,17 +272,42 @@ struct LibraryDetailView: View {
         }
     }
 
+    private var rigRMSDistribution: [Double] {
+        nightRecords.map { $0.medianRMSArcsec }
+    }
+
+    private func medianRMSValue() -> Double {
+        let vals = rigRMSDistribution.filter { $0 > 0 }.sorted()
+        return vals.isEmpty ? 0 : vals[vals.count / 2]
+    }
+
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(profile.effectiveName).font(.title2.weight(.semibold))
-            HStack(spacing: 12) {
-                Text(profile.mountClass.displayName)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(profile.effectiveName)
+                    .font(.title.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Spacer()
                 if profile.isImagingScaleConfigured {
-                    Text(String(format: "%.2f″/px", profile.imagingPixelScale))
-                        .monospacedDigit()
-                }
-                Text("\(nightRecords.count) nights · \(range.displayName.lowercased())")
+                    HStack(spacing: 4) {
+                        Image(systemName: "camera.aperture")
+                            .font(.caption)
+                        Text(String(format: "%.2f″/px imaging", profile.imagingPixelScale))
+                            .monospacedDigit()
+                    }
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(.quaternary, in: Capsule())
+                }
+            }
+            HStack(spacing: 12) {
+                Label(profile.mountClass.displayName, systemImage: "scope")
+                Text("•").foregroundStyle(.tertiary)
+                Text("\(nightRecords.count) nights")
+                Text("•").foregroundStyle(.tertiary)
+                Text(range.displayName.lowercased())
             }
             .font(.subheadline)
             .foregroundStyle(.secondary)
@@ -291,41 +316,119 @@ struct LibraryDetailView: View {
 
     @ViewBuilder
     private var metricsRow: some View {
-        let medians = nightRecords.map { $0.medianRMSArcsec }
         let totalMin = nightRecords.reduce(0.0) { $0 + $1.totalIntegrationMinutes }
-        let medianRMS = medians.isEmpty ? 0 : medians.sorted()[medians.count / 2]
+        let medianRMS = medianRMSValue()
+        let medianVerdict = NightVerdictCalculator.verdict(
+            rmsArcsec: medianRMS,
+            imagingPixelScale: profile.imagingPixelScale,
+            rigDistribution: rigRMSDistribution
+        )
+
         HStack(spacing: 12) {
-            metricCard(title: "Median RMS", value: String(format: "%.2f″", medianRMS))
-            metricCard(title: "Integration", value: String(format: "%.1f h", totalMin / 60))
-            metricCard(title: "Sessions",
-                       value: "\(nightRecords.reduce(0) { $0 + $1.sessionsCount })")
+            metricCard(
+                title: "Median RMS",
+                value: String(format: "%.2f″", medianRMS),
+                icon: "scope",
+                accent: medianVerdict.tint,
+                accentLabel: medianVerdict.shortLabel
+            )
+            metricCard(
+                title: "Integration",
+                value: String(format: "%.1f h", totalMin / 60),
+                icon: "clock",
+                accent: .blue
+            )
+            metricCard(
+                title: "Sessions",
+                value: "\(nightRecords.reduce(0) { $0 + $1.sessionsCount })",
+                icon: "rectangle.stack",
+                accent: .purple
+            )
         }
     }
 
-    private func metricCard(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title.uppercased())
-                .font(.caption2.weight(.semibold))
-                .tracking(0.5)
-                .foregroundStyle(.secondary)
+    private func metricCard(title: String,
+                            value: String,
+                            icon: String,
+                            accent: Color,
+                            accentLabel: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(accent)
+                Text(title.uppercased())
+                    .font(.caption.weight(.semibold))
+                    .tracking(0.6)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if let label = accentLabel {
+                    Text(label)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(accent)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(accent.opacity(0.15), in: Capsule())
+                        .overlay(Capsule().stroke(accent.opacity(0.35), lineWidth: 0.5))
+                }
+            }
             Text(value)
-                .font(.title2.monospacedDigit())
+                .font(.system(size: 28, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.primary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor)))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(.regularMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(accent.opacity(0.25), lineWidth: 1)
+        )
+        .overlay(alignment: .leading) {
+            // Subtle accent bar on the leading edge for visual interest
+            Rectangle()
+                .fill(accent)
+                .frame(width: 3)
+                .clipShape(
+                    UnevenRoundedRectangle(topLeadingRadius: 10, bottomLeadingRadius: 10)
+                )
+        }
     }
 
     private var recentNightsList: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Recent nights".uppercased())
-                .font(.caption.weight(.semibold))
-                .tracking(0.5)
-                .foregroundStyle(.secondary)
-            ForEach(nightRecords.prefix(20)) { record in
-                nightRow(record)
-                Divider()
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Recent nights")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                Text("·").foregroundStyle(.tertiary)
+                Text("most recent first")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(nightRecords.count) total")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
             }
+            VStack(spacing: 0) {
+                ForEach(Array(nightRecords.prefix(20).enumerated()), id: \.element.id) { idx, record in
+                    nightRow(record)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(idx.isMultiple(of: 2) ? Color.clear : Color.primary.opacity(0.03))
+                    if idx < min(19, nightRecords.count - 1) {
+                        Divider().opacity(0.4)
+                    }
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(.quaternary.opacity(0.3))
+            )
         }
         .sheet(item: $annotatingRecord) { record in
             AnnotationSheet(
@@ -340,10 +443,22 @@ struct LibraryDetailView: View {
 
     @ViewBuilder
     private func nightRow(_ record: NightRecordEntity) -> some View {
-        HStack {
+        let verdict = NightVerdictCalculator.verdict(
+            rmsArcsec: record.medianRMSArcsec,
+            imagingPixelScale: profile.imagingPixelScale,
+            rigDistribution: rigRMSDistribution
+        )
+        HStack(spacing: 10) {
+            Circle()
+                .fill(verdict.tint)
+                .frame(width: 9, height: 9)
+                .help(verdict.shortLabel)
             Text(record.nightDate.formatted(date: .abbreviated, time: .omitted))
+                .font(.callout.weight(.medium))
                 .frame(width: 110, alignment: .leading)
-            Text("\(record.sessionsCount) sessions").foregroundStyle(.secondary)
+            Text("\(record.sessionsCount) sessions")
+                .font(.callout)
+                .foregroundStyle(.secondary)
             annotationBadge(for: record)
             Spacer()
             Button {
@@ -356,13 +471,12 @@ struct LibraryDetailView: View {
             .help("Add an annotation for this night")
             Text(String(format: "%.0f min", record.totalIntegrationMinutes))
                 .foregroundStyle(.secondary)
-                .monospacedDigit()
+                .font(.callout.monospacedDigit())
             Text(String(format: "%.2f″", record.medianRMSArcsec))
-                .monospacedDigit()
+                .font(.callout.weight(.semibold).monospacedDigit())
+                .foregroundStyle(verdict.tint)
                 .frame(width: 60, alignment: .trailing)
         }
-        .font(.callout)
-        .padding(.vertical, 4)
     }
 
     @ViewBuilder

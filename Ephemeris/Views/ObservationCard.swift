@@ -211,22 +211,33 @@ struct ObservationsPanel: View {
     let title: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(title.uppercased())
-                    .font(.caption.weight(.semibold))
-                    .tracking(0.5)
-                    .foregroundStyle(.secondary)
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
                 Spacer()
-                Text("\(observations.count)")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.tertiary)
+                if !observations.isEmpty {
+                    Text("\(observations.count)")
+                        .font(.caption.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(severitySummaryTint, in: Capsule())
+                }
             }
             if observations.isEmpty {
-                Text("No observations on this log.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .padding(.vertical, 4)
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle")
+                        .foregroundStyle(.green)
+                    Text("Nothing to surface on this log.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.3)))
             } else {
                 VStack(spacing: 6) {
                     ForEach(observations) { obs in
@@ -234,6 +245,19 @@ struct ObservationsPanel: View {
                     }
                 }
             }
+        }
+    }
+
+    /// Highest severity present, used to color the count badge.
+    private var severitySummaryTint: Color {
+        let max = observations.map(\.severity).max() ?? .coaching
+        switch max {
+        case .alert:      return .red
+        case .pattern:    return .orange
+        case .equipment:  return .yellow
+        case .hygiene:    return .blue
+        case .suggestion: return .teal
+        case .coaching:   return .secondary
         }
     }
 }

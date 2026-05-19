@@ -17,6 +17,10 @@ struct TrendChartView: View {
     let imagingPixelScale: Double  // 0 = not configured
     let annotations: [AnnotationMarker]
 
+    private var rmsDistribution: [Double] {
+        nights.map { $0.medianRMSArcsec }
+    }
+
     struct AnnotationMarker: Sendable, Identifiable {
         let id: UUID
         let date: Date
@@ -41,40 +45,73 @@ struct TrendChartView: View {
 
     private var chartContent: some View {
         Chart {
-            // Imaging-scale reference line
+            // Area gradient under the curve — soft visual weight without competing with points
+            ForEach(nights) { night in
+                AreaMark(
+                    x: .value("Night", night.nightDate),
+                    y: .value("RMS", night.medianRMSArcsec)
+                )
+                .interpolationMethod(.catmullRom)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [.accentColor.opacity(0.25), .accentColor.opacity(0.02)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+            }
+
+            // Imaging-scale reference line (or rig-relative median if imaging not configured)
             if imagingPixelScale > 0 {
                 RuleMark(y: .value("Imaging scale", imagingPixelScale))
-                    .foregroundStyle(.secondary.opacity(0.4))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                    .foregroundStyle(Color.orange.opacity(0.7))
+                    .lineStyle(StrokeStyle(lineWidth: 1.2, dash: [5, 4]))
                     .annotation(position: .top, alignment: .leading) {
                         Text("Imaging scale \(String(format: "%.2f″", imagingPixelScale))")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(.regularMaterial, in: Capsule())
                     }
             }
 
-            // RMS line + verdict-colored points
+            // RMS line — accent color for visual continuity
             ForEach(nights) { night in
                 LineMark(
                     x: .value("Night", night.nightDate),
                     y: .value("RMS", night.medianRMSArcsec)
                 )
-                .interpolationMethod(.linear)
-                .foregroundStyle(.secondary.opacity(0.4))
-                .lineStyle(StrokeStyle(lineWidth: 1.5))
+                .interpolationMethod(.catmullRom)
+                .foregroundStyle(Color.accentColor)
+                .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+            }
 
+            // Verdict-colored point markers
+            ForEach(nights) { night in
+                let verdict = NightVerdictCalculator.verdict(
+                    rmsArcsec: night.medianRMSArcsec,
+                    imagingPixelScale: imagingPixelScale,
+                    rigDistribution: rmsDistribution
+                )
                 PointMark(
                     x: .value("Night", night.nightDate),
                     y: .value("RMS", night.medianRMSArcsec)
                 )
-                .foregroundStyle(verdictColor(rms: night.medianRMSArcsec))
-                .symbolSize(40)
+                .foregroundStyle(verdict.tint)
+                .symbolSize(56)
+                .symbol {
+                    Circle()
+                        .fill(verdict.tint)
+                        .frame(width: 8, height: 8)
+                        .overlay(Circle().stroke(.white.opacity(0.5), lineWidth: 0.5))
+                }
             }
 
             // Annotation markers
             ForEach(annotations.prefix(50)) { marker in
                 RuleMark(x: .value("Annotation", marker.date))
-                    .foregroundStyle(.blue.opacity(0.4))
+                    .foregroundStyle(.blue.opacity(0.5))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
             }
         }
@@ -98,14 +135,6 @@ struct TrendChartView: View {
         }
         .frame(height: 280)
         .padding(.vertical, 8)
-    }
-
-    private func verdictColor(rms: Double) -> Color {
-        guard imagingPixelScale > 0 else { return .secondary }
-        let ratio = rms / imagingPixelScale
-        if ratio < 0.7 { return .green }
-        if ratio <= 1.0 { return .orange }
-        return Color(red: 0.95, green: 0.45, blue: 0.45)
     }
 
     /// Adaptive X-axis stride so labels stay legible across Week → All ranges.
