@@ -35,11 +35,23 @@ struct EphemerisApp: App {
     // for now — Phase 3 will surface a recovery UI when the store can't be opened.
     @State private var library: EphemerisLibrary? = (try? EphemerisLibrary())
 
+    // v2.0 Phase 8: embedded MCP server listening on localhost. Auto-starts at launch
+    // when the library is available. URL is surfaced in the MCP Server preferences pane.
+    @State private var mcpServer: MCPEmbeddedServer? = nil
+
     var body: some Scene {
         DocumentGroup(viewing: GuideLogDocument.self) { file in
             ContentView(document: file.document)
                 .environment(rigProfileStore)
                 .environment(\.ephemerisLibrary, library)
+                .environment(mcpServer)
+                .task {
+                    if mcpServer == nil, let library {
+                        let server = MCPEmbeddedServer(library: library)
+                        server.start()
+                        mcpServer = server
+                    }
+                }
         }
         .commands {
             // Replace the system About panel with our custom window so we can
@@ -83,9 +95,10 @@ struct EphemerisApp: App {
 
         Window("MCP Server", id: "mcpServer") {
             MCPServerWindow()
+                .environment(mcpServer)
         }
         .windowResizability(.contentSize)
-        .defaultSize(width: 640, height: 720)
+        .defaultSize(width: 640, height: 620)
         .defaultPosition(.center)
 
         // v2.0 Phase 6 — multi-night library. Per design doc §5.2 / §7.1, use WindowGroup
