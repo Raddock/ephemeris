@@ -47,6 +47,29 @@ struct Annotation: Codable, Hashable, Identifiable, Sendable {
     }
 }
 
+extension Annotation {
+    /// Build a value-type Annotation from a SwiftData AnnotationEntity. Phase 7 wiring
+    /// uses this in `LibraryDetailView` to feed the cross-night engine which only knows
+    /// the pure-Swift type.
+    @MainActor
+    init?(entity: AnnotationEntity) {
+        let rawCategories = (try? JSONDecoder().decode([String].self, from: entity.categoriesData)) ?? []
+        let categories = Set(rawCategories.compactMap { AnnotationCategory(rawValue: $0) })
+        self.init(
+            id: entity.id,
+            rigProfileId: entity.rigProfileId,
+            nightRecordId: entity.nightRecord?.id,
+            eventDate: entity.eventDate,
+            categories: categories,
+            label: entity.label,
+            detail: entity.detail,
+            isRigMutating: entity.isRigMutating,
+            createdAt: entity.createdAt,
+            modifiedAt: entity.modifiedAt
+        )
+    }
+}
+
 extension AnnotationCategory {
     /// Display label shown on the multi-select chip strip.
     var displayName: String {

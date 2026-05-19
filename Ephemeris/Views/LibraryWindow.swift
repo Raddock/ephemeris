@@ -112,6 +112,7 @@ struct LibraryDetailView: View {
     let range: TimeRange
 
     @Query private var nightRecords: [NightRecordEntity]
+    @Query private var annotationEntities: [AnnotationEntity]
     @Environment(\.modelContext) private var modelContext
     @State private var annotatingRecord: NightRecordEntity?
 
@@ -127,6 +128,42 @@ struct LibraryDetailView: View {
             sort: \NightRecordEntity.nightDate,
             order: .reverse
         )
+        _annotationEntities = Query(
+            filter: #Predicate<AnnotationEntity> { ann in
+                ann.rigProfileId == rigID && ann.eventDate >= cutoff
+            },
+            sort: \AnnotationEntity.eventDate,
+            order: .reverse
+        )
+    }
+
+    /// Cross-night observations from the recommender. Computed once per render off the
+    /// SwiftData snapshots, which Phase 7 considers acceptable at typical corpus sizes.
+    private var crossNightObservations: [RecommenderObservation] {
+        let summaries: [NightSummary] = nightRecords
+            .reversed()  // chronological
+            .map { NightSummary(entity: $0) }
+        let annotations: [Annotation] = annotationEntities.compactMap { Annotation(entity: $0) }
+        let context = CrossNightContext(
+            profile: profile,
+            nights: summaries,
+            annotations: annotations
+        )
+        return CrossNightEngine.default.analyze(context: context)
+    }
+
+    private var trendMarkers: [TrendChartView.AnnotationMarker] {
+        annotationEntities.map { ann in
+            TrendChartView.AnnotationMarker(
+                id: ann.id,
+                date: ann.eventDate,
+                label: ann.label
+            )
+        }
+    }
+
+    private var chronologicalNights: [NightSummary] {
+        nightRecords.reversed().map { NightSummary(entity: $0) }
     }
 
     var body: some View {
@@ -141,6 +178,15 @@ struct LibraryDetailView: View {
                     )
                 } else {
                     metricsRow
+                    TrendChartView(
+                        nights: chronologicalNights,
+                        imagingPixelScale: profile.imagingPixelScale,
+                        annotations: trendMarkers
+                    )
+                    ObservationsPanel(
+                        observations: crossNightObservations,
+                        title: "Cross-night observations · \(profile.currentName)"
+                    )
                     recentNightsList
                 }
             }
