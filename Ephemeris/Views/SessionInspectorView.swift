@@ -27,6 +27,7 @@ struct SessionInspectorView: View {
     let manualExclusions: [ClosedRange<Double>]
 
     @Environment(RigProfileStore.self) private var rigStore
+    @State private var showConfigureRigSheet = false
 
     /// PHD2 profile name parsed from the most recent guide-session header.
     /// Used to resolve the matching `RigProfile` (current or historical).
@@ -81,15 +82,46 @@ struct SessionInspectorView: View {
         .contentMargins(.trailing, 12, for: .scrollContent)
     }
 
+    /// Pulls guide-train values from the latest session header for use as a hint when
+    /// configuring a new rig profile.
+    private var guideTrainHint: RigProfileEditorView.GuideTrainHint? {
+        guard let session = log.guideSessions.last else { return nil }
+        let props = session.headerProperties
+        guard let fl = props.guideFocalLengthMm,
+              let pix = props.guideCameraPixelSizeMicrons
+        else { return nil }
+        return RigProfileEditorView.GuideTrainHint(
+            focalLengthMm: fl,
+            pixelSizeMicrons: pix,
+            binning: props.guideBinning ?? 1,
+            cameraName: props.guideCameraName
+        )
+    }
+
     @ViewBuilder
     private func rigConfigurePrompt(phd2Name: String) -> some View {
         InspectorCard("Rig profile", systemImage: "scope") {
             Text("This log was produced by PHD2 profile **“\(phd2Name)”**, but no Ephemeris rig profile matches that name.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text("Configure a rig profile to enable imaging-scale verdicts and the full recommender. Use Shift-⌘-, (Rig Profiles…) to set it up.")
+            Text("Configure a rig profile to enable imaging-scale verdicts and the full recommender.")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
+            Button {
+                showConfigureRigSheet = true
+            } label: {
+                Label("Configure rig for \(phd2Name)", systemImage: "scope")
+            }
+            .controlSize(.small)
+            .padding(.top, 4)
+        }
+        .sheet(isPresented: $showConfigureRigSheet) {
+            RigProfileConfigureSheet(
+                phd2Name: phd2Name,
+                guideTrainHint: guideTrainHint
+            ) { newProfile in
+                try? rigStore.save(newProfile)
+            }
         }
     }
 

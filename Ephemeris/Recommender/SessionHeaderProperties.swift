@@ -22,6 +22,14 @@ struct SessionHeaderProperties: Sendable {
     let calibrationOrthogonalityErrorDeg: Double?
     let raGuideSpeedArcsecPerSec: Double?
     let decGuideSpeedArcsecPerSec: Double?
+    /// Guide-train focal length from the "Focal length = N mm" line. Post-reducer for OAG.
+    let guideFocalLengthMm: Double?
+    /// Guide camera pixel pitch from "Camera = ... pixel size = N um".
+    let guideCameraPixelSizeMicrons: Double?
+    /// Guide-camera binning (1, 2, …) from the "Binning = N" line.
+    let guideBinning: Int?
+    /// Friendly camera name extracted from "Camera = NAME (...)".
+    let guideCameraName: String?
     /// True if the header explicitly reports Variable Exposure Delays enabled.
     /// PHD2 emits this only when the user has enabled it; absence ≠ off, but we treat it
     /// as "unknown / probably off" for the purpose of `VariableExposureDelaysObserver`.
@@ -44,6 +52,10 @@ struct SessionHeaderProperties: Sendable {
         var orthoErr: Double?
         var raGuide: Double?
         var decGuide: Double?
+        var guideFL: Double?
+        var guidePixelSize: Double?
+        var guideBin: Int?
+        var guideCam: String?
         var ved = false
 
         for line in rawHeader {
@@ -77,6 +89,20 @@ struct SessionHeaderProperties: Sendable {
                line.localizedCaseInsensitiveContains("Additional inter-exposure delay") {
                 ved = true
             }
+            // "Pixel scale = 0.62 arc-sec/px, Binning = 1, Focal length = 1960 mm"
+            if let m = Self.match(line, pattern: #"Binning = (\d+), Focal length = (\d+) mm"#) {
+                guideBin = Int(m[0])
+                guideFL = Double(m[1])
+            }
+            // "Camera = ZWO ASI174MM Mini (ASCOM), ..., pixel size = 5.9 um"
+            if let m = Self.match(line, pattern: #"Camera = ([^,]+),.*pixel size = ([\d.]+) um"#) {
+                let rawName = m[0].trimmingCharacters(in: .whitespaces)
+                // Strip the " (ASCOM)" / " (Native)" suffix if present
+                guideCam = rawName.replacingOccurrences(of: #" \([^)]+\)\s*$"#,
+                                                       with: "",
+                                                       options: .regularExpression)
+                guidePixelSize = Double(m[1])
+            }
         }
 
         self.raHours = ra
@@ -95,6 +121,10 @@ struct SessionHeaderProperties: Sendable {
         self.calibrationOrthogonalityErrorDeg = orthoErr
         self.raGuideSpeedArcsecPerSec = raGuide
         self.decGuideSpeedArcsecPerSec = decGuide
+        self.guideFocalLengthMm = guideFL
+        self.guideCameraPixelSizeMicrons = guidePixelSize
+        self.guideBinning = guideBin
+        self.guideCameraName = guideCam
         self.variableExposureDelaysEnabled = ved
     }
 
