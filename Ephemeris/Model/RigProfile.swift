@@ -8,8 +8,14 @@ import Foundation
 /// already apply here so the Phase 3 migration is mechanical.
 struct RigProfile: Codable, Hashable, Identifiable, Sendable {
     var id: UUID
+    /// **Immutable identity** — the PHD2 `Equipment Profile = X` value from the log.
+    /// This is the foreign key that matches logs to rigs; never edit it in the UI.
+    /// `nameHistory` covers the case where PHD2 itself renames the profile over time.
     var currentName: String
     var nameHistory: [String]
+    /// **User-facing label** — freely editable. Surfaced in the sidebar, chart titles,
+    /// and headers. When empty, the UI falls back to `currentName`.
+    var displayName: String?
 
     var imagingFocalLength: Double   // mm
     var imagingPixelSize: Double     // μm
@@ -35,6 +41,7 @@ struct RigProfile: Codable, Hashable, Identifiable, Sendable {
         id: UUID = UUID(),
         currentName: String = "",
         nameHistory: [String] = [],
+        displayName: String? = nil,
         imagingFocalLength: Double = 0,
         imagingPixelSize: Double = 0,
         imagingBinning: Int = 1,
@@ -54,6 +61,7 @@ struct RigProfile: Codable, Hashable, Identifiable, Sendable {
         self.id = id
         self.currentName = currentName
         self.nameHistory = nameHistory
+        self.displayName = displayName
         self.imagingFocalLength = imagingFocalLength
         self.imagingPixelSize = imagingPixelSize
         self.imagingBinning = imagingBinning
@@ -101,8 +109,19 @@ struct RigProfile: Codable, Hashable, Identifiable, Sendable {
         imagingFocalLength > 0 && imagingPixelSize > 0 && imagingBinning > 0
     }
 
-    /// Apply a rename, preserving prior name in history.
-    public mutating func rename(to newName: String) {
+    /// The label to show users — `displayName` when set, falls back to the PHD2 profile name.
+    var effectiveName: String {
+        if let displayName, !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return displayName
+        }
+        return currentName
+    }
+
+    /// **Advanced / repair operation** — change the PHD2 profile name (the matching key).
+    /// Used only when an existing rig was created with the wrong identity (e.g., the user
+    /// typed a name before this app enforced log-derived identity). The previous name is
+    /// preserved in `nameHistory` so historically-matched logs still resolve.
+    mutating func repairPhd2Name(to newName: String) {
         let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed != currentName else { return }
         if !currentName.isEmpty && !nameHistory.contains(currentName) {

@@ -60,7 +60,7 @@ struct SessionInspectorView: View {
             LazyVStack(alignment: .leading, spacing: 10) {
                 if let profile = matchedProfile {
                     ObservationsPanel(observations: observations,
-                                      title: "Observations · \(profile.currentName)")
+                                      title: "Observations · \(profile.effectiveName)")
                 } else if let name = phd2ProfileName {
                     rigConfigurePrompt(phd2Name: name)
                 }

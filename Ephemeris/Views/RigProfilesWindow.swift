@@ -42,8 +42,13 @@ struct RigProfilesWindow: View {
             List(selection: $selectedID) {
                 ForEach(store.profiles) { profile in
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(profile.currentName.isEmpty ? "(unnamed)" : profile.currentName)
+                        Text(profile.effectiveName.isEmpty ? "(unnamed)" : profile.effectiveName)
                             .font(.headline)
+                        if profile.displayName?.isEmpty == false {
+                            Text(profile.currentName)
+                                .font(.caption2.monospaced())
+                                .foregroundStyle(.tertiary)
+                        }
                         HStack(spacing: 4) {
                             Text(profile.mountClass.displayName)
                             if profile.isImagingScaleConfigured {
@@ -61,20 +66,21 @@ struct RigProfilesWindow: View {
             .listStyle(.sidebar)
 
             Divider()
-            HStack(spacing: 4) {
-                Button { addProfile() } label: { Image(systemName: "plus") }
-                    .buttonStyle(.borderless)
-                    .help("Add a new rig profile")
-                Button { deleteSelected() } label: { Image(systemName: "minus") }
-                    .buttonStyle(.borderless)
-                    .disabled(selectedID == nil)
-                    .help("Delete the selected profile")
-                Spacer()
-                if hasUnsavedChanges {
-                    Text("Unsaved changes")
-                        .font(.caption2)
-                        .foregroundStyle(.orange)
-                        .padding(.trailing, 4)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Rigs are created automatically when you open or import PHD2 logs. The PHD2 profile name is the matching key — edit only the enrichment fields on the right.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Button { deleteSelected() } label: { Image(systemName: "minus") }
+                        .buttonStyle(.borderless)
+                        .disabled(selectedID == nil)
+                        .help("Delete the selected rig profile")
+                    Spacer()
+                    if hasUnsavedChanges {
+                        Text("Unsaved changes")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
                 }
             }
             .padding(8)
@@ -93,13 +99,17 @@ struct RigProfilesWindow: View {
                 onDiscard: { reloadDraft(from: id) }
             )
             .id(id)  // Force re-render when switching between profiles
+        } else if store.profiles.isEmpty {
+            ContentUnavailableView {
+                Label("No rigs yet", systemImage: "scope")
+            } description: {
+                Text("Open a PHD2 guide log or use the bulk importer in the Library window. Rigs are created automatically from each log's `Equipment Profile = …` line.")
+            }
         } else {
             ContentUnavailableView {
                 Label("No rig selected", systemImage: "scope")
             } description: {
-                Text("Choose a rig profile on the left, or add a new one with the + button.")
-            } actions: {
-                Button("Add Rig Profile") { addProfile() }
+                Text("Choose a rig profile on the left to edit its imaging-train values, mount class, and notes.")
             }
         }
     }
@@ -114,15 +124,6 @@ struct RigProfilesWindow: View {
             get: { draft ?? RigProfile() },
             set: { draft = $0 }
         )
-    }
-
-    private func addProfile() {
-        var new = RigProfile(currentName: "New rig")
-        new.createdAt = .now
-        new.modifiedAt = .now
-        try? store.save(new)
-        selectedID = new.id
-        draft = new
     }
 
     private func deleteSelected() {

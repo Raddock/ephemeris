@@ -24,21 +24,37 @@ struct RigProfileEditorView: View {
 
     var body: some View {
         Form {
-            Section("Identity") {
-                TextField("PHD2 profile name", text: $profile.currentName, prompt: Text("Edge-10m"))
+            Section {
+                LabeledContent("PHD2 profile") {
+                    HStack(spacing: 4) {
+                        Image(systemName: "lock.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                        Text(profile.currentName.isEmpty ? "(none)" : profile.currentName)
+                            .font(.callout.monospaced())
+                            .textSelection(.enabled)
+                    }
+                }
+                TextField("Display name (optional)",
+                          text: Binding(
+                            get: { profile.displayName ?? "" },
+                            set: { profile.displayName = $0.isEmpty ? nil : $0 }
+                          ),
+                          prompt: Text(profile.currentName.isEmpty ? "Edge 11 + ASI2600MM" : profile.currentName))
                     .textFieldStyle(.roundedBorder)
                 if !profile.nameHistory.isEmpty {
-                    LabeledContent("Past names") {
+                    LabeledContent("Past PHD2 names") {
                         Text(profile.nameHistory.joined(separator: ", "))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
-                if let phd2 = phd2ProfileName, profile.currentName.isEmpty {
-                    Text("Matched PHD2 profile: **\(phd2)**")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+            } header: {
+                Text("Identity")
+            } footer: {
+                Text("The PHD2 profile name is the foreign key that matches logs to this rig. It's set when a log is first ingested and isn't editable here. The display name is just for your UI — sidebar entries, chart titles. Leave it blank to fall back to the PHD2 name.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Mount") {

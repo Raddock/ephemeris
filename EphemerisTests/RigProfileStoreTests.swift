@@ -69,7 +69,7 @@ final class RigProfileStoreTests: XCTestCase {
         try store.save(profile)
         XCTAssertNotNil(store.profile(matchingPHD2Name: "Edge-10m"))
         XCTAssertNil(store.profile(matchingPHD2Name: "Nonexistent"))
-        profile.rename(to: "Edge HD")
+        profile.repairPhd2Name(to: "Edge HD")
         try store.save(profile)
         XCTAssertNotNil(store.profile(matchingPHD2Name: "Edge HD"))         // current
         XCTAssertNotNil(store.profile(matchingPHD2Name: "Edge-10m"))         // historical

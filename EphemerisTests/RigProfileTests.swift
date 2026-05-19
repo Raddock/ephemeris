@@ -90,17 +90,17 @@ final class RigProfileTests: XCTestCase {
 
     func test_rigProfile_rename_recordsHistory() {
         var p = RigProfile(currentName: "Edge-10m")
-        p.rename(to: "Edge HD 10m")
+        p.repairPhd2Name(to: "Edge HD 10m")
         XCTAssertEqual(p.currentName, "Edge HD 10m")
         XCTAssertEqual(p.nameHistory, ["Edge-10m"])
 
-        p.rename(to: "Edge HD 10m")  // no-op
+        p.repairPhd2Name(to: "Edge HD 10m")  // no-op
         XCTAssertEqual(p.nameHistory, ["Edge-10m"])
 
-        p.rename(to: "")  // no-op
+        p.repairPhd2Name(to: "")  // no-op
         XCTAssertEqual(p.currentName, "Edge HD 10m")
 
-        p.rename(to: "  Edge HD 10  ")
+        p.repairPhd2Name(to: "  Edge HD 10  ")
         XCTAssertEqual(p.currentName, "Edge HD 10")
         XCTAssertEqual(p.nameHistory, ["Edge-10m", "Edge HD 10m"])
     }
@@ -110,13 +110,13 @@ final class RigProfileTests: XCTestCase {
         XCTAssertTrue(p.matches(profileName: "Edge-10m"))
         XCTAssertTrue(p.matches(profileName: " Edge-10m "))   // whitespace tolerant
         XCTAssertFalse(p.matches(profileName: "Edge-11"))
-        p.rename(to: "Edge HD")
+        p.repairPhd2Name(to: "Edge HD")
         XCTAssertTrue(p.matches(profileName: "Edge HD"))      // new current
         XCTAssertTrue(p.matches(profileName: "Edge-10m"))     // historical
     }
 
     func test_rigProfile_codableRoundTrip() throws {
-        var original = RigProfile(currentName: "Edge-10m")
+        var original = RigProfile(currentName: "Edge-10m", displayName: "Edge 11 + ASI2600MM (remote obs)")
         original.imagingFocalLength = 1960
         original.imagingPixelSize = 5.9
         original.imagingBinning = 1
@@ -130,6 +130,17 @@ final class RigProfileTests: XCTestCase {
         let data = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(RigProfile.self, from: data)
         XCTAssertEqual(decoded, original)
+    }
+
+    func test_rigProfile_effectiveName_prefersDisplayNameWhenSet() {
+        var p = RigProfile(currentName: "Edge-10m")
+        XCTAssertEqual(p.effectiveName, "Edge-10m")
+        p.displayName = "Edge 11 (remote)"
+        XCTAssertEqual(p.effectiveName, "Edge 11 (remote)")
+        p.displayName = ""   // empty falls back
+        XCTAssertEqual(p.effectiveName, "Edge-10m")
+        p.displayName = "   "  // whitespace falls back
+        XCTAssertEqual(p.effectiveName, "Edge-10m")
     }
 
     func test_rigProfile_guidePixelScale_sameOpticsUsesImaging() {

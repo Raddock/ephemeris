@@ -20,11 +20,11 @@ final class LibraryBulkImporter {
 
     struct Summary: Equatable, Sendable {
         var imported: Int = 0
-        var skippedExisting: Int = 0       // dedup hit on content hash
-        var skippedNoProfile: [String] = []  // PHD2 profile names with no matching rig
-        var skippedEmpty: [String] = []    // empty / 0-byte files (PHD2 placeholder logs)
+        var skippedExisting: Int = 0           // dedup hit on content hash
+        var skippedEmpty: [String] = []        // empty / 0-byte files (PHD2 placeholder logs)
         var errors: [String] = []
         var totalConsidered: Int = 0
+        var autoCreatedRigs: [String] = []     // PHD2 profile names auto-created during import
     }
 
     var status: Status = .idle
@@ -111,14 +111,20 @@ final class LibraryBulkImporter {
                 continue
             }
 
-            // Match rig profile by PHD2 profile name
+            // Match rig profile by PHD2 profile name; auto-create a stub if none exists.
+            // Per the rig-identity-from-log design preference: the PHD2 profile name is
+            // immutable identity, so we create profiles automatically rather than asking
+            // the user to predeclare them.
             guard let phd2Name = extractProfileName(from: log) else {
-                summary.skippedNoProfile.append(url.lastPathComponent)
+                summary.errors.append("\(url.lastPathComponent): no `Equipment Profile = …` line in header")
                 continue
             }
-            guard let profile = rigStore.profile(matchingPHD2Name: phd2Name) else {
-                summary.skippedNoProfile.append("\(url.lastPathComponent) (profile: \(phd2Name))")
-                continue
+            let profile: RigProfile
+            if let existing = rigStore.profile(matchingPHD2Name: phd2Name) {
+                profile = existing
+            } else {
+                profile = autoCreateRig(named: phd2Name, prefilledFrom: log)
+                summary.autoCreatedRigs.append(phd2Name)
             }
 
             // Ingest
@@ -139,13 +145,29 @@ final class LibraryBulkImporter {
             }
         }
 
-        NSLog("[BulkImport] Done — imported: %d, dedup: %d, no-profile: %d, empty: %d, errors: %d",
+        NSLog("[BulkImport] Done — imported: %d, dedup: %d, auto-created rigs: %d, empty: %d, errors: %d",
               summary.imported, summary.skippedExisting,
-              summary.skippedNoProfile.count, summary.skippedEmpty.count, summary.errors.count)
+              summary.autoCreatedRigs.count, summary.skippedEmpty.count, summary.errors.count)
         status = .completed(summary)
     }
 
     // MARK: - Helpers
+
+    /// Create a fresh RigProfile keyed off a PHD2 profile name. Pre-populates the
+    /// guide-train fields from the log's header (the imaging-train fields and mount
+    /// class stay empty; the user fills those in to enable the verdict pipeline).
+    private func autoCreateRig(named phd2Name: String, prefilledFrom log: GuideLog) -> RigProfile {
+        var rig = RigProfile(currentName: phd2Name)
+        if let session = log.guideSessions.last {
+            let props = session.headerProperties
+            if let fl = props.guideFocalLengthMm { rig.guideFocalLength = fl }
+            if let px = props.guideCameraPixelSizeMicrons { rig.guideCameraPixelSize = px }
+            if let bin = props.guideBinning { rig.guideBinning = bin }
+        }
+        try? rigStore.save(rig)
+        NSLog("[BulkImport] Auto-created rig \"%@\"", phd2Name)
+        return rig
+    }
 
     private func findGuideLogs(in folderURL: URL) -> [URL] {
         let fm = FileManager.default

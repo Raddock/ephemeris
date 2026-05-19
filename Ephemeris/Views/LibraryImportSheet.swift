@@ -81,10 +81,10 @@ struct LibraryImportSheet: View {
                 }
             }
 
-            if !summary.skippedNoProfile.isEmpty {
-                disclosure(title: "\(summary.skippedNoProfile.count) skipped — no matching rig profile",
-                           items: summary.skippedNoProfile,
-                           detail: "Configure a rig profile that matches the PHD2 profile name shown in parentheses, then re-import.")
+            if !summary.autoCreatedRigs.isEmpty {
+                disclosure(title: "\(summary.autoCreatedRigs.count) rigs auto-created",
+                           items: summary.autoCreatedRigs,
+                           detail: "These PHD2 profile names had no matching rig — Ephemeris created stubs for them, pre-filled with guide-train values from each log. Open Rig Profiles (Shift-⌘-,) to add imaging-train values and enable the verdict pipeline.")
             }
             if !summary.skippedEmpty.isEmpty {
                 disclosure(title: "\(summary.skippedEmpty.count) skipped — empty or unparseable",

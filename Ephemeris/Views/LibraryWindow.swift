@@ -51,9 +51,7 @@ struct LibraryWindow: View {
                     Label("Import logs…", systemImage: "tray.and.arrow.down")
                 }
                 .disabled(library == nil)
-                .help(rigStore.profiles.isEmpty
-                      ? "Configure at least one rig profile first (⇧⌘,)"
-                      : "Bulk-import every PHD2_GuideLog_*.txt from a folder")
+                .help("Bulk-import every PHD2_GuideLog_*.txt from a folder. New rigs are created automatically from each log's PHD2 profile name.")
             }
         }
     }
@@ -79,7 +77,7 @@ struct LibraryWindow: View {
             Section("Rigs") {
                 ForEach(rigStore.profiles) { profile in
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(profile.currentName.isEmpty ? "(unnamed)" : profile.currentName)
+                        Text(profile.effectiveName.isEmpty ? "(unnamed)" : profile.effectiveName)
                             .font(.headline)
                         if profile.isImagingScaleConfigured {
                             Text(String(format: "%.2f″/px imaging", profile.imagingPixelScale))
@@ -111,7 +109,7 @@ struct LibraryWindow: View {
         guard let rigID = selectedRigID,
               let profile = rigStore.profiles.first(where: { $0.id == rigID })
         else { return "" }
-        return "\(profile.currentName) · \(range.displayName)"
+        return "\(profile.effectiveName) · \(range.displayName)"
     }
 }
 
@@ -222,7 +220,7 @@ struct LibraryDetailView: View {
                     )
                     ObservationsPanel(
                         observations: crossNightObservations,
-                        title: "Cross-night observations · \(profile.currentName)"
+                        title: "Cross-night observations · \(profile.effectiveName)"
                     )
                     recentNightsList
                 }
@@ -233,7 +231,7 @@ struct LibraryDetailView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(profile.currentName).font(.title2.weight(.semibold))
+            Text(profile.effectiveName).font(.title2.weight(.semibold))
             HStack(spacing: 12) {
                 Text(profile.mountClass.displayName)
                 if profile.isImagingScaleConfigured {
