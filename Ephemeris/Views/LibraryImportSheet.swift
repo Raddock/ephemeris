@@ -11,7 +11,7 @@ struct LibraryImportSheet: View {
             Divider()
             switch importer.status {
             case .idle:
-                EmptyView()
+                idleView
             case .running(let file, let processed, let total):
                 runningView(currentFile: file, processed: processed, total: total)
             case .completed(let summary):
@@ -19,9 +19,19 @@ struct LibraryImportSheet: View {
             case .cancelled(let summary):
                 summaryView(summary: summary, cancelled: true)
             }
+            Spacer(minLength: 0)
         }
         .padding(20)
-        .frame(width: 520)
+        .frame(minWidth: 540, idealWidth: 540, minHeight: 280, idealHeight: 360)
+    }
+
+    private var idleView: some View {
+        HStack(spacing: 10) {
+            ProgressView().controlSize(.small)
+            Text("Preparing…")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
     }
 
     private var header: some View {

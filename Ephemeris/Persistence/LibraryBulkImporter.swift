@@ -54,10 +54,27 @@ final class LibraryBulkImporter {
 
     private func runImport(folderURL: URL) async {
         var summary = Summary()
+
+        // Sandboxed apps need explicit access to the security-scoped URL returned
+        // by NSOpenPanel. Without this, FileManager.enumerator silently returns 0
+        // results and the importer looks stuck.
+        let accessGranted = folderURL.startAccessingSecurityScopedResource()
+        defer {
+            if accessGranted { folderURL.stopAccessingSecurityScopedResource() }
+        }
+        NSLog("[BulkImport] Scanning %@ (sandbox access: %@)",
+              folderURL.path, accessGranted ? "granted" : "denied")
+
         let urls = findGuideLogs(in: folderURL)
         summary.totalConsidered = urls.count
+        NSLog("[BulkImport] Found %d PHD2_GuideLog_*.txt files", urls.count)
 
         guard !urls.isEmpty else {
+            if !accessGranted {
+                summary.errors.append("Sandbox denied access to the chosen folder. Try a folder you've previously opened, or grant Full Disk Access to Ephemeris in System Settings.")
+            } else {
+                summary.errors.append("No files matching PHD2_GuideLog_*.txt found in the chosen folder.")
+            }
             status = .completed(summary)
             return
         }
@@ -122,6 +139,9 @@ final class LibraryBulkImporter {
             }
         }
 
+        NSLog("[BulkImport] Done — imported: %d, dedup: %d, no-profile: %d, empty: %d, errors: %d",
+              summary.imported, summary.skippedExisting,
+              summary.skippedNoProfile.count, summary.skippedEmpty.count, summary.errors.count)
         status = .completed(summary)
     }
 
