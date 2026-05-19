@@ -28,6 +28,43 @@ struct ContentView: View {
     @State private var chartSelectedTime: Double?
     @State private var manualExclusions: [ClosedRange<Double>] = []
 
+    @Environment(RigProfileStore.self) private var rigStore
+    @Environment(\.ephemerisLibrary) private var library
+
+    /// Auto-ingest the opened log into the Library store when both a matching rig
+    /// profile and the live library are available. Best-effort — failures are logged.
+    private func ingestIfPossible() async {
+        guard let library else { return }
+        guard let phd2Name = phd2ProfileName,
+              let profile = rigStore.profile(matchingPHD2Name: phd2Name)
+        else { return }
+        guard let bytes = document.sourceBytes else { return }
+        let ingestor = LibraryIngestor(modelContainer: library.container)
+        do {
+            let result = try await ingestor.ingest(
+                log: document.log,
+                sourceBytes: bytes,
+                sourceFilePath: document.filename ?? "",
+                rigProfile: profile
+            )
+            print("[Library] Ingested night \(result.nightRecordId.uuidString.prefix(8)) — \(result.observationCount) observations \(result.didCreate ? "(new)" : "(updated)")")
+        } catch {
+            print("[Library] Ingest failed: \(error)")
+        }
+    }
+
+    private var phd2ProfileName: String? {
+        for session in document.log.guideSessions.reversed() {
+            for line in session.rawHeader {
+                if let range = line.range(of: "Equipment Profile = ") {
+                    let value = String(line[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    return value.isEmpty ? nil : value
+                }
+            }
+        }
+        return nil
+    }
+
     var body: some View {
         NavigationSplitView {
             SessionListView(log: document.log, selection: $selection)
@@ -37,6 +74,9 @@ struct ContentView: View {
         }
         .navigationTitle(document.filename ?? "PHD2 Log")
         .background(WindowSubtitleSetter(subtitle: subtitleText).frame(width: 0, height: 0))
+        .task {
+            await ingestIfPossible()
+        }
         .onChange(of: selection) { old, new in
             // Summary is exclusive: it cannot coexist with section selections.
             // Decide based on what changed: if the user added summary, collapse

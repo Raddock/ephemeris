@@ -29,10 +29,17 @@ struct EphemerisApp: App {
     // view can read profile data.
     @State private var rigProfileStore = RigProfileStore()
 
+    // v2.0 Phase 3: SwiftData library backing the multi-night surface (Phase 6+).
+    // Auto-ingest of opened documents happens in ContentView when both the rig
+    // profile and the parsed log are available. Construction failure is swallowed
+    // for now — Phase 3 will surface a recovery UI when the store can't be opened.
+    @State private var library: EphemerisLibrary? = (try? EphemerisLibrary())
+
     var body: some Scene {
         DocumentGroup(viewing: GuideLogDocument.self) { file in
             ContentView(document: file.document)
                 .environment(rigProfileStore)
+                .environment(\.ephemerisLibrary, library)
         }
         .commands {
             // Replace the system About panel with our custom window so we can
@@ -47,6 +54,12 @@ struct EphemerisApp: App {
                     openWindow(id: "rigProfiles")
                 }
                 .keyboardShortcut(",", modifiers: [.command, .shift])
+            }
+            CommandGroup(after: .windowList) {
+                Button("Library") {
+                    openWindow(id: "library")
+                }
+                .keyboardShortcut("L", modifiers: [.command, .shift])
             }
         }
 
@@ -63,6 +76,17 @@ struct EphemerisApp: App {
         }
         .windowResizability(.contentSize)
         .defaultSize(width: 720, height: 540)
+        .defaultPosition(.center)
+
+        // v2.0 Phase 6 — multi-night library. Per design doc §5.2 / §7.1, use WindowGroup
+        // (not Window) so the scene can carry a data binding (the active rig).
+        WindowGroup("Library", id: "library") {
+            LibraryWindow()
+                .environment(rigProfileStore)
+                .environment(\.ephemerisLibrary, library)
+        }
+        .windowResizability(.contentSize)
+        .defaultSize(width: 980, height: 720)
         .defaultPosition(.center)
     }
 }

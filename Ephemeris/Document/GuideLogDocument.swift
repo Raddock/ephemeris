@@ -80,10 +80,14 @@ struct GuideLogDocument: FileDocument {
 
     let log: GuideLog
     let filename: String?
+    /// Original file bytes — retained for v2.0 Phase 3 content-hash dedup.
+    /// Nil for synthetic / preview / programmatically-constructed documents.
+    let sourceBytes: Data?
 
     init(log: GuideLog = GuideLog(), filename: String? = nil) {
         self.log = log
         self.filename = filename
+        self.sourceBytes = nil
     }
 
     init(configuration: ReadConfiguration) throws {
@@ -96,6 +100,7 @@ struct GuideLogDocument: FileDocument {
         if data.isEmpty {
             self.log = GuideLog()
             self.filename = configuration.file.preferredFilename
+            self.sourceBytes = nil
             return
         }
 
@@ -122,6 +127,7 @@ struct GuideLogDocument: FileDocument {
 
         self.log = GuideLogParser.parse(text)
         self.filename = configuration.file.preferredFilename
+        self.sourceBytes = data
     }
 
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
