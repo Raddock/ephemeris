@@ -217,7 +217,7 @@ struct LibraryDetailView: View {
         )
         _gaResults = Query(
             filter: #Predicate<GAResultEntity> { result in
-                result.nightRecord?.rigProfile?.id == rigID
+                result.rigProfileId == rigID
             },
             sort: \GAResultEntity.runAt,
             order: .reverse
@@ -505,6 +505,15 @@ struct LibraryDetailView: View {
             Text(record.nightDate.formatted(date: .abbreviated, time: .omitted))
                 .font(.callout.weight(.medium))
                 .frame(width: 110, alignment: .leading)
+            if let target = record.catalogIdentifier {
+                Text(target)
+                    .font(.caption.weight(.medium).monospacedDigit())
+                    .foregroundStyle(.blue)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background(Color.blue.opacity(0.12), in: Capsule())
+                    .help(record.catalogCommonName ?? target)
+            }
             Text("\(record.sessionsCount) sessions")
                 .font(.callout)
                 .foregroundStyle(.secondary)

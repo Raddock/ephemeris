@@ -51,6 +51,28 @@ actor LibraryIngestor {
         record.worstSessionRMSArcsec = perSession.max() ?? 0
         record.lastAnalyzedAt = .now
 
+        // Phase 9: pointing context. Median RA/Dec across the sessions; galactic
+        // latitude + Messier catalog match if within tolerance.
+        let pointings = log.guideSessions.compactMap { session -> (Double, Double)? in
+            let props = session.headerProperties
+            guard let ra = props.raHours, let dec = props.decDegrees else { return nil }
+            return (ra, dec)
+        }
+        if !pointings.isEmpty {
+            let medRA = pointings.map { $0.0 }.sorted()[pointings.count / 2]
+            let medDec = pointings.map { $0.1 }.sorted()[pointings.count / 2]
+            record.medianRAHours = medRA
+            record.medianDecDegrees = medDec
+            record.galacticLatitudeDeg = Astronomy.galacticLatitude(raHours: medRA, decDegrees: medDec)
+            if let target = MessierCatalog.match(raHours: medRA, decDegrees: medDec) {
+                record.catalogIdentifier = target.identifier
+                record.catalogCommonName = target.commonName
+            } else {
+                record.catalogIdentifier = nil
+                record.catalogCommonName = nil
+            }
+        }
+
         try removeExistingObservations(for: record)
         try removeExistingGAResults(for: record)
 
@@ -62,6 +84,7 @@ actor LibraryIngestor {
                 let entity = GAResultEntity()
                 entity.id = UUID()
                 entity.nightRecord = record
+                entity.rigProfileId = rigProfile.id
                 entity.runAt = parsed.runAt
                 entity.durationSec = parsed.durationSec
                 entity.recommendedRAMinMovePx = parsed.recommendedRAMinMovePx

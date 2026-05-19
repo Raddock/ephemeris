@@ -142,6 +142,19 @@ final class NightRecordEntity {
     /// guide log — this is the user's testimony that the engine can't otherwise observe.
     var subQualityRaw: String? = nil
 
+    // Phase 9: target / pointing context derived from session header at ingest time.
+    /// Median RA (hours) across this night's sessions.
+    var medianRAHours: Double? = nil
+    /// Median Dec (degrees) across this night's sessions.
+    var medianDecDegrees: Double? = nil
+    /// Galactic latitude (degrees) of the median pointing — used to normalize star-count
+    /// expectations. Below ±10° = in-plane, dense star fields; > 40° = high latitude, sparse.
+    var galacticLatitudeDeg: Double? = nil
+    /// Best Messier catalog match for the median pointing, if within ±0.5°. e.g. "M31".
+    var catalogIdentifier: String? = nil
+    /// Friendly catalog name, e.g. "Andromeda Galaxy".
+    var catalogCommonName: String? = nil
+
     @Relationship(deleteRule: .cascade, inverse: \ObservationEntity.nightRecord)
     var observations: [ObservationEntity]? = nil
 
@@ -232,6 +245,10 @@ final class TargetClusterEntity {
 final class GAResultEntity {
     var id: UUID = UUID()
     var nightRecord: NightRecordEntity? = nil
+    /// Denormalized — SwiftData / Core Data's SQL generator can't traverse two
+    /// levels of optional relationships in a predicate, so we keep the rig id flat
+    /// on the GA result for the @Query filter to use.
+    var rigProfileId: UUID = UUID()
 
     var runAt: Date = Date()
     var durationSec: Int = 0

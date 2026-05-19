@@ -109,6 +109,12 @@ enum MCPTools {
                     "best_session_rms_arcsec": .number(n.bestSessionRMSArcsec),
                     "worst_session_rms_arcsec": .number(n.worstSessionRMSArcsec),
                     "source_file_path": .string(n.sourceFilePath),
+                    "target": n.catalogIdentifier.map { .string($0) } ?? .null,
+                    "target_name": n.catalogCommonName.map { .string($0) } ?? .null,
+                    "median_ra_hours": n.medianRAHours.map { .number($0) } ?? .null,
+                    "median_dec_degrees": n.medianDecDegrees.map { .number($0) } ?? .null,
+                    "galactic_latitude_deg": n.galacticLatitudeDeg.map { .number($0) } ?? .null,
+                    "sub_quality": n.subQualityRaw.map { .string($0) } ?? .null,
                 ])
             })
         }
