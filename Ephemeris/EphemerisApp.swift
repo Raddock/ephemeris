@@ -24,9 +24,15 @@ import SwiftUI
 struct EphemerisApp: App {
     @Environment(\.openWindow) private var openWindow
 
+    // v2.0 Phase 1: app-wide RigProfileStore. JSON-sidecar persistence until Phase 3
+    // promotes it to SwiftData. Injected into the environment so any document-window
+    // view can read profile data.
+    @State private var rigProfileStore = RigProfileStore()
+
     var body: some Scene {
         DocumentGroup(viewing: GuideLogDocument.self) { file in
             ContentView(document: file.document)
+                .environment(rigProfileStore)
         }
         .commands {
             // Replace the system About panel with our custom window so we can
@@ -36,6 +42,12 @@ struct EphemerisApp: App {
                     openWindow(id: "about")
                 }
             }
+            CommandGroup(after: .appSettings) {
+                Button("Rig Profiles…") {
+                    openWindow(id: "rigProfiles")
+                }
+                .keyboardShortcut(",", modifiers: [.command, .shift])
+            }
         }
 
         Window("About Ephemeris", id: "about") {
@@ -43,6 +55,14 @@ struct EphemerisApp: App {
         }
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)
+        .defaultPosition(.center)
+
+        Window("Rig Profiles", id: "rigProfiles") {
+            RigProfilesWindow()
+                .environment(rigProfileStore)
+        }
+        .windowResizability(.contentSize)
+        .defaultSize(width: 720, height: 540)
         .defaultPosition(.center)
     }
 }

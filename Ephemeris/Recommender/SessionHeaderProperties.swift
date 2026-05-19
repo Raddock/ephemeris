@@ -1,0 +1,128 @@
+import Foundation
+
+/// Lazy extractor for guide-log header fields the 1.x parser doesn't structure.
+/// Parses verbatim header lines on demand — non-invasive to the existing model.
+///
+/// These fields are used by Phase 2 generators that need pointing context, exposure,
+/// multi-star state, HFD baseline, and similar header-only data.
+struct SessionHeaderProperties: Sendable {
+    let raHours: Double?
+    let decDegrees: Double?
+    let hourAngleHours: Double?
+    let altitudeDegrees: Double?
+    let azimuthDegrees: Double?
+    let pierSide: String?
+    let hfdPixels: Double?
+    let exposureMs: Int?
+    let multiStarEnabled: Bool
+    let xAngleDegrees: Double?
+    let yAngleDegrees: Double?
+    let normRateRaArcsecPerSec: Double?
+    let normRateDecArcsecPerSec: Double?
+    let calibrationOrthogonalityErrorDeg: Double?
+    let raGuideSpeedArcsecPerSec: Double?
+    let decGuideSpeedArcsecPerSec: Double?
+    /// True if the header explicitly reports Variable Exposure Delays enabled.
+    /// PHD2 emits this only when the user has enabled it; absence ≠ off, but we treat it
+    /// as "unknown / probably off" for the purpose of `VariableExposureDelaysObserver`.
+    let variableExposureDelaysEnabled: Bool
+
+    init(rawHeader: [String]) {
+        var ra: Double?
+        var dec: Double?
+        var ha: Double?
+        var alt: Double?
+        var az: Double?
+        var pier: String?
+        var hfd: Double?
+        var expMs: Int?
+        var multi = false
+        var xAng: Double?
+        var yAng: Double?
+        var raRate: Double?
+        var decRate: Double?
+        var orthoErr: Double?
+        var raGuide: Double?
+        var decGuide: Double?
+        var ved = false
+
+        for line in rawHeader {
+            if let m = Self.match(line, pattern: #"RA = ([\-\d.]+) hr, Dec = ([\-\d.]+) deg, Hour angle = ([\-\d.]+) hr, Pier side = (\w+)"#) {
+                ra = Double(m[0]); dec = Double(m[1]); ha = Double(m[2]); pier = m[3]
+            }
+            if let m = Self.match(line, pattern: #"Alt = ([\-\d.]+) deg, Az = ([\-\d.]+) deg"#) {
+                alt = Double(m[0]); az = Double(m[1])
+            }
+            if let m = Self.match(line, pattern: #"HFD = ([\d.]+) px"#) {
+                hfd = Double(m[0])
+            }
+            if let m = Self.match(line, pattern: #"Exposure = (\d+) ms"#) {
+                expMs = Int(m[0])
+            }
+            if line.contains("Multi-star mode") {
+                multi = true
+            }
+            if let m = Self.match(line, pattern: #"xAngle = ([\-\d.]+).*yAngle = ([\-\d.]+)"#) {
+                xAng = Double(m[0]); yAng = Double(m[1])
+            }
+            if let m = Self.match(line, pattern: #"Norm rates RA = ([\d.]+)"/s @ dec 0, Dec = ([\d.]+)"/s; ortho\.err\. = ([\d.]+) deg"#) {
+                raRate = Double(m[0]); decRate = Double(m[1]); orthoErr = Double(m[2])
+            }
+            if let m = Self.match(line, pattern: #"RA Guide Speed = ([\d.]+) a-s/s, Dec Guide Speed = ([\d.]+)"#) {
+                raGuide = Double(m[0]); decGuide = Double(m[1])
+            }
+            // PHD2 emits "Camera ... has additional delay setting" / "Variable Exposure Delays" in its header
+            // when the feature is enabled. Use a tolerant substring search.
+            if line.localizedCaseInsensitiveContains("Variable Exposure Delays") ||
+               line.localizedCaseInsensitiveContains("Additional inter-exposure delay") {
+                ved = true
+            }
+        }
+
+        self.raHours = ra
+        self.decDegrees = dec
+        self.hourAngleHours = ha
+        self.altitudeDegrees = alt
+        self.azimuthDegrees = az
+        self.pierSide = pier
+        self.hfdPixels = hfd
+        self.exposureMs = expMs
+        self.multiStarEnabled = multi
+        self.xAngleDegrees = xAng
+        self.yAngleDegrees = yAng
+        self.normRateRaArcsecPerSec = raRate
+        self.normRateDecArcsecPerSec = decRate
+        self.calibrationOrthogonalityErrorDeg = orthoErr
+        self.raGuideSpeedArcsecPerSec = raGuide
+        self.decGuideSpeedArcsecPerSec = decGuide
+        self.variableExposureDelaysEnabled = ved
+    }
+
+    /// Convenience derived from min-move and observed pulse stats. Not parsed directly.
+    var hasPointingFix: Bool {
+        raHours != nil && decDegrees != nil
+    }
+
+    /// Match a regex pattern against a line; return the capture groups as strings.
+    private static func match(_ line: String, pattern: String) -> [String]? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { return nil }
+        let nsLine = line as NSString
+        let range = NSRange(location: 0, length: nsLine.length)
+        guard let m = regex.firstMatch(in: line, options: [], range: range), m.numberOfRanges >= 2 else { return nil }
+        var groups: [String] = []
+        for i in 1..<m.numberOfRanges {
+            let r = m.range(at: i)
+            if r.location == NSNotFound { return nil }
+            groups.append(nsLine.substring(with: r))
+        }
+        return groups
+    }
+}
+
+extension GuideSession {
+    /// Lazily parses additional header fields not structured by the 1.x parser.
+    /// Computed on access — generators that don't need these fields don't pay the cost.
+    var headerProperties: SessionHeaderProperties {
+        SessionHeaderProperties(rawHeader: rawHeader)
+    }
+}

@@ -1,0 +1,254 @@
+import Foundation
+import SwiftData
+
+/// v2.0 Phase 3 — SwiftData schema v1. Persistent library store backing the multi-night
+/// library (Phase 6+) and the cross-night recommender (Phase 7).
+///
+/// **CloudKit-clean rules applied uniformly (design doc §4):**
+/// 1. No `@Attribute(.unique)` constraints — uniqueness enforced by ingest `ModelActor`.
+/// 2. Every `@Relationship` declared optional.
+/// 3. Every attribute has a default value.
+/// 4. Ordered `[String]` arrays stored via Codable-encoded `Data` when order matters.
+///
+/// Phase 1's `RigProfile` struct continues to back the rig-profile editor; Phase 3 will
+/// migrate JSON-sidecar profiles into `RigProfileEntity` on first launch.
+enum SchemaV1: VersionedSchema {
+    static let versionIdentifier = Schema.Version(1, 0, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            RigProfileEntity.self,
+            NightRecordEntity.self,
+            ObservationEntity.self,
+            AnnotationEntity.self,
+            TargetClusterEntity.self,
+            GAResultEntity.self,
+        ]
+    }
+}
+
+/// Persistent rig profile. Mirrors the v1 value type's shape.
+@Model
+final class RigProfileEntity {
+    @Attribute(.allowsCloudEncryption) var id: UUID = UUID()
+    var currentName: String = ""
+    /// Codable-encoded array of historical names (SwiftData doesn't preserve array order).
+    var nameHistoryData: Data = Data()
+
+    var imagingFocalLengthMm: Double = 0
+    var imagingPixelSizeMicrons: Double = 0
+    var imagingBinning: Int = 1
+    var reducerFactor: Double? = nil
+
+    var guideConfigurationRaw: String = GuideConfiguration.oag.rawValue
+    var guideCameraPixelSizeMicrons: Double = 0
+    var guideFocalLengthMm: Double = 0
+    var guideBinning: Int = 1
+
+    var mountModel: String? = nil
+    var mountClassRaw: String = MountClass.standardGearMount.rawValue
+    var hasHighPrecisionEncoders: Bool = false
+
+    var typicalSubExposure: Int? = nil
+    var notes: String? = nil
+
+    var createdAt: Date = Date()
+    var modifiedAt: Date = Date()
+
+    @Relationship(deleteRule: .cascade, inverse: \NightRecordEntity.rigProfile)
+    var nightRecords: [NightRecordEntity]? = nil
+
+    @Relationship(deleteRule: .cascade, inverse: \TargetClusterEntity.rigProfile)
+    var targetClusters: [TargetClusterEntity]? = nil
+
+    init(from value: RigProfile) {
+        self.id = value.id
+        self.currentName = value.currentName
+        self.nameHistoryData = (try? JSONEncoder().encode(value.nameHistory)) ?? Data()
+        self.imagingFocalLengthMm = value.imagingFocalLength
+        self.imagingPixelSizeMicrons = value.imagingPixelSize
+        self.imagingBinning = value.imagingBinning
+        self.reducerFactor = value.reducerFactor
+        self.guideConfigurationRaw = value.guideConfiguration.rawValue
+        self.guideCameraPixelSizeMicrons = value.guideCameraPixelSize
+        self.guideFocalLengthMm = value.guideFocalLength
+        self.guideBinning = value.guideBinning
+        self.mountModel = value.mountModel
+        self.mountClassRaw = value.mountClass.rawValue
+        self.hasHighPrecisionEncoders = value.hasHighPrecisionEncoders
+        self.typicalSubExposure = value.typicalSubExposure
+        self.notes = value.notes
+        self.createdAt = value.createdAt
+        self.modifiedAt = value.modifiedAt
+    }
+
+    init() {}
+
+    var asValue: RigProfile {
+        let history = (try? JSONDecoder().decode([String].self, from: nameHistoryData)) ?? []
+        let cfg = GuideConfiguration(rawValue: guideConfigurationRaw) ?? .oag
+        let mc = MountClass(rawValue: mountClassRaw) ?? .standardGearMount
+        return RigProfile(
+            id: id, currentName: currentName, nameHistory: history,
+            imagingFocalLength: imagingFocalLengthMm,
+            imagingPixelSize: imagingPixelSizeMicrons,
+            imagingBinning: imagingBinning,
+            reducerFactor: reducerFactor,
+            guideConfiguration: cfg,
+            guideCameraPixelSize: guideCameraPixelSizeMicrons,
+            guideFocalLength: guideFocalLengthMm,
+            guideBinning: guideBinning,
+            mountModel: mountModel,
+            mountClass: mc,
+            hasHighPrecisionEncoders: hasHighPrecisionEncoders,
+            typicalSubExposure: typicalSubExposure,
+            notes: notes,
+            createdAt: createdAt,
+            modifiedAt: modifiedAt
+        )
+    }
+}
+
+/// Per-night analytical artifact. One record per `.txt` log file ingested.
+@Model
+final class NightRecordEntity {
+    var id: UUID = UUID()
+    var rigProfile: RigProfileEntity? = nil
+
+    /// File path the night was ingested from. Not authoritative — may be moved/deleted.
+    var sourceFilePath: String = ""
+    /// SHA-256 content hash. Uniqueness enforced in the ingest ModelActor.
+    var sourceContentHash: String = ""
+
+    var nightDate: Date = Date()
+    var sessionsCount: Int = 0
+    var totalIntegrationMinutes: Double = 0
+
+    var medianRMSArcsec: Double = 0
+    var bestSessionRMSArcsec: Double = 0
+    var worstSessionRMSArcsec: Double = 0
+
+    /// JSON-encoded `[PersistedSessionStats]`. Phase 3 will define the inner shape.
+    var sessionStatsData: Data = Data()
+    /// JSON-encoded `PersistedCalibration?`. Phase 3 will define the inner shape.
+    var calibrationData: Data = Data()
+
+    var ingestedAt: Date = Date()
+    var lastAnalyzedAt: Date = Date()
+
+    @Relationship(deleteRule: .cascade, inverse: \ObservationEntity.nightRecord)
+    var observations: [ObservationEntity]? = nil
+
+    @Relationship(deleteRule: .cascade, inverse: \AnnotationEntity.nightRecord)
+    var annotations: [AnnotationEntity]? = nil
+
+    @Relationship(deleteRule: .cascade, inverse: \GAResultEntity.nightRecord)
+    var gaResults: [GAResultEntity]? = nil
+
+    init() {}
+}
+
+/// Persistent observation. Mirrors the value-type `RecommenderObservation`.
+@Model
+final class ObservationEntity {
+    var id: UUID = UUID()
+    var nightRecord: NightRecordEntity? = nil
+    var rigProfileId: UUID = UUID()
+
+    var scopeRaw: String = "singleNight"
+    var categoryRaw: Int = 0
+    var severityRaw: Int = 0
+    var sourceAuthorityRaw: String = "ephemerisHeuristic"
+    var confidenceRaw: String = "medium"
+
+    var title: String = ""
+    var summary: String = ""
+    var suggestedResponse: String = ""
+
+    /// JSON-encoded `[EvidenceItem]`.
+    var evidenceData: Data = Data()
+    /// JSON-encoded `[String]`.
+    var candidateContributorsData: Data = Data()
+    /// JSON-encoded `[String]` of help topic IDs.
+    var relatedHelpTopicIdsData: Data = Data()
+    /// JSON-encoded `[PHD2Tool]` (raw values).
+    var relatedPHD2ToolsData: Data = Data()
+
+    var generatedAt: Date = Date()
+    var dismissedAt: Date? = nil
+
+    init() {}
+}
+
+/// Persistent user-recorded event tied to a night.
+@Model
+final class AnnotationEntity {
+    var id: UUID = UUID()
+    var rigProfileId: UUID = UUID()
+    var nightRecord: NightRecordEntity? = nil
+
+    var eventDate: Date = Date()
+    /// JSON-encoded `Set<AnnotationCategory>` raw values.
+    var categoriesData: Data = Data()
+    var label: String = ""
+    var detail: String = ""
+    var isRigMutating: Bool = false
+
+    var createdAt: Date = Date()
+    var modifiedAt: Date = Date()
+
+    init() {}
+}
+
+/// Persistent target cluster (Phase 8 pointing/target awareness).
+@Model
+final class TargetClusterEntity {
+    var id: UUID = UUID()
+    var rigProfile: RigProfileEntity? = nil
+
+    var centerRA: Double = 0       // hours
+    var centerDec: Double = 0      // degrees
+    var radiusDeg: Double = 0.5
+
+    var catalogMatch: String? = nil
+    var sessionCount: Int = 0
+    var totalIntegrationMinutes: Double = 0
+    var medianRMSArcsec: Double = 0
+
+    /// JSON-encoded `[UUID]`.
+    var nightRecordIdsData: Data = Data()
+
+    init() {}
+}
+
+/// Persistent Guiding Assistant result parsed from log INFO entries.
+@Model
+final class GAResultEntity {
+    var id: UUID = UUID()
+    var nightRecord: NightRecordEntity? = nil
+
+    var runAt: Date = Date()
+    var durationSec: Int = 0
+    var recommendedRAMinMovePx: Double? = nil
+    var recommendedDecMinMovePx: Double? = nil
+    var recommendedExposureSec: Double? = nil
+    var polarAlignErrorArcmin: Double? = nil
+    var decBacklashMs: Double? = nil
+    var raPeakToPeakArcsec: Double? = nil
+    var raMaxRateOfChangeArcsecPerSec: Double? = nil
+    var highFreqStarMotionArcsecRMS: Double? = nil
+    var recommendedBacklashCompensationMs: Int? = nil
+    var rawText: String = ""
+
+    init() {}
+}
+
+/// Annotation categories from design doc §9. Stored in `AnnotationEntity.categoriesData`
+/// as a JSON-encoded `Set<String>` of raw values.
+enum AnnotationCategory: String, Codable, CaseIterable, Sendable {
+    case equipment
+    case calibration
+    case environment
+    case software
+    case freeText
+}

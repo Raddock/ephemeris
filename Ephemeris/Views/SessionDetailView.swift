@@ -258,12 +258,31 @@ private struct GuideSessionDetail: View {
     @Binding var selectedTime: Double?
     @Binding var manualExclusions: [ClosedRange<Double>]
 
+    @Environment(RigProfileStore.self) private var rigStore
+    @Environment(\.openWindow) private var openWindow
+
     @State private var hoverTime: Double?
     @State private var visibleDomain: ClosedRange<Double>?
     @State private var showFrequencyAnalysis = false
 
     private var stats: SessionStats {
         SessionStatsCalculator.calculate(session, manualExclusionRanges: manualExclusions)
+    }
+
+    /// The PHD2 profile name from this session's header, used to look up a matching rig.
+    private var phd2ProfileName: String? {
+        for line in session.rawHeader {
+            if let range = line.range(of: "Equipment Profile = ") {
+                let value = String(line[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+                return value.isEmpty ? nil : value
+            }
+        }
+        return nil
+    }
+
+    private var matchedProfile: RigProfile? {
+        guard let name = phd2ProfileName else { return nil }
+        return rigStore.profile(matchingPHD2Name: name)
     }
 
     private var activeTime: Double? { hoverTime ?? selectedTime }
@@ -405,6 +424,31 @@ private struct GuideSessionDetail: View {
             Divider().frame(height: 36).padding(.horizontal, 4)
             stat("Peak RA", value: distanceText(stats.peakRA), tint: raTint)
             stat("Peak Dec", value: distanceText(stats.peakDec), tint: decTint)
+            if let profile = matchedProfile, profile.isImagingScaleConfigured {
+                Divider().frame(height: 36).padding(.horizontal, 4)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Verdict")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    ImagingScaleVerdictChip(
+                        rmsArcsec: stats.rmsTotal * session.pixelScale,
+                        imagingPixelScale: profile.imagingPixelScale
+                    )
+                }
+            } else if matchedProfile == nil {
+                Divider().frame(height: 36).padding(.horizontal, 4)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Verdict")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    ImagingScaleVerdictChip(
+                        rmsArcsec: stats.rmsTotal * session.pixelScale,
+                        imagingPixelScale: 0
+                    ) {
+                        openWindow(id: "rigProfiles")
+                    }
+                }
+            }
             Spacer()
         }
         .padding(.horizontal, 16)

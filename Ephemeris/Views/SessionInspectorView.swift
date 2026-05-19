@@ -26,9 +26,43 @@ struct SessionInspectorView: View {
     @Binding var selectedTime: Double?
     let manualExclusions: [ClosedRange<Double>]
 
+    @Environment(RigProfileStore.self) private var rigStore
+
+    /// PHD2 profile name parsed from the most recent guide-session header.
+    /// Used to resolve the matching `RigProfile` (current or historical).
+    private var phd2ProfileName: String? {
+        for session in log.guideSessions.reversed() {
+            for line in session.rawHeader {
+                if let range = line.range(of: "Equipment Profile = ") {
+                    let value = String(line[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    return value.isEmpty ? nil : value
+                }
+            }
+        }
+        return nil
+    }
+
+    private var matchedProfile: RigProfile? {
+        guard let name = phd2ProfileName else { return nil }
+        return rigStore.profile(matchingPHD2Name: name)
+    }
+
+    /// Recommender observations for the whole log. Recomputed on each inspector render —
+    /// fine at Phase 2 volumes; Phase 3 will cache via `NightRecord`.
+    private var observations: [RecommenderObservation] {
+        guard let profile = matchedProfile else { return [] }
+        return RecommenderEngine.default.analyze(log: log, profile: profile)
+    }
+
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
+                if let profile = matchedProfile {
+                    ObservationsPanel(observations: observations,
+                                      title: "Observations · \(profile.currentName)")
+                } else if let name = phd2ProfileName {
+                    rigConfigurePrompt(phd2Name: name)
+                }
                 switch section {
                 case .summary:
                     EmptyView()
@@ -45,6 +79,18 @@ struct SessionInspectorView: View {
         // 12pt trailing gutter matches Mail.app's inspector — keeps the
         // scrollbar from sitting flush against the rounded card edges.
         .contentMargins(.trailing, 12, for: .scrollContent)
+    }
+
+    @ViewBuilder
+    private func rigConfigurePrompt(phd2Name: String) -> some View {
+        InspectorCard("Rig profile", systemImage: "scope") {
+            Text("This log was produced by PHD2 profile **“\(phd2Name)”**, but no Ephemeris rig profile matches that name.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("Configure a rig profile to enable imaging-scale verdicts and the full recommender. Use Shift-⌘-, (Rig Profiles…) to set it up.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
     }
 
     @ViewBuilder
