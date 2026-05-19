@@ -54,6 +54,9 @@ struct EphemerisApp: App {
                     openWindow(id: "rigProfiles")
                 }
                 .keyboardShortcut(",", modifiers: [.command, .shift])
+                Button("MCP Server…") {
+                    openWindow(id: "mcpServer")
+                }
             }
             CommandGroup(after: .windowList) {
                 Button("Library") {
@@ -76,6 +79,13 @@ struct EphemerisApp: App {
         }
         .windowResizability(.contentSize)
         .defaultSize(width: 720, height: 540)
+        .defaultPosition(.center)
+
+        Window("MCP Server", id: "mcpServer") {
+            MCPServerWindow()
+        }
+        .windowResizability(.contentSize)
+        .defaultSize(width: 640, height: 720)
         .defaultPosition(.center)
 
         // v2.0 Phase 6 — multi-night library. Per design doc §5.2 / §7.1, use WindowGroup
