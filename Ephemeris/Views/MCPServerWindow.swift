@@ -1,9 +1,13 @@
 import SwiftUI
 import AppKit
 
-/// In-app surface for the embedded MCP server. Per design doc §5.4 + the
-/// `feedback_mcp_embedded` preference, the server lives inside the app and listens
-/// on localhost. The user only needs to copy one URL into Claude's connector UI.
+/// In-app surface for the embedded MCP server. Per design doc §5.4 + the embedded-MCP
+/// feedback memory: the server lives inside the app and listens on localhost.
+///
+/// Important: Claude Desktop's "Custom Connector" UI requires **HTTPS** URLs for
+/// remote services — it won't accept localhost HTTP. Local MCP setup uses the
+/// older mechanism: edit `claude_desktop_config.json` directly. This window
+/// surfaces both paths plus the Claude Code path (which DOES accept local HTTP).
 struct MCPServerWindow: View {
     @Environment(MCPEmbeddedServer.self) private var server
     @State private var copyConfirmation: String = ""
@@ -15,19 +19,19 @@ struct MCPServerWindow: View {
                 Divider()
                 statusSection
                 Divider()
-                connectionSection
+                claudeCodeSection
                 Divider()
-                pasteInstructionsSection
+                claudeDesktopSection
                 Divider()
                 toolsSection
             }
             .padding(24)
-            .frame(maxWidth: 620)
+            .frame(maxWidth: 640)
         }
         .navigationTitle("MCP Server")
     }
 
-    // MARK: - Sections
+    // MARK: - Header / status
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -67,6 +71,28 @@ struct MCPServerWindow: View {
                 }
             }
             .font(.caption)
+            if let url = server.connectionURL {
+                HStack(spacing: 8) {
+                    Text(url.absoluteString)
+                        .font(.callout.monospaced())
+                        .textSelection(.enabled)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(nsColor: .textBackgroundColor),
+                                    in: RoundedRectangle(cornerRadius: 6))
+                    Button {
+                        copy(url.absoluteString, label: "URL")
+                    } label: {
+                        Label("Copy URL", systemImage: "doc.on.doc")
+                            .labelStyle(.iconOnly)
+                    }
+                    .help("Copy the server URL")
+                }
+            }
+            if !copyConfirmation.isEmpty {
+                Text(copyConfirmation).font(.caption).foregroundStyle(.green)
+            }
         }
     }
 
@@ -76,7 +102,7 @@ struct MCPServerWindow: View {
         case .running(let port):
             HStack(spacing: 6) {
                 Circle().fill(.green).frame(width: 8, height: 8)
-                Text("Running on port \(port)").font(.callout)
+                Text("Running on 127.0.0.1:\(port)").font(.callout)
             }
         case .stopped:
             HStack(spacing: 6) {
@@ -99,91 +125,166 @@ struct MCPServerWindow: View {
         }
     }
 
-    @ViewBuilder
-    private var connectionSection: some View {
-        sectionTitle("Connection URL")
-        if let url = server.connectionURL {
-            HStack(spacing: 8) {
-                Text(url.absoluteString)
-                    .font(.callout.monospaced())
-                    .textSelection(.enabled)
-                    .padding(8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(nsColor: .textBackgroundColor),
-                                in: RoundedRectangle(cornerRadius: 6))
-                Button {
-                    copy(url.absoluteString, label: "URL")
-                } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
-                }
+    // MARK: - Claude Code (recommended)
+
+    private var claudeCodeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "terminal")
+                    .foregroundStyle(.green)
+                sectionTitle("Claude Code")
+                Text("recommended")
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 1)
+                    .background(.green.opacity(0.18), in: Capsule())
+                    .foregroundStyle(.green)
             }
-            if !copyConfirmation.isEmpty {
-                Text(copyConfirmation).font(.caption).foregroundStyle(.green)
-            }
-        } else {
-            Text("Server is not running. Start it to get a connection URL.")
+            Text("Claude Code accepts the localhost URL directly. One terminal command and the connector is live:")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-        }
-    }
-
-    private var pasteInstructionsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionTitle("How to connect")
-            VStack(alignment: .leading, spacing: 6) {
-                instructionStep(
-                    number: 1,
-                    title: "Open Claude Desktop or Claude Code",
-                    detail: "Or any other MCP-conformant client."
-                )
-                instructionStep(
-                    number: 2,
-                    title: "Add a custom connector",
-                    detail: "In Claude Desktop: Settings → Connectors → Add Custom Connector. In Claude Code: edit your .claude.json mcpServers entry to use the url field."
-                )
-                instructionStep(
-                    number: 3,
-                    title: "Paste the URL above",
-                    detail: "The client will list five Ephemeris tools (list_rigs, list_nights, list_observations, get_aggregate_stats, get_corpus_summary)."
-                )
+            if let url = server.connectionURL {
+                codeBlock("claude mcp add ephemeris --transport http \(url.absoluteString)")
+                    .overlay(alignment: .topTrailing) {
+                        Button {
+                            copy("claude mcp add ephemeris --transport http \(url.absoluteString)",
+                                 label: "Claude Code command")
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(6)
+                    }
             }
-            DisclosureGroup("Alternative: edit Claude Desktop config file directly") {
+            DisclosureGroup("Or edit your config file") {
                 if let url = server.connectionURL {
+                    Text("Add to `~/.claude.json` (or your project's `.claude/mcp_servers.json`):")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 4)
                     let snippet = #"""
                     {
                       "mcpServers": {
                         "ephemeris": {
+                          "type": "http",
                           "url": "\#(url.absoluteString)"
                         }
                       }
                     }
                     """#
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Add to ~/Library/Application Support/Claude/claude_desktop_config.json:")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text(snippet)
-                            .font(.caption.monospaced())
-                            .textSelection(.enabled)
-                            .padding(8)
-                            .background(Color(nsColor: .textBackgroundColor),
-                                        in: RoundedRectangle(cornerRadius: 4))
-                        Button {
-                            copy(snippet, label: "Config snippet")
-                        } label: {
-                            Label("Copy config snippet", systemImage: "doc.on.doc")
+                    codeBlock(snippet)
+                        .overlay(alignment: .topTrailing) {
+                            Button {
+                                copy(snippet, label: "Claude Code config")
+                            } label: {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(6)
                         }
-                        .controlSize(.small)
-                    }
-                } else {
-                    Text("Start the server to see the config snippet.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
             }
             .font(.caption)
         }
     }
+
+    // MARK: - Claude Desktop (config file)
+
+    private var claudeDesktopSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "macwindow")
+                    .foregroundStyle(.orange)
+                sectionTitle("Claude Desktop")
+            }
+            Text("Claude Desktop's **Custom Connector** UI requires an HTTPS remote URL — it won't accept this localhost server directly.")
+                .font(.caption)
+                .foregroundStyle(.orange)
+                .padding(8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(.orange.opacity(0.35), lineWidth: 0.5)
+                )
+            Text("The supported local path is via the config file. Two options:")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            DisclosureGroup("Option A — stdio binary (no app required to be running)") {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Build the standalone helper once, then point Claude Desktop at it. Works even when this app is closed.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    codeBlock("cd tools/ephemeris-mcp && swift build -c release")
+                    Text("Then add to `~/Library/Application Support/Claude/claude_desktop_config.json`:")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    let snippet = """
+                    {
+                      "mcpServers": {
+                        "ephemeris": {
+                          "command": "/absolute/path/to/PHD2-Log-Viewer/tools/ephemeris-mcp/.build/release/ephemeris-mcp"
+                        }
+                      }
+                    }
+                    """
+                    codeBlock(snippet)
+                        .overlay(alignment: .topTrailing) {
+                            Button {
+                                copy(snippet, label: "Stdio config")
+                            } label: {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(6)
+                        }
+                    Text("Restart Claude Desktop after editing.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .font(.caption)
+
+            DisclosureGroup("Option B — mcp-proxy bridge (uses this running server)") {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("`mcp-proxy` is a small Node bridge that lets Claude Desktop talk to a local HTTP MCP server via stdio. Requires this app to be running.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    codeBlock("npm install -g @modelcontextprotocol/proxy")
+                    if let url = server.connectionURL {
+                        let snippet = """
+                        {
+                          "mcpServers": {
+                            "ephemeris": {
+                              "command": "mcp-proxy",
+                              "args": ["\(url.absoluteString)"]
+                            }
+                          }
+                        }
+                        """
+                        codeBlock(snippet)
+                            .overlay(alignment: .topTrailing) {
+                                Button {
+                                    copy(snippet, label: "mcp-proxy config")
+                                } label: {
+                                    Image(systemName: "doc.on.doc")
+                                        .font(.caption)
+                                }
+                                .buttonStyle(.plain)
+                                .padding(6)
+                            }
+                    }
+                }
+            }
+            .font(.caption)
+        }
+    }
+
+    // MARK: - Tools list
 
     private var toolsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -194,7 +295,7 @@ struct MCPServerWindow: View {
             VStack(alignment: .leading, spacing: 3) {
                 toolRow("get_corpus_summary", "High-level inventory — useful first call")
                 toolRow("list_rigs", "Rig profiles with imaging-train values")
-                toolRow("list_nights", "Per-night rollups (median RMS, integration time)")
+                toolRow("list_nights", "Per-night rollups (RMS, integration, target, sub-quality)")
                 toolRow("list_observations", "Recommender output with severity + source authority")
                 toolRow("get_aggregate_stats", "Median / p75 / p90 RMS across a rig's nights")
             }
@@ -215,27 +316,24 @@ struct MCPServerWindow: View {
             .foregroundStyle(.secondary)
     }
 
-    private func instructionStep(number: Int, title: String, detail: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text("\(number).")
-                .font(.callout.weight(.semibold))
-                .foregroundStyle(.blue)
-                .frame(width: 18, alignment: .leading)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.callout)
-                Text(detail).font(.caption2).foregroundStyle(.secondary)
-            }
-        }
-    }
-
     private func toolRow(_ name: String, _ description: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(name)
                 .font(.caption.monospaced())
-                .frame(width: 150, alignment: .leading)
+                .frame(width: 170, alignment: .leading)
             Text(description)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private func codeBlock(_ text: String) -> some View {
+        Text(text)
+            .font(.caption.monospaced())
+            .textSelection(.enabled)
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(nsColor: .textBackgroundColor),
+                        in: RoundedRectangle(cornerRadius: 5))
     }
 
     private func copy(_ text: String, label: String) {
