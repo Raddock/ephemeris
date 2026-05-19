@@ -9,8 +9,18 @@ import SwiftUI
 struct RigProfileEditorView: View {
     @Binding var profile: RigProfile
     var phd2ProfileName: String?
+    /// Optional guide-train values harvested from an open log's header. When present,
+    /// a "Suggest from open log" button appears in the Guide-train section.
+    var guideTrainHint: GuideTrainHint?
     var onSave: (() -> Void)?
     var onDiscard: (() -> Void)?
+
+    struct GuideTrainHint: Equatable, Sendable {
+        let focalLengthMm: Double      // post-reducer effective FL reported by PHD2
+        let pixelSizeMicrons: Double
+        let binning: Int
+        let cameraName: String?        // for the button label
+    }
 
     var body: some View {
         Form {
@@ -49,8 +59,9 @@ struct RigProfileEditorView: View {
             Section {
                 doubleField("OTA focal length", value: $profile.imagingFocalLength,
                             unit: "mm", placeholder: "2800")
-                doubleField("Pixel size", value: $profile.imagingPixelSize,
-                            unit: "μm", placeholder: "5.9")
+                doubleField("Imaging camera pixel size",
+                            value: $profile.imagingPixelSize,
+                            unit: "μm", placeholder: "3.76")
                 Picker("Binning", selection: $profile.imagingBinning) {
                     ForEach(1...4, id: \.self) { Text("\($0)×\($0)").tag($0) }
                 }
@@ -73,12 +84,12 @@ struct RigProfileEditorView: View {
             } header: {
                 Text("Imaging train")
             } footer: {
-                Text("Enter the OTA's nominal focal length. Use the reducer factor separately if you image with a reducer. PHD2's log header reports the post-reducer effective focal length — Ephemeris recomputes it from your inputs.")
+                Text("Enter the OTA's nominal focal length and your **imaging** camera's pixel size. PHD2's log header doesn't know these — only the guide-train values appear there. Use the reducer factor separately if you image with a reducer.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section("Guide train") {
+            Section {
                 Picker("Configuration", selection: $profile.guideConfiguration) {
                     ForEach(GuideConfiguration.allCases, id: \.self) { c in
                         Text(c.rawValue).tag(c)
@@ -87,8 +98,9 @@ struct RigProfileEditorView: View {
                 if profile.guideConfiguration != .sameOptics {
                     doubleField("Guide focal length", value: $profile.guideFocalLength,
                                 unit: "mm", placeholder: "1960")
-                    doubleField("Guide pixel size", value: $profile.guideCameraPixelSize,
-                                unit: "μm", placeholder: "5.9")
+                    doubleField("Guide camera pixel size",
+                                value: $profile.guideCameraPixelSize,
+                                unit: "μm", placeholder: "5.9 (ZWO ASI174MM)")
                     Picker("Guide binning", selection: $profile.guideBinning) {
                         ForEach(1...4, id: \.self) { Text("\($0)×\($0)").tag($0) }
                     }
@@ -99,7 +111,24 @@ struct RigProfileEditorView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                    if let hint = guideTrainHint {
+                        Button {
+                            applyHint(hint)
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "wand.and.stars")
+                                Text("Fill from open log\(hint.cameraName.map { " (\($0))" } ?? "")")
+                            }
+                            .font(.caption)
+                        }
+                    }
                 }
+            } header: {
+                Text("Guide train")
+            } footer: {
+                Text("These values are visible in the PHD2 log header — focal length is the post-reducer effective length when guiding through the same OTA as imaging (OAG), or the guide-scope's FL otherwise.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Notes") {
@@ -127,6 +156,12 @@ struct RigProfileEditorView: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private func applyHint(_ hint: GuideTrainHint) {
+        profile.guideFocalLength = hint.focalLengthMm
+        profile.guideCameraPixelSize = hint.pixelSizeMicrons
+        profile.guideBinning = hint.binning
     }
 
     @ViewBuilder
