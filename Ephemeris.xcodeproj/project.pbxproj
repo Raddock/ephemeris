@@ -103,6 +103,7 @@
 				5F9BE2AA2F9C5F1D00DD97D8 /* Frameworks */,
 				5F9BE2AB2F9C5F1D00DD97D8 /* Resources */,
 				5FA1B00112345678ABCDEF02 /* Copy AppIcon.icon to bundle */,
+				5FBE5A0112345678ABCDEF03 /* Bundle ephemeris-mcp helper */,
 			);
 			buildRules = (
 			);
@@ -253,6 +254,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "SRC=\"${SRCROOT}/Ephemeris/AppIcon.icon\"\nDST=\"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/Contents/Resources/AppIcon.icon\"\nif [ ! -d \"$SRC\" ]; then\n  echo \"warning: AppIcon.icon source not found at $SRC\"\n  exit 0\nfi\nrm -rf \"$DST\"\nmkdir -p \"$(dirname \"$DST\")\"\ncp -R \"$SRC\" \"$DST\"\n";
+		};
+		5FBE5A0112345678ABCDEF03 /* Bundle ephemeris-mcp helper */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/tools/ephemeris-mcp/Package.swift",
+			);
+			name = "Bundle ephemeris-mcp helper";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(WRAPPER_NAME)/Contents/Helpers/ephemeris-mcp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nHELPER_SRC=\"${SRCROOT}/tools/ephemeris-mcp\"\nDST_DIR=\"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/Contents/Helpers\"\nDST=\"${DST_DIR}/ephemeris-mcp\"\n\nif [ ! -f \"${HELPER_SRC}/Package.swift\" ]; then\n  echo \"warning: ephemeris-mcp package not found at ${HELPER_SRC}; skipping\"\n  exit 0\nfi\n\necho \"Building ephemeris-mcp helper (release)…\"\ncd \"${HELPER_SRC}\"\nswift build -c release 2>&1 | tail -10\n\nBUILT=\"${HELPER_SRC}/.build/release/ephemeris-mcp\"\nif [ ! -f \"${BUILT}\" ]; then\n  echo \"error: helper binary not found at ${BUILT} after build\"\n  exit 1\nfi\n\nmkdir -p \"${DST_DIR}\"\ncp \"${BUILT}\" \"${DST}\"\nchmod +x \"${DST}\"\n\nif [ -n \"${EXPANDED_CODE_SIGN_IDENTITY}\" ]; then\n  echo \"Code-signing helper with ${EXPANDED_CODE_SIGN_IDENTITY_NAME:-${EXPANDED_CODE_SIGN_IDENTITY}}\"\n  codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" --options runtime --timestamp=none \"${DST}\"\nfi\n\necho \"Helper bundled at ${DST}\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
