@@ -37,6 +37,8 @@ struct RigProfilesWindow: View {
         }
     }
 
+    @State private var profileToDelete: RigProfile?
+
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
             List(selection: $selectedID) {
@@ -61,6 +63,13 @@ struct RigProfilesWindow: View {
                         .foregroundStyle(.secondary)
                     }
                     .tag(profile.id)
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            profileToDelete = profile
+                        } label: {
+                            Label("Delete \"\(profile.effectiveName)\"", systemImage: "trash")
+                        }
+                    }
                 }
             }
             .listStyle(.sidebar)
@@ -71,10 +80,18 @@ struct RigProfilesWindow: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 HStack(spacing: 4) {
-                    Button { deleteSelected() } label: { Image(systemName: "minus") }
-                        .buttonStyle(.borderless)
-                        .disabled(selectedID == nil)
-                        .help("Delete the selected rig profile")
+                    Button(role: .destructive) {
+                        if let id = selectedID,
+                           let p = store.profiles.first(where: { $0.id == id }) {
+                            profileToDelete = p
+                        }
+                    } label: {
+                        Label("Delete rig", systemImage: "trash")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(selectedID == nil)
+                    .help("Delete the selected rig profile")
                     Spacer()
                     if hasUnsavedChanges {
                         Text("Unsaved changes")
@@ -86,6 +103,29 @@ struct RigProfilesWindow: View {
             .padding(8)
         }
         .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 360)
+        .confirmationDialog(
+            "Delete this rig profile?",
+            isPresented: Binding(
+                get: { profileToDelete != nil },
+                set: { if !$0 { profileToDelete = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: profileToDelete
+        ) { profile in
+            Button("Delete \"\(profile.effectiveName)\"", role: .destructive) {
+                try? store.delete(profile)
+                if selectedID == profile.id {
+                    selectedID = store.profiles.first?.id
+                    draft = selectedID.flatMap { id in store.profiles.first(where: { $0.id == id }) }
+                }
+                profileToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                profileToDelete = nil
+            }
+        } message: { profile in
+            Text("PHD2 profile **\(profile.currentName)** — any night records and observations tied to this rig will also be removed. This can't be undone.")
+        }
     }
 
     @ViewBuilder

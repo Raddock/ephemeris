@@ -148,6 +148,20 @@ final class LibraryBulkImporter {
         NSLog("[BulkImport] Done — imported: %d, dedup: %d, auto-created rigs: %d, empty: %d, errors: %d",
               summary.imported, summary.skippedExisting,
               summary.autoCreatedRigs.count, summary.skippedEmpty.count, summary.errors.count)
+        if !summary.autoCreatedRigs.isEmpty {
+            NSLog("[BulkImport]   Auto-created rigs: %@",
+                  summary.autoCreatedRigs.joined(separator: ", "))
+        }
+        if !summary.skippedEmpty.isEmpty {
+            NSLog("[BulkImport]   Empty files: %@",
+                  summary.skippedEmpty.prefix(5).joined(separator: ", ")
+                  + (summary.skippedEmpty.count > 5 ? " (and \(summary.skippedEmpty.count - 5) more)" : ""))
+        }
+        if !summary.errors.isEmpty {
+            for err in summary.errors.prefix(10) {
+                NSLog("[BulkImport]   ERROR: %@", err)
+            }
+        }
         status = .completed(summary)
     }
 
