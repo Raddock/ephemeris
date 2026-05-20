@@ -1,12 +1,13 @@
 import Foundation
 
-/// Parses Guiding Assistant result INFO entries from a PHD2 log session.
+/// Parses Guiding Assistant result lines from a PHD2 guide-log session.
 ///
-/// PHD2 emits a sequence of "INFO: Guiding Assistant: ..." lines when GA stops.
-/// Each value is exposed as a separate line; this parser walks the session's infos
-/// and aggregates them into a single `GAResultEntity`. Per design §6.2: the
-/// recommender's GuidingAssistantRecommendationObserver surfaces these verbatim
-/// (`phd2Measurement` source authority) — they supersede any computed estimate.
+/// When the Guiding Assistant stops, PHD2 writes its measurements and
+/// recommendations into the guide log as a run of `INFO: GA Result - …` lines —
+/// HPF-RMS, RA/Dec peak and drift, polar-alignment error, and the suggested
+/// min-move values. This parser aggregates them into a single `GAResultEntity`.
+/// Per design §6.2 the recommender surfaces these verbatim (`phd2Measurement`
+/// source authority) — they supersede any computed estimate.
 nonisolated enum GAResultParser {
 
     /// Parsed result for one GA run. The ingestor maps this to a `GAResultEntity`.
@@ -27,43 +28,42 @@ nonisolated enum GAResultParser {
     /// Walk a session and return zero or more `Parsed` GA results. A session can host
     /// multiple GA runs (rare but possible), so we group by transitions.
     static func parse(session: GuideSession) -> [Parsed] {
-        let gaLines = session.infos.filter { $0.text.localizedCaseInsensitiveContains("Guiding Assistant:") }
+        let gaLines = session.infos.filter { $0.text.contains("GA Result") }
         guard !gaLines.isEmpty else { return [] }
 
-        // For now, group all GA lines in one session into a single Parsed. (Mostly correct;
-        // edge case of two GA runs per session can be split via a heuristic later.)
+        // For now, group all GA Result lines in one session into a single Parsed.
+        // (A session hosting two GA runs is rare; splitting is a future heuristic.)
         var result = Parsed(runAt: session.startedAt ?? .now)
         var rawLines: [String] = []
         for info in gaLines {
             let text = info.text
             rawLines.append(text)
 
-            if let v = extractDouble(text, after: "Suggested RA min-move") {
+            // Recommendations: "… Recommendation: Try setting RA min-move to 0.50"
+            if let v = extractDouble(text, after: "RA min-move to") {
                 result.recommendedRAMinMovePx = v
             }
-            if let v = extractDouble(text, after: "Suggested Dec min-move") {
+            if let v = extractDouble(text, after: "Dec min-move to") {
                 result.recommendedDecMinMovePx = v
             }
-            if let v = extractDouble(text, after: "Suggested exposure") {
-                result.recommendedExposureSec = v
-            }
-            if let v = extractDouble(text, after: "Polar alignment error") {
+            // Polar-alignment error: "… PA Error= 2.3 arc-min"
+            if let v = extractDouble(text, after: "PA Error=") {
                 result.polarAlignErrorArcmin = v
             }
-            if let v = extractDouble(text, after: "Dec backlash") {
-                result.decBacklashMs = v
+            // Measurement duration: "… Elapsed Time=138s, …"
+            if let v = extractInt(text, after: "Elapsed Time=") {
+                result.durationSec = v
             }
-            if let v = extractDouble(text, after: "Peak-to-Peak RA") {
-                result.raPeakToPeakArcsec = v
-            }
-            if let v = extractDouble(text, after: "Max rate of change") {
-                result.raMaxRateOfChangeArcsecPerSec = v
-            }
-            if let v = extractDouble(text, after: "High-frequency star motion") {
+            // PHD2 writes the remaining values as "<px> px ( <arcsec> arc-sec )"
+            // pairs; keep the arc-sec figure (first number inside the parens).
+            if let v = firstParenValue(text, after: "Total HPF-RMS") {
                 result.highFreqStarMotionArcsecRMS = v
             }
-            if let v = extractInt(text, after: "Duration") {
-                result.durationSec = v
+            if let v = firstParenValue(text, after: "RA Peak-Peak") {
+                result.raPeakToPeakArcsec = v
+            }
+            if let v = firstParenValue(text, after: "Max RA Drift Rate") {
+                result.raMaxRateOfChangeArcsecPerSec = v
             }
         }
 
@@ -88,6 +88,18 @@ nonisolated enum GAResultParser {
         let scanner = Scanner(string: String(tail))
         scanner.charactersToBeSkipped = CharacterSet(charactersIn: " =:\t")
         return scanner.scanInt()
+    }
+
+    /// Pulls the first number inside the parentheses that follow `prefix`. PHD2
+    /// writes paired values as "<px> px ( <arcsec> arc-sec )"; we keep the
+    /// arc-sec figure. Returns nil if the prefix or a parenthesised number is absent.
+    private static func firstParenValue(_ text: String, after prefix: String) -> Double? {
+        guard let prefixRange = text.range(of: prefix) else { return nil }
+        let tail = text[prefixRange.upperBound...]
+        guard let paren = tail.range(of: "(") else { return nil }
+        let scanner = Scanner(string: String(tail[paren.upperBound...]))
+        scanner.charactersToBeSkipped = CharacterSet(charactersIn: " =:\t")
+        return scanner.scanDouble()
     }
 }
 
