@@ -37,18 +37,26 @@ actor LibraryIngestor {
 
         // Recompute aggregates and recommender output every time — cheap relative to
         // the full library, and avoids needing migration for threshold changes.
-        let aggregate = LogAggregateStatsCalculator.calculate(log)
         record.sessionsCount = log.guideSessions.count
         record.totalIntegrationMinutes = log.guideSessions.reduce(0.0) { $0 + $1.duration / 60.0 }
-        record.medianRMSArcsec = aggregate.weightedRMSTotal * (aggregate.pixelScale > 0 ? aggregate.pixelScale : 1.0)
 
-        // best/worst session RMS in arcsec
-        let perSession = log.guideSessions.map { session in
+        // Per-session RMS in arcsec — each session is converted with its own pixel
+        // scale, so a log whose sessions differ in binning/scale still aggregates
+        // correctly. The night-level RMS is the frame-weighted quadrature mean of
+        // these; computing it this way (rather than from a single global pixel
+        // scale) avoids leaving RMS in pixels when a log mixes scales.
+        let perSession: [(rmsArcsec: Double, frames: Int)] = log.guideSessions.map { session in
             let s = SessionStatsCalculator.calculate(session, manualExclusionRanges: [])
-            return s.rmsTotal * session.pixelScale
+            return (s.rmsTotal * session.pixelScale, s.includedFrames)
         }
-        record.bestSessionRMSArcsec = perSession.min() ?? 0
-        record.worstSessionRMSArcsec = perSession.max() ?? 0
+        let rmsValues = perSession.map(\.rmsArcsec)
+        record.bestSessionRMSArcsec = rmsValues.min() ?? 0
+        record.worstSessionRMSArcsec = rmsValues.max() ?? 0
+        let totalFrames = perSession.reduce(0) { $0 + $1.frames }
+        record.medianRMSArcsec = totalFrames > 0
+            ? (perSession.reduce(0.0) { $0 + $1.rmsArcsec * $1.rmsArcsec * Double($1.frames) }
+               / Double(totalFrames)).squareRoot()
+            : 0
         record.lastAnalyzedAt = .now
 
         // Phase 9: pointing context. Median RA/Dec across the sessions; galactic
