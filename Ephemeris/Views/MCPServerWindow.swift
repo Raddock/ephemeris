@@ -8,7 +8,10 @@ import AppKit
 /// invoke `ClaudeConfigInstaller` which uses the bundled helper binary + a
 /// user-mediated NSOpenPanel to write each client's config file.
 struct MCPServerWindow: View {
-    @Environment(MCPEmbeddedServer.self) private var server
+    // Optional: if EphemerisLibrary failed to open, no server was created and the
+    // environment carries no MCPEmbeddedServer. A non-optional @Environment would
+    // hard-crash here when macOS restores this window scene.
+    @Environment(MCPEmbeddedServer.self) private var server: MCPEmbeddedServer?
     @State private var installInProgress: ClaudeConfigInstaller.Target?
     @State private var installResult: ClaudeConfigInstaller.InstallResult?
     @State private var installError: String?
@@ -19,20 +22,30 @@ struct MCPServerWindow: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                header
-                Divider()
-                statusSection
-                Divider()
-                connectSection
-                Divider()
-                toolsSection
-                Divider()
-                advancedDisclosure
+        Group {
+            if let server {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 22) {
+                        header
+                        Divider()
+                        statusSection(server)
+                        Divider()
+                        connectSection
+                        Divider()
+                        toolsSection
+                        Divider()
+                        advancedDisclosure(server)
+                    }
+                    .padding(24)
+                    .frame(maxWidth: 660)
+                }
+            } else {
+                ContentUnavailableView(
+                    "MCP server unavailable",
+                    systemImage: "bubble.left.and.text.bubble.right",
+                    description: Text("Ephemeris couldn't open its library, so the embedded MCP server isn't running. Quit and reopen Ephemeris; if this keeps happening the library store may be damaged.")
+                )
             }
-            .padding(24)
-            .frame(maxWidth: 660)
         }
         .navigationTitle("MCP Server")
         .alert(
@@ -73,9 +86,9 @@ struct MCPServerWindow: View {
         }
     }
 
-    private var statusSection: some View {
+    private func statusSection(_ server: MCPEmbeddedServer) -> some View {
         HStack(spacing: 14) {
-            statusIndicator
+            statusIndicator(server)
             Spacer()
             if let last = server.lastConnectionAt {
                 VStack(alignment: .trailing, spacing: 1) {
@@ -89,7 +102,7 @@ struct MCPServerWindow: View {
     }
 
     @ViewBuilder
-    private var statusIndicator: some View {
+    private func statusIndicator(_ server: MCPEmbeddedServer) -> some View {
         switch server.status {
         case .running(let port):
             HStack(spacing: 6) {
@@ -242,7 +255,7 @@ struct MCPServerWindow: View {
 
     // MARK: - Advanced
 
-    private var advancedDisclosure: some View {
+    private func advancedDisclosure(_ server: MCPEmbeddedServer) -> some View {
         DisclosureGroup {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Privacy: localhost (127.0.0.1) only. No outbound network. No telemetry.")
