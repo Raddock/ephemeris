@@ -13,6 +13,7 @@ struct LibraryWindow: View {
     @Environment(\.ephemerisLibrary) private var library
     @Environment(\.importCoordinator) private var importCoordinator
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.controlActiveState) private var controlActiveState
     @State private var selectedRigID: RigProfile.ID?
     @State private var range: TimeRange = .month
     @State private var rigToDelete: RigProfile?
@@ -56,9 +57,16 @@ struct LibraryWindow: View {
         .navigationTitle("Library")
         .navigationSubtitle(rangeSubtitle)
         .onAppear {
+            rigStore.load()
             if selectedRigID == nil {
                 selectedRigID = rigStore.profiles.first?.id
             }
+        }
+        .onChange(of: controlActiveState) { _, state in
+            // Re-read rig profiles whenever the Library becomes the active window.
+            // Picks up imaging-scale (and other) edits made in the Rig Profiles
+            // window so star-shape predictions recompute without an app relaunch.
+            if state == .key { rigStore.load() }
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
