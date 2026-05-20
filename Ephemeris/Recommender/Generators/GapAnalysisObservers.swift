@@ -736,7 +736,7 @@ nonisolated struct StarLostObserver: RecommenderGenerator {
 
 // MARK: - Shared formatters
 
-private func formatArcsec(_ v: Double) -> String { String(format: "%.2f″", v) }
-private func formatRatio(_ v: Double) -> String { String(format: "%.2f", v) }
-private func formatPx(_ v: Double) -> String { String(format: "%.2f px", v) }
-private func formatPxSize(_ v: Double) -> String { String(format: "%.2fµm", v) }
+private nonisolated func formatArcsec(_ v: Double) -> String { String(format: "%.2f″", v) }
+private nonisolated func formatRatio(_ v: Double) -> String { String(format: "%.2f", v) }
+private nonisolated func formatPx(_ v: Double) -> String { String(format: "%.2f px", v) }
+private nonisolated func formatPxSize(_ v: Double) -> String { String(format: "%.2fµm", v) }

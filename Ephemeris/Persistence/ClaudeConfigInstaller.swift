@@ -147,7 +147,7 @@ enum ClaudeConfigInstaller {
 
         // Read existing JSON, or start with {}
         var rootDict: [String: Any] = [:]
-        var wasFirstInstall = !FileManager.default.fileExists(atPath: configURL.path)
+        let wasFirstInstall = !FileManager.default.fileExists(atPath: configURL.path)
 
         if !wasFirstInstall {
             do {

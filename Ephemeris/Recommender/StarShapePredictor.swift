@@ -10,7 +10,7 @@ import Foundation
 /// — just larger than they would be if guiding were sub-pixel. A user
 /// rating this night would still pick `.round` from their visual check, so
 /// the verdict mapping treats both sharp and bloated round as `.round`.
-enum PredictedStarShape: Sendable, Equatable {
+nonisolated enum PredictedStarShape: Sendable, Equatable {
     /// Symmetric guiding (low axis asymmetry, no meaningful drift). `bloated == true`
     /// means RMS exceeds the imaging scale enough that stars will look noticeably
     /// soft despite being round — the classic "good guiding, long focal length,

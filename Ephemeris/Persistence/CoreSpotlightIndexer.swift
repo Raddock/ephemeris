@@ -14,7 +14,7 @@ import UniformTypeIdentifiers
 /// We use a single shared `domainIdentifier` so a "Reset library data" action can
 /// remove every Ephemeris donation in one call to
 /// `deleteSearchableItems(withDomainIdentifiers:)`.
-enum CoreSpotlightIndexer {
+nonisolated enum CoreSpotlightIndexer {
     static let domainIdentifier = "com.macobservatory.Ephemeris.library"
 
     nonisolated static func donate(night: NightRecordEntityDigest) {

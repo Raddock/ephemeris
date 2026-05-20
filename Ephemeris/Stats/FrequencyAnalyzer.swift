@@ -23,7 +23,7 @@ import Foundation
 
 /// Frequency-domain analysis of a guide-session axis. Periods are in seconds
 /// (the natural unit for diagnosing worm-drive harmonics).
-struct FrequencySpectrum: Sendable, Equatable {
+nonisolated struct FrequencySpectrum: Sendable, Equatable {
     /// Periods in seconds, one per frequency bin (excluding DC).
     var periods: [Double]
     /// Magnitudes aligned with `periods`, normalised so peak == 1.
@@ -38,9 +38,9 @@ struct FrequencySpectrum: Sendable, Equatable {
     var driftCorrected: Bool
 }
 
-enum FrequencyAxis: Sendable { case ra, dec }
+nonisolated enum FrequencyAxis: Sendable { case ra, dec }
 
-enum FrequencyAnalyzer {
+nonisolated enum FrequencyAnalyzer {
 
     /// Compute the magnitude spectrum of the given axis.
     /// Returns `nil` if there are too few included frames or the timestamps don't form a valid interval.
