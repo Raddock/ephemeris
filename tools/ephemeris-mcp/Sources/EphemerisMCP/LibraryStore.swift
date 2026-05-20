@@ -202,13 +202,8 @@ final class LibraryStore: @unchecked Sendable {
          WHERE 1=1
         """
         if rigUUID != nil { sql += " AND r.ZID = ?" }
-        if let days = sinceDays {
-            let cutoff = Date().addingTimeInterval(-Double(days) * 86400)
-            // Core Data stores dates as seconds since 2001-01-01
-            let coreDataCutoff = cutoff.timeIntervalSinceReferenceDate
-            sql += " AND n.ZNIGHTDATE >= \(coreDataCutoff)"
-        }
-        sql += " ORDER BY n.ZNIGHTDATE DESC LIMIT \(limit)"
+        if sinceDays != nil { sql += " AND n.ZNIGHTDATE >= ?" }
+        sql += " ORDER BY n.ZNIGHTDATE DESC LIMIT ?"
 
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
@@ -218,6 +213,13 @@ final class LibraryStore: @unchecked Sendable {
             _ = bindUUID(stmt, idx: bindIdx, uuid: rigUUID)
             bindIdx += 1
         }
+        if let days = sinceDays {
+            // Core Data stores dates as seconds since 2001-01-01.
+            let cutoff = Date().addingTimeInterval(-Double(days) * 86400)
+            sqlite3_bind_double(stmt, bindIdx, cutoff.timeIntervalSinceReferenceDate)
+            bindIdx += 1
+        }
+        sqlite3_bind_int(stmt, bindIdx, Int32(max(1, min(limit, 10_000))))
         var rows: [NightRow] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
             rows.append(readNightRow(stmt))
