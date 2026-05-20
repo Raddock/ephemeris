@@ -530,7 +530,8 @@ struct LibraryDetailView: View {
         static let note: CGFloat = 34
         static let integration: CGFloat = 82
         static let rms: CGFloat = 58
-        static let shape: CGFloat = 64
+        static let predicted: CGFloat = 66
+        static let rating: CGFloat = 52
     }
 
     /// Tiny column-header strip placed above the recent-nights rows. Names the
@@ -549,8 +550,10 @@ struct LibraryDetailView: View {
             columnLabel("Note", width: NightColumn.note)
             columnLabel("Integration", width: NightColumn.integration, align: .trailing)
             columnLabel("RMS", width: NightColumn.rms, align: .trailing)
-            columnLabel("Shape", width: NightColumn.shape)
-                .help("Star shape — predicted from the night's data, or your own rating once you set one. Click a row's chip to rate it.")
+            columnLabel("Predicted", width: NightColumn.predicted)
+                .help("Star shape predicted from the night's data — RMS vs imaging scale, axis asymmetry, and drift. Read-only.")
+            columnLabel("Rating", width: NightColumn.rating)
+                .help("Your own verdict on how the subs looked. Click a row's chip to set it; a mismatch with the prediction is flagged orange.")
         }
         .padding(.horizontal, 12)
     }
@@ -672,8 +675,10 @@ struct LibraryDetailView: View {
                 .font(.callout.weight(.semibold).monospacedDigit())
                 .foregroundStyle(verdict.tint)
                 .frame(width: NightColumn.rms, alignment: .trailing)
-            shapeChip(for: record)
-                .frame(width: NightColumn.shape)
+            predictedShapeChip(for: record)
+                .frame(width: NightColumn.predicted)
+            ratingChip(for: record)
+                .frame(width: NightColumn.rating)
         }
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {
@@ -715,65 +720,72 @@ struct LibraryDetailView: View {
         }
     }
 
-    /// Unified shape chip — replaces the prior split between "predicted" and
-    /// "your rating" columns. By default shows the predicted shape from the data.
-    /// When the user has rated the night, the rating wins (it's ground truth) and
-    /// the predicted value is folded into the tooltip; disagreements paint the chip
-    /// orange so the differential-flexure signature is hard to miss. Click the
-    /// chip to rate or clear.
+    /// Read-only predicted-shape chip — what the data implies the night's stars
+    /// look like: sharp, bloated, elongated, trailed, or mixed. This is a computed
+    /// signal, never a control — it does not open a menu. The user's own verdict
+    /// lives in the separate `ratingChip` column.
     @ViewBuilder
-    private func shapeChip(for record: NightRecordEntity) -> some View {
+    private func predictedShapeChip(for record: NightRecordEntity) -> some View {
         let prediction = StarShapePredictor.predict(
             night: record,
             imagingPixelScale: profile.imagingPixelScale
         )
         let userRated = record.subQualityRaw.flatMap { SubQualityVerdict(rawValue: $0) }
         let disagrees = userRated != nil && prediction.verdict != userRated && prediction != .unknown
-
-        // What's shown on the chip face: user rating if present, else prediction.
-        // Tooltip carries both so the comparison stays accessible. Computed in a
-        // closure so the branching stays plain control flow, not @ViewBuilder content.
-        let (primarySymbol, primaryTint, isPredicted): (String, Color, Bool) = {
-            if let rated = userRated {
-                return (rated.symbolName, rated.tint, false)
-            } else if prediction != .unknown {
-                return (predictionIcon(prediction),
-                        chipTint(prediction: prediction, disagrees: false),
-                        true)
-            } else if profile.imagingPixelScale <= 0 {
-                // Prediction can't run without the rig's imaging scale. Show a
-                // ruler cue (no wand) so it reads as "needs setup", not "no data".
-                return ("ruler", .secondary, false)
-            } else {
-                return ("circle.dashed", .secondary, true)
+        if prediction != .unknown {
+            let tint = chipTint(prediction: prediction, disagrees: false)
+            HStack(spacing: 3) {
+                Image(systemName: "wand.and.stars").font(.caption2)
+                Image(systemName: predictionIcon(prediction)).font(.caption.weight(.semibold))
             }
-        }()
-        let resolvedTint: Color = disagrees ? .orange : primaryTint
+            .foregroundStyle(tint)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(tint.opacity(0.22), in: Capsule())
+            .overlay(Capsule().stroke(tint.opacity(0.55), lineWidth: 1))
+            .help(predictionTooltip(prediction: prediction, userRated: userRated, disagrees: disagrees, record: record))
+        } else {
+            // No imaging scale → can't predict. A faint ruler cue; the tooltip
+            // carries the fix.
+            Image(systemName: "ruler")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .help("Star-shape prediction needs this rig's imaging pixel scale. Set the imaging focal length, pixel size, and binning under App → Rig Profiles… (⇧⌘,).")
+        }
+    }
 
+    /// Selectable rating chip — the user's own verdict on how the night's subs
+    /// actually came out. A hollow circle until rated; click to set or clear. When
+    /// the rating contradicts the prediction the chip turns orange — the classic
+    /// differential-flexure tell.
+    @ViewBuilder
+    private func ratingChip(for record: NightRecordEntity) -> some View {
+        let userRated = record.subQualityRaw.flatMap { SubQualityVerdict(rawValue: $0) }
+        let prediction = StarShapePredictor.predict(
+            night: record,
+            imagingPixelScale: profile.imagingPixelScale
+        )
+        let disagrees = userRated != nil && prediction.verdict != userRated && prediction != .unknown
+        let tint: Color = disagrees ? .orange : (userRated?.tint ?? .secondary)
         Menu {
             shapeRatingMenu(for: record, userRated: userRated)
         } label: {
-            HStack(spacing: 3) {
-                if isPredicted {
-                    Image(systemName: "wand.and.stars").font(.caption2)
-                }
-                Image(systemName: primarySymbol).font(.caption.weight(.semibold))
+            if let userRated {
+                Image(systemName: userRated.symbolName)
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(tint.opacity(0.22), in: Capsule())
+                    .overlay(Capsule().stroke(tint.opacity(0.55), lineWidth: 1))
+            } else {
+                Image(systemName: "circle").font(.caption.weight(.medium))
             }
-            .foregroundStyle(resolvedTint)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(resolvedTint.opacity(0.22), in: Capsule())
-            .overlay(Capsule().stroke(resolvedTint.opacity(0.55), lineWidth: 1))
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
-        // .borderlessButton tints its label content from `.tint`, not
-        // `.foregroundStyle` — without this the icons render a flat default
-        // gray regardless of the prediction. The high-opacity capsule above
-        // carries the colour signal even if a future macOS ignores `.tint`.
-        .tint(resolvedTint)
+        .tint(userRated == nil ? .secondary : tint)
         .fixedSize()
-        .help(combinedShapeTooltip(prediction: prediction, userRated: userRated, disagrees: disagrees, record: record))
+        .help(ratingTooltip(prediction: prediction, userRated: userRated, disagrees: disagrees, record: record))
     }
 
     @ViewBuilder
@@ -781,7 +793,7 @@ struct LibraryDetailView: View {
         Button {
             setSubQuality(nil, for: record)
         } label: {
-            Label("Use predicted", systemImage: "wand.and.stars")
+            Label(userRated == nil ? "Not rated" : "Clear rating", systemImage: "circle")
         }
         Divider()
         ForEach(SubQualityVerdict.allCases, id: \.self) { option in
@@ -793,74 +805,25 @@ struct LibraryDetailView: View {
         }
     }
 
-    private func combinedShapeTooltip(prediction: PredictedStarShape,
-                                      userRated: SubQualityVerdict?,
-                                      disagrees: Bool,
-                                      record: NightRecordEntity) -> String {
-        let scaleNote: String
-        if profile.imagingPixelScale > 0 {
-            let ratio = record.medianRMSArcsec / profile.imagingPixelScale
-            scaleNote = String(format: " (RMS %.2f″ vs imaging scale %.2f″/px = %.2f×)",
-                               record.medianRMSArcsec, profile.imagingPixelScale, ratio)
-        } else {
-            scaleNote = ""
-        }
+    /// Tooltip for the rating chip: the user's verdict, the prediction for
+    /// comparison, and a flexure note when the two disagree.
+    private func ratingTooltip(prediction: PredictedStarShape,
+                               userRated: SubQualityVerdict?,
+                               disagrees: Bool,
+                               record: NightRecordEntity) -> String {
         var lines: [String] = []
-        if let rated = userRated {
-            lines.append("Your rating: \(rated.displayName)")
-            if prediction != .unknown {
-                lines.append("Predicted from data: \(prediction.displayName.lowercased())\(scaleNote)")
-            }
-        } else if prediction == .unknown && profile.imagingPixelScale <= 0 {
-            lines.append("Star-shape prediction needs this rig's imaging pixel scale.")
-            lines.append("Set the imaging focal length, pixel size, and binning under App → Rig Profiles… (⇧⌘,) — predicted shapes then appear here automatically.")
+        if let userRated {
+            lines.append("Your rating: \(userRated.displayName)")
         } else {
-            lines.append("Predicted from data: \(prediction.displayName.lowercased())\(scaleNote)")
-            lines.append("(Click to rate this night against your actual subs.)")
+            lines.append("Not rated — click to record how this night's subs actually looked.")
         }
-        if prediction.isBloated {
-            lines.append("Bloated = symmetric guiding wider than the imaging scale. Stars stay round but appear soft. Long-FL OTAs on harmonic-strain-wave mounts often live here.")
-        }
-        if case .trailed(let cause) = prediction {
-            lines.append(trailedCauseExplanation(cause))
+        if prediction != .unknown {
+            lines.append("Predicted from data: \(prediction.displayName.lowercased())")
         }
         if disagrees {
-            lines.append("Disagreement between your rating and the data often indicates differential flexure or another between-guider-and-imager effect.")
+            lines.append("Your rating disagrees with the prediction — that gap often points to differential flexure or another guider-vs-imager effect.")
         }
         return lines.joined(separator: "\n\n")
-    }
-
-    /// Old name kept as a no-op so we don't have to ripple-rename. Returns nothing.
-    @ViewBuilder
-    private func predictedShapeChip(for record: NightRecordEntity) -> some View {
-        let prediction = StarShapePredictor.predict(
-            night: record,
-            imagingPixelScale: profile.imagingPixelScale
-        )
-        let userRated = record.subQualityRaw.flatMap { SubQualityVerdict(rawValue: $0) }
-        let disagrees = userRated != nil && prediction.verdict != userRated && prediction != .unknown
-        // Bloated round + user-rated round isn't a disagreement (they'd both pick
-        // "round" from the menu) — but it IS information worth surfacing, so the
-        // chip stays visible to show the bloat. We just don't paint it orange.
-
-        if prediction != .unknown {
-            // Always show — the user wants to see the data signal on every row.
-            // Tint scales with severity: secondary for sharp round, the chip's
-            // own color for bloated / elongated / trailed, orange for disagreements.
-            let tint = chipTint(prediction: prediction, disagrees: disagrees)
-            HStack(spacing: 3) {
-                Image(systemName: "wand.and.stars")
-                    .font(.caption2)
-                Image(systemName: predictionIcon(prediction))
-                    .font(.caption2)
-            }
-            .foregroundStyle(tint)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(tint.opacity(0.12), in: Capsule())
-            .overlay(Capsule().stroke(tint.opacity(0.35), lineWidth: 0.5))
-            .help(predictionTooltip(prediction: prediction, userRated: userRated, disagrees: disagrees, record: record))
-        }
     }
 
     private func chipTint(prediction: PredictedStarShape, disagrees: Bool) -> Color {

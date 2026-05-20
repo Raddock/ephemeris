@@ -121,9 +121,10 @@ nonisolated enum StarShapePredictor {
     static let trailedDriftScaleMultiplier: Double = 4.0
     static let mixedBestWorstRatio: Double = 3.0
     static let asymmetryRatio: Double = 1.5
-    /// Once RMS exceeds this multiple of the imaging scale, symmetric guiding still
-    /// produces visibly soft (bloated) stars. They remain round, not elongated.
-    static let bloatedScaleMultiplier: Double = 1.25
+    /// Symmetric guiding with RMS above the imaging pixel scale produces visibly
+    /// soft (bloated) stars; at or below the scale they read as sharp. The stars
+    /// stay round either way — this only distinguishes sharp from bloated.
+    static let bloatedScaleMultiplier: Double = 1.0
     /// Sessions need at least this many frames to participate in trailed voting.
     /// Below this, linear-regression drift slope is too noisy to be meaningful.
     static let minFramesForTrailedVote: Int = 60
