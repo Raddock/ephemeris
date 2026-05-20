@@ -97,7 +97,10 @@ struct SettingsWindow: View {
             return
         }
         do {
-            let context = ModelContext(library.container)
+            // Delete on the container's main context — the same context the open
+            // Library window's @Query reads from — so its night/observation lists
+            // refresh after the reset instead of showing rows for deleted entities.
+            let context = library.container.mainContext
             // SwiftData's batch-delete predicates need each model type listed
             // explicitly. We delete child entities before parents to keep the
             // cascade-rule timing predictable.
