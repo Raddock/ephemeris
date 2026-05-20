@@ -7,7 +7,12 @@ import SwiftData
 ///
 /// Implements just enough HTTP to accept POSTs from MCP clients. No keep-alive, no
 /// chunked encoding, no compression — clients send a single JSON body, get one JSON
-/// response. CORS preflight handled for browser-based MCP clients (rare but cheap).
+/// response.
+///
+/// Hardening: the listener is loopback-bound, but a browser page the user visits
+/// could still reach it via DNS rebinding. We validate the `Host` header is a
+/// loopback name and emit no CORS headers, so browser-origin requests can neither
+/// be routed here under a foreign hostname nor read any response cross-origin.
 final class MCPConnectionHandler: @unchecked Sendable {
     let library: EphemerisLibrary
     init(library: EphemerisLibrary) {
@@ -43,16 +48,36 @@ final class MCPConnectionHandler: @unchecked Sendable {
     }
 
     private func respond(to request: HTTPRequest, on connection: NWConnection) {
+        // The listener is loopback-bound, so a non-loopback Host header means the
+        // request reached us via DNS rebinding from a browser — reject it before
+        // touching the library. Legitimate MCP clients connect straight to
+        // 127.0.0.1 / localhost and send a matching Host.
+        guard isLoopbackHost(request.headers["host"]) else {
+            send(connection: connection, statusCode: 403, body: Data("forbidden\n".utf8), contentType: "text/plain")
+            return
+        }
         switch (request.method, request.path) {
         case ("POST", "/mcp"), ("POST", "/"):
             handleMCPPost(request: request, on: connection)
-        case ("OPTIONS", _):
-            sendCORSPreflight(on: connection)
         case ("GET", "/"), ("GET", "/health"):
             send(connection: connection, statusCode: 200, body: Data("ephemeris-mcp running\n".utf8), contentType: "text/plain")
         default:
             send(connection: connection, statusCode: 404, body: Data("not found\n".utf8), contentType: "text/plain")
         }
+    }
+
+    /// True when the HTTP `Host` header names a loopback address. Strips the port
+    /// and any IPv6 brackets. A missing Host is treated as untrusted — HTTP/1.1
+    /// clients are required to send one.
+    private func isLoopbackHost(_ hostHeader: String?) -> Bool {
+        guard let hostHeader, !hostHeader.isEmpty else { return false }
+        let host: String
+        if hostHeader.hasPrefix("[") {
+            host = String(hostHeader.dropFirst().prefix { $0 != "]" })
+        } else {
+            host = String(hostHeader.prefix { $0 != ":" })
+        }
+        return host == "127.0.0.1" || host == "localhost" || host == "::1"
     }
 
     private func handleMCPPost(request: HTTPRequest, on connection: NWConnection) {
@@ -70,29 +95,14 @@ final class MCPConnectionHandler: @unchecked Sendable {
         }
     }
 
-    private func sendCORSPreflight(on connection: NWConnection) {
-        let headers = [
-            "Access-Control-Allow-Origin: *",
-            "Access-Control-Allow-Methods: POST, OPTIONS",
-            "Access-Control-Allow-Headers: Content-Type, Authorization",
-            "Access-Control-Max-Age: 86400",
-        ]
-        send(connection: connection, statusCode: 204, body: Data(), contentType: "text/plain", extraHeaders: headers)
-    }
-
     private func send(connection: NWConnection,
                       statusCode: Int,
                       body: Data,
-                      contentType: String,
-                      extraHeaders: [String] = []) {
+                      contentType: String) {
         var response = "HTTP/1.1 \(statusCode) \(statusText(statusCode))\r\n"
         response += "Content-Type: \(contentType)\r\n"
         response += "Content-Length: \(body.count)\r\n"
         response += "Connection: close\r\n"
-        response += "Access-Control-Allow-Origin: *\r\n"
-        for header in extraHeaders {
-            response += "\(header)\r\n"
-        }
         response += "\r\n"
         var responseData = Data(response.utf8)
         responseData.append(body)
