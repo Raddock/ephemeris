@@ -22,9 +22,15 @@ nonisolated struct StarShapePredictionObserver: RecommenderGenerator {
         let perSession = context.sessionStats
         let totalFrames = perSession.reduce(0) { $0 + $1.stats.includedFrames }
         guard totalFrames > 0 else { return [] }
-        let weightedRMS = perSession.reduce(0.0) { acc, item in
-            acc + item.stats.rmsTotal * item.session.pixelScale * Double(item.stats.includedFrames)
-        } / Double(totalFrames)
+        // Frame-weighted quadrature mean — the identical night-RMS rollup the
+        // library ingestor stores on NightRecord. Using the same statistic here
+        // means the document-window observation and the Log Library chip predict
+        // the same shape for a night (a plain weighted mean would diverge near
+        // the pixel-scale threshold).
+        let weightedRMS = (perSession.reduce(0.0) { acc, item in
+            let rmsArcsec = item.stats.rmsTotal * item.session.pixelScale
+            return acc + rmsArcsec * rmsArcsec * Double(item.stats.includedFrames)
+        } / Double(totalFrames)).squareRoot()
         let perSessionRMSArcsec = perSession.map {
             $0.stats.rmsTotal * $0.session.pixelScale
         }
