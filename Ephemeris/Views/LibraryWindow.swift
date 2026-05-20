@@ -581,13 +581,16 @@ struct LibraryDetailView: View {
                     .foregroundStyle(.secondary)
             }
             recentNightsColumnHeader
-            VStack(spacing: 0) {
-                ForEach(Array(nightRecords.prefix(20).enumerated()), id: \.element.id) { idx, record in
+            // Every night in the selected range — not a capped "recent" slice;
+            // the trend chart above shows them all, so the table must too.
+            // LazyVStack keeps a long range (the All filter) cheap to scroll.
+            LazyVStack(spacing: 0) {
+                ForEach(Array(nightRecords.enumerated()), id: \.element.id) { idx, record in
                     nightRow(record)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(idx.isMultiple(of: 2) ? Color.clear : Color.primary.opacity(0.03))
-                    if idx < min(19, nightRecords.count - 1) {
+                    if idx < nightRecords.count - 1 {
                         Divider().opacity(0.4)
                     }
                 }
