@@ -121,7 +121,10 @@ enum SourceFolderBookmarks {
 
         // Match longest folder path first so nested bookmarks win over their parents.
         for (folderPath, data) in store.sorted(by: { $0.key.count > $1.key.count }) {
-            guard path.hasPrefix(folderPath) else { continue }
+            // Require a path-component boundary so "/Logs" doesn't falsely cover
+            // "/LogsBackup". A bookmarked folder always contains the file below it.
+            let folderPrefix = folderPath.hasSuffix("/") ? folderPath : folderPath + "/"
+            guard path.hasPrefix(folderPrefix) else { continue }
             var isStale = false
             do {
                 let resolved = try URL(

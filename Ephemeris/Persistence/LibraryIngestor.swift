@@ -67,7 +67,7 @@ actor LibraryIngestor {
             return (ra, dec)
         }
         if !pointings.isEmpty {
-            let medRA = pointings.map { $0.0 }.sorted()[pointings.count / 2]
+            let medRA = Self.circularMedianRAHours(pointings.map { $0.0 })
             let medDec = pointings.map { $0.1 }.sorted()[pointings.count / 2]
             record.medianRAHours = medRA
             record.medianDecDegrees = medDec
@@ -355,5 +355,18 @@ actor LibraryIngestor {
     private static func sha256(of data: Data) -> String {
         let digest = SHA256.hash(data: data)
         return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Median RA in hours, tolerant of the 0h/24h wrap. When the values span more
+    /// than half the circle the cluster straddles 0h; shifting the low half up by
+    /// 24h before taking the median keeps the result in a contiguous range.
+    private static func circularMedianRAHours(_ values: [Double]) -> Double {
+        let sorted = values.sorted()
+        guard let lo = sorted.first, let hi = sorted.last else { return 0 }
+        if hi - lo > 12 {
+            let unwrapped = values.map { $0 < 12 ? $0 + 24 : $0 }.sorted()
+            return unwrapped[unwrapped.count / 2].truncatingRemainder(dividingBy: 24)
+        }
+        return sorted[sorted.count / 2]
     }
 }
