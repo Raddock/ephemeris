@@ -95,9 +95,21 @@ nonisolated enum TargetClustering {
             }
             guard !members.isEmpty else { continue }
             let totalWeight = members.reduce(0.0) { $0 + max(1.0, $1.totalIntegrationMinutes) }
-            let weightedRA = members.reduce(0.0) {
-                $0 + $1.raHours * max(1.0, $1.totalIntegrationMinutes)
-            } / totalWeight
+            // RA is circular (wraps at 24h): a plain weighted mean of a cluster
+            // straddling 0h would land ~12h away on the opposite side of the sky.
+            // Average the weighted unit vectors and convert the resultant angle
+            // back to hours. Dec does not wrap, so a linear mean is correct there.
+            var raSin = 0.0
+            var raCos = 0.0
+            for member in members {
+                let weight = max(1.0, member.totalIntegrationMinutes)
+                let angle = member.raHours / 24.0 * 2.0 * .pi
+                raSin += sin(angle) * weight
+                raCos += cos(angle) * weight
+            }
+            var raAngle = atan2(raSin, raCos)
+            if raAngle < 0 { raAngle += 2.0 * .pi }
+            let weightedRA = raAngle / (2.0 * .pi) * 24.0
             let weightedDec = members.reduce(0.0) {
                 $0 + $1.decDegrees * max(1.0, $1.totalIntegrationMinutes)
             } / totalWeight
