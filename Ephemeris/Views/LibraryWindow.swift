@@ -530,8 +530,7 @@ struct LibraryDetailView: View {
         static let note: CGFloat = 34
         static let integration: CGFloat = 82
         static let rms: CGFloat = 58
-        static let predicted: CGFloat = 66
-        static let rating: CGFloat = 52
+        static let shape: CGFloat = 58
     }
 
     /// Tiny column-header strip placed above the recent-nights rows. Names the
@@ -550,10 +549,8 @@ struct LibraryDetailView: View {
             columnLabel("Note", width: NightColumn.note)
             columnLabel("Integration", width: NightColumn.integration, align: .trailing)
             columnLabel("RMS", width: NightColumn.rms, align: .trailing)
-            columnLabel("Predicted", width: NightColumn.predicted)
-                .help("Star shape predicted from the night's data — RMS vs imaging scale, axis asymmetry, and drift. Read-only.")
-            columnLabel("Rating", width: NightColumn.rating)
-                .help("Your own verdict on how the subs looked. Click a row's chip to set it; a mismatch with the prediction is flagged orange.")
+            columnLabel("Shape", width: NightColumn.shape)
+                .help("Predicted star shape from the night's data — RMS vs imaging scale, axis asymmetry, and drift. Hover a row's icon for the full read.")
         }
         .padding(.horizontal, 12)
     }
@@ -676,9 +673,7 @@ struct LibraryDetailView: View {
                 .foregroundStyle(verdict.tint)
                 .frame(width: NightColumn.rms, alignment: .trailing)
             predictedShapeChip(for: record)
-                .frame(width: NightColumn.predicted)
-            ratingChip(for: record)
-                .frame(width: NightColumn.rating)
+                .frame(width: NightColumn.shape)
         }
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {
@@ -720,30 +715,24 @@ struct LibraryDetailView: View {
         }
     }
 
-    /// Read-only predicted-shape chip — what the data implies the night's stars
-    /// look like: sharp, bloated, elongated, trailed, or mixed. This is a computed
-    /// signal, never a control — it does not open a menu. The user's own verdict
-    /// lives in the separate `ratingChip` column.
+    /// Read-only predicted-shape icon — what the data implies the night's stars
+    /// look like: sharp, bloated, elongated, trailed, or mixed. A computed signal,
+    /// never a control — it does not open a menu. Hover for the full explanation.
     @ViewBuilder
     private func predictedShapeChip(for record: NightRecordEntity) -> some View {
         let prediction = StarShapePredictor.predict(
             night: record,
             imagingPixelScale: profile.imagingPixelScale
         )
-        let userRated = record.subQualityRaw.flatMap { SubQualityVerdict(rawValue: $0) }
-        let disagrees = userRated != nil && prediction.verdict != userRated && prediction != .unknown
         if prediction != .unknown {
             let tint = chipTint(prediction: prediction, disagrees: false)
-            HStack(spacing: 3) {
-                Image(systemName: "wand.and.stars").font(.caption2)
-                Image(systemName: predictionIcon(prediction)).font(.caption.weight(.semibold))
-            }
-            .foregroundStyle(tint)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(tint.opacity(0.22), in: Capsule())
-            .overlay(Capsule().stroke(tint.opacity(0.55), lineWidth: 1))
-            .help(predictionTooltip(prediction: prediction, userRated: userRated, disagrees: disagrees, record: record))
+            Image(systemName: predictionIcon(prediction))
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(width: 26, height: 20)
+                .background(tint.opacity(0.22), in: Capsule())
+                .overlay(Capsule().stroke(tint.opacity(0.55), lineWidth: 1))
+                .help(predictionTooltip(prediction: prediction, record: record))
         } else {
             // No imaging scale → can't predict. A faint ruler cue; the tooltip
             // carries the fix.
@@ -752,78 +741,6 @@ struct LibraryDetailView: View {
                 .foregroundStyle(.tertiary)
                 .help("Star-shape prediction needs this rig's imaging pixel scale. Set the imaging focal length, pixel size, and binning under App → Rig Profiles… (⇧⌘,).")
         }
-    }
-
-    /// Selectable rating chip — the user's own verdict on how the night's subs
-    /// actually came out. A hollow circle until rated; click to set or clear. When
-    /// the rating contradicts the prediction the chip turns orange — the classic
-    /// differential-flexure tell.
-    @ViewBuilder
-    private func ratingChip(for record: NightRecordEntity) -> some View {
-        let userRated = record.subQualityRaw.flatMap { SubQualityVerdict(rawValue: $0) }
-        let prediction = StarShapePredictor.predict(
-            night: record,
-            imagingPixelScale: profile.imagingPixelScale
-        )
-        let disagrees = userRated != nil && prediction.verdict != userRated && prediction != .unknown
-        let tint: Color = disagrees ? .orange : (userRated?.tint ?? .secondary)
-        Menu {
-            shapeRatingMenu(for: record, userRated: userRated)
-        } label: {
-            if let userRated {
-                Image(systemName: userRated.symbolName)
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(tint.opacity(0.22), in: Capsule())
-                    .overlay(Capsule().stroke(tint.opacity(0.55), lineWidth: 1))
-            } else {
-                Image(systemName: "circle").font(.caption.weight(.medium))
-            }
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .tint(userRated == nil ? .secondary : tint)
-        .fixedSize()
-        .help(ratingTooltip(prediction: prediction, userRated: userRated, disagrees: disagrees, record: record))
-    }
-
-    @ViewBuilder
-    private func shapeRatingMenu(for record: NightRecordEntity, userRated: SubQualityVerdict?) -> some View {
-        Button {
-            setSubQuality(nil, for: record)
-        } label: {
-            Label(userRated == nil ? "Not rated" : "Clear rating", systemImage: "circle")
-        }
-        Divider()
-        ForEach(SubQualityVerdict.allCases, id: \.self) { option in
-            Button {
-                setSubQuality(option, for: record)
-            } label: {
-                Label(option.displayName, systemImage: option.symbolName)
-            }
-        }
-    }
-
-    /// Tooltip for the rating chip: the user's verdict, the prediction for
-    /// comparison, and a flexure note when the two disagree.
-    private func ratingTooltip(prediction: PredictedStarShape,
-                               userRated: SubQualityVerdict?,
-                               disagrees: Bool,
-                               record: NightRecordEntity) -> String {
-        var lines: [String] = []
-        if let userRated {
-            lines.append("Your rating: \(userRated.displayName)")
-        } else {
-            lines.append("Not rated — click to record how this night's subs actually looked.")
-        }
-        if prediction != .unknown {
-            lines.append("Predicted from data: \(prediction.displayName.lowercased())")
-        }
-        if disagrees {
-            lines.append("Your rating disagrees with the prediction — that gap often points to differential flexure or another guider-vs-imager effect.")
-        }
-        return lines.joined(separator: "\n\n")
     }
 
     private func chipTint(prediction: PredictedStarShape, disagrees: Bool) -> Color {
@@ -858,82 +775,42 @@ struct LibraryDetailView: View {
         }
     }
 
+    /// Hover text for the predicted-shape icon: the verdict, the RMS-vs-scale
+    /// ratio it came from, and a plain-language explanation of what it means.
     private func predictionTooltip(prediction: PredictedStarShape,
-                                   userRated: SubQualityVerdict?,
-                                   disagrees: Bool,
                                    record: NightRecordEntity) -> String {
         let scaleNote: String
         if profile.imagingPixelScale > 0 {
             let ratio = record.medianRMSArcsec / profile.imagingPixelScale
-            scaleNote = String(format: " (RMS %.2f″ vs imaging scale %.2f″/px = %.2f×)",
+            scaleNote = String(format: " — RMS %.2f″ vs imaging scale %.2f″/px (%.2f×)",
                                record.medianRMSArcsec, profile.imagingPixelScale, ratio)
         } else {
             scaleNote = ""
         }
-        var base = "Predicted from data: \(prediction.displayName.lowercased())\(scaleNote)."
-        if prediction.isBloated {
-            base += " Bloated = symmetric guiding wider than the imaging scale — stars stay round but appear soft. Long-FL OTAs on harmonic-strain-wave mounts often live here."
-        }
+        var base = "Predicted: \(prediction.displayName.lowercased())\(scaleNote)."
+        base += "\n\n" + shapeExplanation(prediction)
         if case .trailed(let cause) = prediction {
             base += " " + trailedCauseExplanation(cause)
-        }
-        if disagrees, let userRated {
-            base += " You rated this night \(userRated.displayName.lowercased()). Disagreement often indicates differential flexure or another between-guider-and-imager effect."
-        } else if userRated == nil {
-            base += " Rate this night to compare your eye against the data."
         }
         return base
     }
 
-    @ViewBuilder
-    private func subQualityChip(for record: NightRecordEntity) -> some View {
-        let current = record.subQualityRaw.flatMap { SubQualityVerdict(rawValue: $0) }
-        Menu {
-            Button {
-                setSubQuality(nil, for: record)
-            } label: {
-                Label("Unrated", systemImage: "circle.dashed")
-            }
-            Divider()
-            ForEach(SubQualityVerdict.allCases, id: \.self) { option in
-                Button {
-                    setSubQuality(option, for: record)
-                } label: {
-                    Label(option.displayName, systemImage: option.symbolName)
-                }
-            }
-        } label: {
-            HStack(spacing: 3) {
-                Image(systemName: current?.symbolName ?? "circle.dashed")
-                    .font(.caption2)
-                if let c = current {
-                    Text(c.displayName)
-                        .font(.caption2)
-                }
-            }
-            .foregroundStyle(current?.tint ?? .secondary)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(
-                (current?.tint ?? .secondary).opacity(0.12),
-                in: Capsule()
-            )
-            .overlay(
-                Capsule().stroke((current?.tint ?? .secondary).opacity(0.35), lineWidth: 0.5)
-            )
+    /// Plain-language "what this means and why" for each predicted shape.
+    private func shapeExplanation(_ prediction: PredictedStarShape) -> String {
+        switch prediction {
+        case .round(let bloated):
+            return bloated
+                ? "Bloated: guiding is symmetric (RA ≈ Dec) but its RMS is larger than one imaging pixel, so stars stay round yet image soft. Common on long-focal-length rigs sitting at the mount's tracking floor."
+                : "Sharp: guiding RMS is at or under the imaging pixel scale, so stars render tight and round — the data shows nothing limiting your resolution."
+        case .slightlyElongated:
+            return "Elongated: one axis carries noticeably more RMS than the other, so stars come out egg-shaped. Per-axis aggressiveness or min-move tuning is the usual lever."
+        case .trailed:
+            return "Trailed: drift on an axis outran the guide corrections, stretching stars into short lines."
+        case .mixed:
+            return "Mixed: the night's sessions disagree sharply — some good, some poor — usually changing conditions or an equipment change mid-night rather than one steady state."
+        case .unknown:
+            return "Not enough data to predict a shape."
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .help(current == nil
-              ? "Rate this night's imaging frames"
-              : "Imaging frames: \(current!.displayName)")
-    }
-
-    private func setSubQuality(_ verdict: SubQualityVerdict?, for record: NightRecordEntity) {
-        record.subQualityRaw = verdict?.rawValue
-        record.lastAnalyzedAt = .now
-        try? modelContext.save()
     }
 
     @ViewBuilder
