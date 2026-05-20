@@ -757,16 +757,21 @@ struct LibraryDetailView: View {
                 if isPredicted {
                     Image(systemName: "wand.and.stars").font(.caption2)
                 }
-                Image(systemName: primarySymbol).font(.caption2)
+                Image(systemName: primarySymbol).font(.caption.weight(.semibold))
             }
             .foregroundStyle(resolvedTint)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(resolvedTint.opacity(0.12), in: Capsule())
-            .overlay(Capsule().stroke(resolvedTint.opacity(0.35), lineWidth: 0.5))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(resolvedTint.opacity(0.22), in: Capsule())
+            .overlay(Capsule().stroke(resolvedTint.opacity(0.55), lineWidth: 1))
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
+        // .borderlessButton tints its label content from `.tint`, not
+        // `.foregroundStyle` — without this the icons render a flat default
+        // gray regardless of the prediction. The high-opacity capsule above
+        // carries the colour signal even if a future macOS ignores `.tint`.
+        .tint(resolvedTint)
         .fixedSize()
         .help(combinedShapeTooltip(prediction: prediction, userRated: userRated, disagrees: disagrees, record: record))
     }
