@@ -99,6 +99,7 @@ private extension GAResultParser.Parsed {
         polarAlignErrorArcmin != nil ||
         decBacklashMs != nil ||
         raPeakToPeakArcsec != nil ||
+        raMaxRateOfChangeArcsecPerSec != nil ||
         highFreqStarMotionArcsecRMS != nil
     }
 }
