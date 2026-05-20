@@ -60,11 +60,12 @@ enum NightVerdictCalculator {
     ) -> NightVerdict {
         guard rmsArcsec > 0 else { return .unknown }
 
-        // Primary: against imaging scale when configured
+        // Primary: against imaging scale when configured. RMS at or under one
+        // imaging pixel is sub-pixel guiding — the imager can't fault it.
         if imagingPixelScale > 0 {
             let ratio = rmsArcsec / imagingPixelScale
-            if ratio < 0.7 { return .subPixel }
-            if ratio <= 1.0 { return .atResolution }
+            if ratio <= 1.0 { return .subPixel }
+            if ratio <= 1.5 { return .atResolution }
             return .overResolution
         }
 
@@ -78,5 +79,29 @@ enum NightVerdictCalculator {
         if rmsArcsec <= p75 { return .typical }
         if rmsArcsec <= p90 { return .elevated }
         return .worst
+    }
+
+    /// Continuous good→poor colour for a night's RMS, anchored to the imaging
+    /// pixel scale. At or under the scale (sub-pixel guiding the imager can't
+    /// fault) it is fully green; it ramps through orange just above the scale to
+    /// red well past it. Falls back to the rig-relative verdict tint when no
+    /// imaging scale is configured.
+    static func rmsColor(
+        rmsArcsec: Double,
+        imagingPixelScale: Double,
+        rigDistribution: [Double] = []
+    ) -> Color {
+        guard rmsArcsec > 0 else { return .secondary }
+        guard imagingPixelScale > 0 else {
+            return verdict(rmsArcsec: rmsArcsec,
+                           imagingPixelScale: 0,
+                           rigDistribution: rigDistribution).tint
+        }
+        let red = Color(red: 0.95, green: 0.30, blue: 0.30)
+        let ratio = rmsArcsec / imagingPixelScale
+        if ratio <= 1.0 { return .green }
+        if ratio <= 1.5 { return Color.green.mix(with: .orange, by: (ratio - 1.0) / 0.5) }
+        if ratio <= 2.5 { return Color.orange.mix(with: red, by: (ratio - 1.5) / 1.0) }
+        return red
     }
 }

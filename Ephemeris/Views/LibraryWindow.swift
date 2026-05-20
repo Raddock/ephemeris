@@ -623,9 +623,14 @@ struct LibraryDetailView: View {
             imagingPixelScale: profile.imagingPixelScale,
             rigDistribution: rigRMSDistribution
         )
+        let rmsTint = NightVerdictCalculator.rmsColor(
+            rmsArcsec: record.medianRMSArcsec,
+            imagingPixelScale: profile.imagingPixelScale,
+            rigDistribution: rigRMSDistribution
+        )
         HStack(spacing: 10) {
             Circle()
-                .fill(verdict.tint)
+                .fill(rmsTint)
                 .frame(width: 9, height: 9)
                 .help(verdict.shortLabel)
             Text(record.nightDate.formatted(date: .abbreviated, time: .omitted))
@@ -670,7 +675,7 @@ struct LibraryDetailView: View {
                 .frame(width: NightColumn.integration, alignment: .trailing)
             Text(String(format: "%.2f″", record.medianRMSArcsec))
                 .font(.callout.weight(.semibold).monospacedDigit())
-                .foregroundStyle(verdict.tint)
+                .foregroundStyle(rmsTint)
                 .frame(width: NightColumn.rms, alignment: .trailing)
             predictedShapeChip(for: record)
                 .frame(width: NightColumn.shape)
@@ -746,7 +751,7 @@ struct LibraryDetailView: View {
     private func chipTint(prediction: PredictedStarShape, disagrees: Bool) -> Color {
         if disagrees { return .orange }
         switch prediction {
-        case .round(let bloated):   return bloated ? .yellow : .secondary
+        case .round(let bloated):   return bloated ? .yellow : .green
         case .slightlyElongated:    return .orange
         case .trailed:              return .red
         case .mixed:                return .yellow

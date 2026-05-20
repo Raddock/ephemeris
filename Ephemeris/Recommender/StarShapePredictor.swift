@@ -138,6 +138,15 @@ nonisolated enum StarShapePredictor {
             return .unknown
         }
 
+        // Sub-pixel guiding: when median RMS is at or under the imaging pixel
+        // scale, the imager cannot resolve axis asymmetry or drift as a visible
+        // shape difference — the stars simply read as round and sharp. The
+        // elongated / trailed / mixed checks below only apply once RMS exceeds
+        // the pixel scale.
+        guard input.medianRMSArcsec > input.imagingPixelScale else {
+            return .round(bloated: false)
+        }
+
         // 1. Trailed — frame-weighted majority of sessions must individually be trailed
         //    before we tag the whole night. A single bad short session in a multi-session
         //    night should produce .mixed at worst, not .trailed. Sessions with too few
