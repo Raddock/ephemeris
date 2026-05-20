@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// Sheet for creating or editing an annotation on a NightRecord.
 /// Per design doc §9.2: multi-select category chips, label, detail, date,
@@ -71,7 +72,13 @@ struct AnnotationSheet: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Detail").font(.subheadline)
                     TextEditor(text: $draft.detail)
+                        .scrollContentBackground(.hidden)
                         .frame(minHeight: 100)
+                        .padding(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color(nsColor: .textBackgroundColor))
+                        )
                         .overlay(
                             RoundedRectangle(cornerRadius: 4)
                                 .stroke(.tertiary, lineWidth: 0.5)
@@ -117,16 +124,39 @@ struct AnnotationSheet: View {
             Button("Cancel") {
                 dismiss()
             }
+            .keyboardShortcut(.cancelAction)
             Button("Save") {
-                draft.modifiedAt = .now
-                onSave(draft)
-                dismiss()
+                save()
             }
             .buttonStyle(.borderedProminent)
-            .disabled(draft.label.trimmingCharacters(in: .whitespaces).isEmpty)
+            .keyboardShortcut(.defaultAction)
+            .disabled(!hasContent)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
+    }
+
+    /// Save needs *some* content — a short label or a detail note. The
+    /// label/detail split shouldn't block a user who only filled one.
+    private var hasContent: Bool {
+        !draft.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        || !draft.detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func save() {
+        var toSave = draft
+        let trimmedLabel = toSave.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedLabel.isEmpty {
+            // No short label given — derive one from the detail so the chart
+            // marker and night row still have something to show.
+            let detail = toSave.detail.trimmingCharacters(in: .whitespacesAndNewlines)
+            toSave.label = detail.count > 60 ? String(detail.prefix(60)) + "…" : detail
+        } else {
+            toSave.label = trimmedLabel
+        }
+        toSave.modifiedAt = .now
+        onSave(toSave)
+        dismiss()
     }
 }
 
