@@ -44,6 +44,7 @@ struct LibraryWindow: View {
             if let library, let rigID = selectedRigID, let profile = rigStore.profiles.first(where: { $0.id == rigID }) {
                 LibraryDetailView(profile: profile, range: range, window: dateWindow)
                     .modelContainer(library.container)
+                    .id(profile.id)
             } else {
                 ContentUnavailableView(
                     "Select a rig",
@@ -159,12 +160,10 @@ struct LibraryWindow: View {
         }
         .listStyle(.sidebar)
         .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 360)
-        .background(
-            // Hidden Button captures ⌘⌫ to delete the selected rig.
-            Button("") { promptDeleteSelected() }
-                .keyboardShortcut(.delete, modifiers: .command)
-                .hidden()
-        )
+        // Delete key removes the selected rig. onDeleteCommand is scoped to the
+        // sidebar's first-responder focus, so — unlike the previous window-wide
+        // ⌘⌫ keyboardShortcut — it can't fire while a date field is being edited.
+        .onDeleteCommand { promptDeleteSelected() }
     }
 
     private func promptDeleteSelected() {
