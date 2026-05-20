@@ -4,7 +4,7 @@ import SwiftUI
 /// The imaging frame is ground truth that the guide log can't see — differential flexure
 /// can produce a great guide RMS and trailed subs simultaneously. This is the testimony
 /// that closes the trust gap between guide RMS and image quality.
-enum SubQualityVerdict: String, Codable, CaseIterable, Sendable {
+nonisolated enum SubQualityVerdict: String, Codable, CaseIterable, Sendable {
     case round              // stars round across the field — guide RMS reflects reality
     case slightlyElongated  // mild egg shape — atmosphere or borderline tracking
     case trailed            // obvious trailing — guide RMS is lying about the actual result

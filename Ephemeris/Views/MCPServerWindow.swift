@@ -12,6 +12,7 @@ struct MCPServerWindow: View {
     @State private var installInProgress: ClaudeConfigInstaller.Target?
     @State private var installResult: ClaudeConfigInstaller.InstallResult?
     @State private var installError: String?
+    @AppStorage("mcp.allowAnnotationWrites") private var allowWrites: Bool = false
 
     private var bundledBinary: URL? {
         ClaudeConfigInstaller.bundledHelperBinary()
@@ -140,6 +141,19 @@ struct MCPServerWindow: View {
             Text("You'll see one macOS file-access prompt — that grants Ephemeris permission to update the client's config. Any existing connectors stay intact.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+            Toggle(isOn: $allowWrites) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Allow Claude to add annotations")
+                        .font(.callout)
+                    Text("Enables the `add_annotation` write tool so Claude can record equipment changes / calibration events / notes on your behalf. Off by default. Changing this only affects subsequent installs — re-run Connect to update your existing connector.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .toggleStyle(.switch)
+            .padding(.top, 4)
         }
     }
 
@@ -194,7 +208,7 @@ struct MCPServerWindow: View {
         installInProgress = target
         Task { @MainActor in
             do {
-                let result = try await ClaudeConfigInstaller.install(target)
+                let result = try await ClaudeConfigInstaller.install(target, allowWrites: allowWrites)
                 installResult = result
             } catch let err as ClaudeConfigInstaller.InstallError {
                 if case .userCancelled = err {} else if case .noFolderSelected = err {} else {

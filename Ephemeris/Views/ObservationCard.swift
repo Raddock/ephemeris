@@ -41,40 +41,46 @@ struct ObservationCard: View {
         }
     }
 
+    /// Header layout follows the macOS HIG pattern for compact list rows
+    /// (Mail, Notes, Reminders): the primary text (title) owns the full row width,
+    /// with secondary metadata stacked beneath it. The severity color is carried
+    /// by the card's leading edge bar so we don't also need a pill flanking the title.
     private var header: some View {
-        HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    severityBadge
-                    Text(observation.title)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-                    Spacer(minLength: 0)
-                    authorityBadge
-                    Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                Text(observation.summary)
-                    .font(.callout)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(observation.title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .lineLimit(expanded ? nil : 3)
             }
+            metaRow
+            Text(observation.summary)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .lineLimit(expanded ? nil : 3)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    private var severityBadge: some View {
-        HStack(spacing: 3) {
-            Circle().fill(severityTint).frame(width: 6, height: 6)
-            Text(observation.severity.displayName.uppercased())
-                .font(.caption2.weight(.bold))
-                .tracking(0.5)
-                .foregroundStyle(severityTint)
+    /// Compact metadata row: severity label (with color dot) · source-authority badge.
+    /// Plain text + small symbols rather than competing capsules — keeps the title
+    /// area uncluttered and the labels never truncate.
+    private var metaRow: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 4) {
+                Circle().fill(severityTint).frame(width: 6, height: 6)
+                Text(observation.severity.displayName)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(severityTint)
+            }
+            Text("·").foregroundStyle(.tertiary)
+            authorityBadge
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
-        .background(severityTint.opacity(0.15), in: Capsule())
     }
 
     @ViewBuilder
@@ -92,11 +98,11 @@ struct ObservationCard: View {
             if !observation.relatedPHD2Tools.isEmpty {
                 phd2ToolsSection
             }
-            if !observation.relatedHelpTopicIds.isEmpty {
-                helpTopicsSection
-            }
+            // helpTopicsSection is intentionally not shown until the in-app help
+            // bundle ships — its links would 404 against an Apple Help anchor
+            // that doesn't exist yet.
         }
-        .padding(.leading, 19)  // align with header text after dot
+        // Header text now starts flush with the card edge; expanded content aligns too.
     }
 
     @ViewBuilder
@@ -193,13 +199,23 @@ struct ObservationCard: View {
     }
 
     private var authorityBadge: some View {
-        Text(observation.sourceAuthority.badgeLabel)
-            .font(.caption2)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 1)
-            .background(authorityTint.opacity(0.15), in: Capsule())
-            .overlay(Capsule().stroke(authorityTint.opacity(0.4), lineWidth: 0.5))
-            .foregroundStyle(authorityTint)
+        HStack(spacing: 3) {
+            Image(systemName: authoritySymbol)
+                .font(.caption2)
+            Text(observation.sourceAuthority.badgeLabel)
+                .font(.caption)
+                .lineLimit(1)
+        }
+        .foregroundStyle(authorityTint)
+    }
+
+    private var authoritySymbol: String {
+        switch observation.sourceAuthority {
+        case .phd2Manual, .phd2BehaviorDocumented: return "book.closed"
+        case .phd2Measurement:                     return "checkmark.seal"
+        case .communityConsensus:                  return "person.2"
+        case .ephemerisHeuristic:                  return "sparkle"
+        }
     }
 
     private var severityTint: Color {

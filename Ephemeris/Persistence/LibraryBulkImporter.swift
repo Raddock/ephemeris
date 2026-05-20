@@ -65,6 +65,13 @@ final class LibraryBulkImporter {
         NSLog("[BulkImport] Scanning %@ (sandbox access: %@)",
               folderURL.path, accessGranted ? "granted" : "denied")
 
+        // Persist a security-scoped bookmark so we can reopen logs from this folder
+        // after the bulk-import session ends. Without this, the sandbox revokes
+        // access and the "Open log" double-click is rejected with "no permission".
+        if accessGranted {
+            SourceFolderBookmarks.save(folder: folderURL)
+        }
+
         let urls = findGuideLogs(in: folderURL)
         summary.totalConsidered = urls.count
         NSLog("[BulkImport] Found %d PHD2_GuideLog_*.txt files", urls.count)

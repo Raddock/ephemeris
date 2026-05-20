@@ -7,7 +7,7 @@ import Foundation
 /// Named `RecommenderObservation` in Swift to avoid shadowing Apple's `Observation` framework
 /// (the home of `@Observable`). Both single-night and cross-night observations use this same
 /// schema; `sourceAuthority` is the integrity guard that distinguishes canon from heuristic.
-struct RecommenderObservation: Codable, Hashable, Identifiable, Sendable {
+nonisolated struct RecommenderObservation: Codable, Hashable, Identifiable, Sendable {
     var id: UUID
     var scope: Scope
     var rigProfileId: UUID
@@ -133,14 +133,14 @@ struct RecommenderObservation: Codable, Hashable, Identifiable, Sendable {
             }
         }
 
-        static func < (lhs: Severity, rhs: Severity) -> Bool {
+        nonisolated static func < (lhs: Severity, rhs: Severity) -> Bool {
             lhs.rawValue < rhs.rawValue
         }
     }
 }
 
 /// One evidence bullet attached to an `Observation`. Includes a label and a measured value.
-struct EvidenceItem: Codable, Hashable, Sendable {
+nonisolated struct EvidenceItem: Codable, Hashable, Sendable {
     var label: String
     var value: String
     var detail: String?

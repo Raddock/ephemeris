@@ -88,6 +88,7 @@ indirect enum JSONValue: Codable, Sendable {
     }
     var dictValue: [String: JSONValue]? { if case .object(let o) = self { return o } else { return nil } }
     var arrayValue: [JSONValue]? { if case .array(let a) = self { return a } else { return nil } }
+    var boolValue: Bool? { if case .bool(let b) = self { return b } else { return nil } }
 }
 
 extension JSONValue: ExpressibleByStringLiteral {

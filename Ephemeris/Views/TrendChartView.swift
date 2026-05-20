@@ -21,6 +21,44 @@ struct TrendChartView: View {
         nights.map { $0.medianRMSArcsec }
     }
 
+    /// One point per calendar night. Multi-log nights (PHD2 splits a single
+    /// observing run when it's restarted mid-session) collapse into a single
+    /// time-weighted RMS so the trend curve doesn't pivot around two
+    /// data points sharing the same x value — that produced a sharp
+    /// area-fill triangle when monotone interpolation hit a vertical segment.
+    private var chartPoints: [NightSummary] {
+        let buckets = Dictionary(grouping: nights) {
+            Calendar.current.startOfDay(for: $0.nightDate)
+        }
+        let merged: [NightSummary] = buckets.map { day, group in
+            let totalMin = group.reduce(0.0) { $0 + $1.totalIntegrationMinutes }
+            let weightedRMS: Double
+            if totalMin > 0 {
+                weightedRMS = group.reduce(0.0) {
+                    $0 + $1.medianRMSArcsec * $1.totalIntegrationMinutes
+                } / totalMin
+            } else {
+                let vals = group.map { $0.medianRMSArcsec }.sorted()
+                weightedRMS = vals[vals.count / 2]
+            }
+            let best = group.map { $0.bestSessionRMSArcsec }.filter { $0 > 0 }.min() ?? 0
+            let worst = group.map { $0.worstSessionRMSArcsec }.max() ?? 0
+            return NightSummary(
+                id: group.first?.id ?? UUID(),
+                nightDate: day,
+                sessionsCount: group.reduce(0) { $0 + $1.sessionsCount },
+                totalIntegrationMinutes: totalMin,
+                medianRMSArcsec: weightedRMS,
+                bestSessionRMSArcsec: best,
+                worstSessionRMSArcsec: worst,
+                calibrationOrthogonalityDeg: nil,
+                guidingAssistantRan: group.contains { $0.guidingAssistantRan },
+                subQuality: group.compactMap { $0.subQuality }.first
+            )
+        }
+        return merged.sorted { $0.nightDate < $1.nightDate }
+    }
+
     struct AnnotationMarker: Sendable, Identifiable {
         let id: UUID
         let date: Date
@@ -49,7 +87,7 @@ struct TrendChartView: View {
             // Monotone interpolation (not catmullRom) so the curve can't overshoot above the
             // data at chart boundaries — Catmull-Rom needs phantom control points at the edges
             // and was generating a vertical wedge artifact at the leftmost point.
-            ForEach(nights) { night in
+            ForEach(chartPoints) { night in
                 AreaMark(
                     x: .value("Night", night.nightDate),
                     y: .value("RMS", night.medianRMSArcsec)
@@ -81,7 +119,7 @@ struct TrendChartView: View {
 
             // RMS line — accent color for visual continuity. Monotone matches the AreaMark
             // so they don't separate at the boundaries.
-            ForEach(nights) { night in
+            ForEach(chartPoints) { night in
                 LineMark(
                     x: .value("Night", night.nightDate),
                     y: .value("RMS", night.medianRMSArcsec)
@@ -92,7 +130,7 @@ struct TrendChartView: View {
             }
 
             // Verdict-colored point markers
-            ForEach(nights) { night in
+            ForEach(chartPoints) { night in
                 let verdict = NightVerdictCalculator.verdict(
                     rmsArcsec: night.medianRMSArcsec,
                     imagingPixelScale: imagingPixelScale,

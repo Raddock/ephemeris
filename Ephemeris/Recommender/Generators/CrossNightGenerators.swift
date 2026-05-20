@@ -11,7 +11,7 @@ import Foundation
 /// can attribute the change instead of guessing. Annotations with `category == .calibration`
 /// or `.equipment` within ±3 nights of the shift suppress this generator (see
 /// `AnnotationSuppression`).
-struct CalibrationAngleShiftObserver: CrossNightGenerator {
+nonisolated struct CalibrationAngleShiftObserver: CrossNightGenerator {
     let identifier = "calibrationAngleShiftObserver"
     init() {}
 
@@ -67,7 +67,7 @@ struct CalibrationAngleShiftObserver: CrossNightGenerator {
 
 /// Surfaces when the Guiding Assistant hasn't run in a while. Per design doc §6.2:
 /// >30 days since last GA = freshness observation.
-struct GAFreshnessObserver: CrossNightGenerator {
+nonisolated struct GAFreshnessObserver: CrossNightGenerator {
     let identifier = "gaFreshnessObserver"
     init() {}
 
@@ -133,7 +133,7 @@ struct GAFreshnessObserver: CrossNightGenerator {
 /// Fires when a night was rated `.trailed` or `.mixed` despite the guide RMS landing
 /// sub-pixel — that's the classic differential-flexure signature the guide log
 /// can't see on its own.
-struct SubQualityDiscrepancyObserver: CrossNightGenerator {
+nonisolated struct SubQualityDiscrepancyObserver: CrossNightGenerator {
     let identifier = "subQualityDiscrepancyObserver"
     init() {}
 
@@ -195,7 +195,7 @@ struct SubQualityDiscrepancyObserver: CrossNightGenerator {
 /// surface a coaching observation pointing at the trend. Uses the rig-relative
 /// threshold scheme from design doc §6.5: alert when recent median exceeds p90 or
 /// 2× rig median, whichever fires first.
-struct BaselineRegressionObserver: CrossNightGenerator {
+nonisolated struct BaselineRegressionObserver: CrossNightGenerator {
     let identifier = "baselineRegressionObserver"
     init() {}
 

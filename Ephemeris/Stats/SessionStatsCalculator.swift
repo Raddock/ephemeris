@@ -20,7 +20,7 @@
 
 import Foundation
 
-enum SessionStatsCalculator {
+nonisolated enum SessionStatsCalculator {
 
     /// Compute summary stats for a guide session using its raw (pre-algorithm) distances.
     /// `manualExclusionRanges` removes additional frames whose `time` falls within any range.

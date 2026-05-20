@@ -10,7 +10,7 @@ import Foundation
 /// Without the three-guard rule, this generator would fire on ~90% of healthy encoder-mount
 /// sessions in the corpus (median Dec skew 50%, p90 100% on a well-aligned 10Micron). The
 /// guards exist to prevent that false-fire.
-struct DecPolarityBiasObserver: RecommenderGenerator {
+nonisolated struct DecPolarityBiasObserver: RecommenderGenerator {
     let identifier = "decPolarityBiasObserver"
     init() {}
 
@@ -73,7 +73,7 @@ struct DecPolarityBiasObserver: RecommenderGenerator {
 ///
 /// Without cross-night rig baselines (added in Phase 7), this generator uses absolute thresholds:
 /// star mass CV > 15% + altitude < 50° + RMS > 0.7″ together.
-struct AtmosphericConditionsProxy: RecommenderGenerator {
+nonisolated struct AtmosphericConditionsProxy: RecommenderGenerator {
     let identifier = "atmosphericConditionsProxy"
     init() {}
 

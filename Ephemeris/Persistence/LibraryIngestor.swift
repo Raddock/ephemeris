@@ -75,6 +75,54 @@ actor LibraryIngestor {
 
         try removeExistingObservations(for: record)
         try removeExistingGAResults(for: record)
+        try removeExistingSessionRecords(for: record)
+
+        // Per-session detail — one row per GuideSession with header + stats.
+        // Sessions are persisted in chronological order so `sessionIndex` is stable.
+        let sortedSessions = log.guideSessions
+            .enumerated()
+            .sorted { (a, b) in
+                (a.element.startedAt ?? .distantPast) < (b.element.startedAt ?? .distantPast)
+            }
+        for (orderIndex, indexed) in sortedSessions.enumerated() {
+            let session = indexed.element
+            let stats = SessionStatsCalculator.calculate(session, manualExclusionRanges: [])
+            let props = session.headerProperties
+            let scale = session.pixelScale > 0 ? session.pixelScale : 1.0
+
+            let entity = SessionRecordEntity()
+            entity.id = UUID()
+            entity.nightRecord = record
+            entity.rigProfileId = rigProfile.id
+            entity.sessionIndex = orderIndex
+            entity.startedAt = session.startedAt
+            entity.durationSec = session.duration
+
+            entity.rmsTotalArcsec = stats.rmsTotal * scale
+            entity.rmsRAArcsec = stats.rmsRA * scale
+            entity.rmsDecArcsec = stats.rmsDec * scale
+            entity.peakRAArcsec = stats.peakRA * scale
+            entity.peakDecArcsec = stats.peakDec * scale
+            entity.driftRAArcsecPerMin = stats.driftRA * scale
+            entity.driftDecArcsecPerMin = stats.driftDec * scale
+            entity.polarAlignErrorArcmin = stats.polarAlignErrorArcmin ?? 0
+
+            entity.includedFrames = stats.includedFrames
+            entity.excludedFrames = stats.excludedFrames
+            entity.pixelScale = scale
+
+            entity.raHours = props.raHours
+            entity.decDegrees = props.decDegrees
+            entity.hourAngleHours = props.hourAngleHours
+            entity.altitudeDegrees = props.altitudeDegrees
+            entity.azimuthDegrees = props.azimuthDegrees
+            entity.pierSide = props.pierSide
+            entity.hfdPixels = props.hfdPixels
+            entity.exposureMs = props.exposureMs
+            entity.multiStarEnabled = props.multiStarEnabled
+
+            modelContext.insert(entity)
+        }
 
         // Parse Guiding Assistant runs from each session's INFO entries and persist
         // them as GAResultEntity records attached to this NightRecord. Picked up by
@@ -124,11 +172,104 @@ actor LibraryIngestor {
 
         try modelContext.save()
 
+        // Phase 9: re-cluster this rig's nights by pointing. Greedy + idempotent.
+        try recomputeTargetClusters(for: rigEntity)
+        try modelContext.save()
+
+        // Phase 3: donate to CoreSpotlight so Spotlight surfaces nights & annotations.
+        // Best-effort; build a value-type digest first so we don't capture the
+        // ModelActor's context in the index callback.
+        let digest = makeNightDigest(record: record, rig: rigEntity)
+        CoreSpotlightIndexer.donate(night: digest)
+
         return IngestResult(
             nightRecordId: record.id,
             observationCount: observations.count,
             didCreate: didCreate
         )
+    }
+
+    private func makeNightDigest(record: NightRecordEntity, rig: RigProfileEntity) -> NightRecordEntityDigest {
+        let dateString = record.nightDate.formatted(date: .abbreviated, time: .omitted)
+        var titleParts = [dateString, rig.currentName]
+        if record.medianRMSArcsec > 0 {
+            titleParts.append(String(format: "%.2f″", record.medianRMSArcsec))
+        }
+        var subtitleParts: [String] = ["\(record.sessionsCount) sessions"]
+        if record.totalIntegrationMinutes > 0 {
+            subtitleParts.append(String(format: "%.0f min", record.totalIntegrationMinutes))
+        }
+        if let catalog = record.catalogIdentifier {
+            subtitleParts.append(catalog)
+        }
+        if let lat = record.galacticLatitudeDeg {
+            subtitleParts.append(String(format: "galactic %+.0f°", lat))
+        }
+        var keywords: [String] = ["Ephemeris", "PHD2", "guide log", rig.currentName]
+        if let catalog = record.catalogIdentifier { keywords.append(catalog) }
+        if let name = record.catalogCommonName { keywords.append(name) }
+        return NightRecordEntityDigest(
+            id: record.id,
+            title: titleParts.joined(separator: " · "),
+            subtitle: subtitleParts.joined(separator: " · "),
+            keywords: keywords,
+            nightDate: record.nightDate,
+            lastAnalyzedAt: record.lastAnalyzedAt
+        )
+    }
+
+    /// Rebuilds `TargetClusterEntity` rows for a rig from its nights' median pointings.
+    /// Idempotent: existing cluster rows for the rig are deleted and re-inserted
+    /// each time. Cheap at typical corpus sizes (≤500 nights per rig).
+    private func recomputeTargetClusters(for rigEntity: RigProfileEntity) throws {
+        let rigID = rigEntity.id
+        // Drop old clusters for this rig — cleaner than diff-and-patch and the
+        // entity carries no user-facing data the user would notice losing.
+        let existingFetch = FetchDescriptor<TargetClusterEntity>(
+            predicate: #Predicate { $0.rigProfile?.id == rigID }
+        )
+        for old in try modelContext.fetch(existingFetch) {
+            modelContext.delete(old)
+        }
+
+        // Collect every night with a known pointing.
+        let nightFetch = FetchDescriptor<NightRecordEntity>(
+            predicate: #Predicate { $0.rigProfile?.id == rigID }
+        )
+        let nights = try modelContext.fetch(nightFetch)
+        let points: [TargetClustering.NightPoint] = nights.compactMap { n in
+            guard let ra = n.medianRAHours, let dec = n.medianDecDegrees else { return nil }
+            return TargetClustering.NightPoint(
+                id: n.id,
+                raHours: ra,
+                decDegrees: dec,
+                totalIntegrationMinutes: n.totalIntegrationMinutes,
+                medianRMSArcsec: n.medianRMSArcsec
+            )
+        }
+        guard !points.isEmpty else { return }
+
+        var sessionsByNight: [UUID: Int] = [:]
+        for n in nights { sessionsByNight[n.id] = n.sessionsCount }
+
+        let clusters = TargetClustering.cluster(
+            nights: points,
+            rigSessionsByNight: sessionsByNight
+        )
+        for cluster in clusters {
+            let entity = TargetClusterEntity()
+            entity.id = cluster.id
+            entity.rigProfile = rigEntity
+            entity.centerRA = cluster.centerRA
+            entity.centerDec = cluster.centerDec
+            entity.radiusDeg = cluster.radiusDeg
+            entity.catalogMatch = cluster.catalogMatch
+            entity.sessionCount = cluster.sessionCount
+            entity.totalIntegrationMinutes = cluster.totalIntegrationMinutes
+            entity.medianRMSArcsec = cluster.medianRMSArcsec
+            entity.nightRecordIdsData = (try? JSONEncoder().encode(cluster.nightIDs.map { $0.uuidString })) ?? Data()
+            modelContext.insert(entity)
+        }
     }
 
     /// Look up a `NightRecordEntity` by content hash, or create a new one.
@@ -189,6 +330,17 @@ actor LibraryIngestor {
         let existing = try modelContext.fetch(fetch)
         for result in existing {
             modelContext.delete(result)
+        }
+    }
+
+    private func removeExistingSessionRecords(for record: NightRecordEntity) throws {
+        let recordId = record.id
+        let fetch = FetchDescriptor<SessionRecordEntity>(
+            predicate: #Predicate { $0.nightRecord?.id == recordId }
+        )
+        let existing = try modelContext.fetch(fetch)
+        for sessionRecord in existing {
+            modelContext.delete(sessionRecord)
         }
     }
 

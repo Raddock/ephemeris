@@ -3,7 +3,7 @@ import Foundation
 /// Per design doc §6.2 throughline #8 (pointing context normalizes confounds).
 /// Coordinate transforms + a small catalog lookup so target-aware observations
 /// can normalize star-count expectations by galactic latitude.
-enum Astronomy {
+nonisolated enum Astronomy {
 
     /// Convert equatorial coordinates (J2000) to galactic latitude in degrees.
     /// Used by the recommender to bin nights by galactic environment.
@@ -44,14 +44,14 @@ enum Astronomy {
 /// Compact catalog of popular Messier objects for target identification.
 /// A full NGC catalog (~7800 entries) is deferred to v2.1. Messier covers the
 /// targets that account for the majority of amateur imaging sessions.
-struct CatalogObject: Sendable {
+nonisolated struct CatalogObject: Sendable {
     let identifier: String   // e.g. "M31"
     let commonName: String   // e.g. "Andromeda Galaxy"
     let raHours: Double      // J2000 right ascension
     let decDegrees: Double   // J2000 declination
 }
 
-enum MessierCatalog {
+nonisolated enum MessierCatalog {
     /// Try to resolve a pointing to a Messier object. Returns the nearest catalog entry
     /// within `toleranceDeg` (default 0.5°), or nil if nothing's close enough.
     static func match(raHours: Double, decDegrees: Double, toleranceDeg: Double = 0.5) -> CatalogObject? {

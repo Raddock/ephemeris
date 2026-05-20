@@ -4,7 +4,7 @@ import Foundation
 /// (or deprecation) status. Matches the algorithm dropdown in PHD2's Algorithm tab.
 ///
 /// Reference: https://openphdguiding.org/man/Guide_algorithms.htm
-enum PHD2Algorithm: String, Codable, CaseIterable, Sendable {
+nonisolated enum PHD2Algorithm: String, Codable, CaseIterable, Sendable {
     case hysteresis
     case resistSwitch
     /// Deprecated per PHD2 manual; treat in historical logs but never recommend.

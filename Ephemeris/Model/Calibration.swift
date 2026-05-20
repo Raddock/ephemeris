@@ -50,7 +50,7 @@ struct CalibrationDetails: Sendable, Equatable {
 
     /// |delta(west, north)| − 90°; positive = mount axes deviate from orthogonality.
     /// Returns nil unless both legs reported angles.
-    var orthogonalityErrorDeg: Double? {
+    nonisolated var orthogonalityErrorDeg: Double? {
         guard let w = legCompletions[.west]?.angleDeg,
               let n = legCompletions[.north]?.angleDeg else { return nil }
         // Smallest signed angular difference on a 360° circle, then unsigned distance from 90°.

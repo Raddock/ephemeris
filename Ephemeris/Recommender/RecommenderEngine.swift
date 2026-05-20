@@ -7,7 +7,7 @@ import Foundation
 /// Observations are returned in triage order per throughline #11 (mechanical-first):
 /// subQuality → opticalTrain → equipment → phd2Hygiene → pattern → suggestion.
 /// Within each category, ordered by severity (alert > pattern > … > coaching).
-struct RecommenderEngine: Sendable {
+nonisolated struct RecommenderEngine: Sendable {
 
     /// Generators registered with the engine. Order doesn't matter — the engine sorts the
     /// observations by category/severity after running all generators.
@@ -28,6 +28,17 @@ struct RecommenderEngine: Sendable {
         // Ephemeris-heuristic tier (softened voice)
         DecPolarityBiasObserver(),
         AtmosphericConditionsProxy(),
+        // Gap-analysis additions (v2 final): data-derived observers that close the
+        // matrix in docs/observation-gap-analysis.md.
+        StarShapePredictionObserver(),
+        PierSideBiasObserver(),
+        CooldownSignatureObserver(),
+        MinMoveValidationObserver(),
+        GuideRateValidationObserver(),
+        AggressivenessObserver(),
+        DataDrivenAlgorithmHintObserver(),
+        GuideScaleMismatchObserver(),
+        StarLostObserver(),
     ])
 
     init(generators: [any RecommenderGenerator]) {
@@ -57,7 +68,7 @@ struct RecommenderEngine: Sendable {
 
 /// Inputs available to a generator at single-night scope.
 /// Cross-night generators (Phase 7) get an extended context type.
-struct SingleNightContext: Sendable {
+nonisolated struct SingleNightContext: Sendable {
     let log: GuideLog
     let profile: RigProfile
 
@@ -83,8 +94,8 @@ struct SingleNightContext: Sendable {
 /// Stateless and Sendable to support future parallel evaluation.
 protocol RecommenderGenerator: Sendable {
     /// Stable identifier used for filtering, dismissing, and threshold-tuning per rig.
-    var identifier: String { get }
+    nonisolated var identifier: String { get }
 
     /// Run this generator against the context. Return zero or more observations.
-    func observe(context: SingleNightContext) -> [RecommenderObservation]
+    nonisolated func observe(context: SingleNightContext) -> [RecommenderObservation]
 }

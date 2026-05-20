@@ -81,7 +81,7 @@ struct RigProfile: Codable, Hashable, Identifiable, Sendable {
 
     /// Cached imaging pixel scale in arcsec/px. Computed from focal length, pixel size, binning, reducer.
     /// Returns 0 when the inputs are insufficient (treated as "unconfigured").
-    var imagingPixelScale: Double {
+    nonisolated var imagingPixelScale: Double {
         ImagingScale.compute(
             focalLengthMm: imagingFocalLength,
             pixelSizeMicrons: imagingPixelSize,

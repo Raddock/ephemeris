@@ -62,13 +62,13 @@ final class MCPEmbeddedServer {
             let listener = try NWListener(using: parameters, on: portValue ?? .any)
             self.listener = listener
 
-            listener.stateUpdateHandler = { [weak self] state in
-                Task { @MainActor in
+            listener.stateUpdateHandler = { state in
+                Task { @MainActor [weak self, listener] in
                     self?.handleListenerState(state, listener: listener)
                 }
             }
-            listener.newConnectionHandler = { [weak self] connection in
-                Task { @MainActor in
+            listener.newConnectionHandler = { connection in
+                Task { @MainActor [weak self] in
                     self?.handleNewConnection(connection)
                 }
             }

@@ -6,7 +6,7 @@ import Foundation
 /// class is community-consensus territory — the manual is silent. Per throughline #4
 /// (secondary clause), any observation citing `.harmonicStrainWave` advice must label
 /// its `sourceAuthority` as `.communityConsensus`.
-enum MountClass: String, Codable, CaseIterable, Sendable {
+nonisolated enum MountClass: String, Codable, CaseIterable, Sendable {
     /// Worm-and-gear / belt — PHD2's default class.
     case standardGearMount
 
@@ -43,7 +43,7 @@ enum MountClass: String, Codable, CaseIterable, Sendable {
 
 /// Mount-class × algorithm recommendation matrix (design doc §4).
 /// Each row is consulted by `algorithmMismatchObserver` and the rig-profile editor.
-struct MountClassDefaults: Sendable {
+nonisolated struct MountClassDefaults: Sendable {
     var recommendedRAAlgorithm: PHD2Algorithm
     var recommendedDecAlgorithm: PHD2Algorithm
     var recommendedExposureRangeSec: ClosedRange<Double>

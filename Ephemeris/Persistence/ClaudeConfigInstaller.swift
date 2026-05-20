@@ -116,7 +116,10 @@ enum ClaudeConfigInstaller {
 
     /// Run the full install for one target. Throws `InstallError.userCancelled`
     /// if the user dismisses the NSOpenPanel without picking a folder.
-    static func install(_ target: Target) async throws -> InstallResult {
+    /// `allowWrites: true` adds the `EPHEMERIS_MCP_ALLOW_WRITES=1` env var to the
+    /// generated config so the helper exposes `add_annotation`. Off by default
+    /// per design §8 (writes are opt-in).
+    static func install(_ target: Target, allowWrites: Bool = false) async throws -> InstallResult {
         guard let binaryURL = bundledHelperBinary() else {
             throw InstallError.helperBinaryMissing
         }
@@ -171,9 +174,12 @@ enum ClaudeConfigInstaller {
 
         // Build the entry. For Claude Desktop we use the stdio "command" form.
         // For Claude Code we use the same shape — it accepts stdio entries too.
-        let entry: [String: Any] = [
+        var entry: [String: Any] = [
             "command": binaryURL.path
         ]
+        if allowWrites {
+            entry["env"] = ["EPHEMERIS_MCP_ALLOW_WRITES": "1"]
+        }
         mcpServers[target.serverEntryKey] = entry
         rootDict["mcpServers"] = mcpServers
 

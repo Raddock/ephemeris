@@ -5,7 +5,7 @@ import Foundation
 ///
 /// These fields are used by Phase 2 generators that need pointing context, exposure,
 /// multi-star state, HFD baseline, and similar header-only data.
-struct SessionHeaderProperties: Sendable {
+nonisolated struct SessionHeaderProperties: Sendable {
     let raHours: Double?
     let decDegrees: Double?
     let hourAngleHours: Double?
@@ -34,6 +34,15 @@ struct SessionHeaderProperties: Sendable {
     /// PHD2 emits this only when the user has enabled it; absence ≠ off, but we treat it
     /// as "unknown / probably off" for the purpose of `VariableExposureDelaysObserver`.
     let variableExposureDelaysEnabled: Bool
+    /// Per-axis aggressiveness percentage parsed from
+    /// `X guide algorithm = <name>, Aggressiveness = NN.NN, Minimum move = MM.MM`.
+    /// The X axis is RA after a normal calibration, Y is Dec.
+    let raAggressivenessPercent: Double?
+    let decAggressivenessPercent: Double?
+    let raGuideAlgorithm: String?
+    let decGuideAlgorithm: String?
+    let raMinMovePixels: Double?
+    let decMinMovePixels: Double?
 
     init(rawHeader: [String]) {
         var ra: Double?
@@ -57,6 +66,12 @@ struct SessionHeaderProperties: Sendable {
         var guideBin: Int?
         var guideCam: String?
         var ved = false
+        var xAggro: Double?
+        var yAggro: Double?
+        var xAlgo: String?
+        var yAlgo: String?
+        var xMinMove: Double?
+        var yMinMove: Double?
 
         for line in rawHeader {
             if let m = Self.match(line, pattern: #"RA = ([\-\d.]+) hr, Dec = ([\-\d.]+) deg, Hour angle = ([\-\d.]+) hr, Pier side = (\w+)"#) {
@@ -103,6 +118,20 @@ struct SessionHeaderProperties: Sendable {
                                                        options: .regularExpression)
                 guidePixelSize = Double(m[1])
             }
+            // "X guide algorithm = Lowpass2, Aggressiveness = 40.000, Minimum move = 0.400"
+            // PHD2 emits one line per axis; X maps to RA after a normal calibration,
+            // Y to Dec. (Some algorithms inject extra middle params like Hysteresis = 0.10
+            // before Aggressiveness — the regex tolerates intervening fields.)
+            if let m = Self.match(line, pattern: #"X guide algorithm = (\w+),.*Aggressiveness = ([\d.]+),.*Minimum move = ([\d.]+)"#) {
+                xAlgo = m[0]
+                xAggro = Double(m[1])
+                xMinMove = Double(m[2])
+            }
+            if let m = Self.match(line, pattern: #"Y guide algorithm = (\w+),.*Aggressiveness = ([\d.]+),.*Minimum move = ([\d.]+)"#) {
+                yAlgo = m[0]
+                yAggro = Double(m[1])
+                yMinMove = Double(m[2])
+            }
         }
 
         self.raHours = ra
@@ -126,6 +155,12 @@ struct SessionHeaderProperties: Sendable {
         self.guideBinning = guideBin
         self.guideCameraName = guideCam
         self.variableExposureDelaysEnabled = ved
+        self.raAggressivenessPercent = xAggro
+        self.decAggressivenessPercent = yAggro
+        self.raGuideAlgorithm = xAlgo
+        self.decGuideAlgorithm = yAlgo
+        self.raMinMovePixels = xMinMove
+        self.decMinMovePixels = yMinMove
     }
 
     /// Convenience derived from min-move and observed pulse stats. Not parsed directly.
@@ -152,7 +187,7 @@ struct SessionHeaderProperties: Sendable {
 extension GuideSession {
     /// Lazily parses additional header fields not structured by the 1.x parser.
     /// Computed on access — generators that don't need these fields don't pay the cost.
-    var headerProperties: SessionHeaderProperties {
+    nonisolated var headerProperties: SessionHeaderProperties {
         SessionHeaderProperties(rawHeader: rawHeader)
     }
 }

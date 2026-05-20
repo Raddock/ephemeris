@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Formula: arcsec/px = 206.265 × pixel_size_μm × binning / (focal_length_mm × reducer_factor)
 /// Reducer factor < 1 shortens effective focal length (faster system); nil treats as 1.0.
-enum ImagingScale {
+nonisolated enum ImagingScale {
 
     /// Compute pixel scale in arcsec/px. Returns 0 when inputs are insufficient.
     /// 206.265 is the constant arcseconds-per-radian / (1000 μm/mm) for the standard form.

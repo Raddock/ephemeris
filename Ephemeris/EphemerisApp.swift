@@ -33,11 +33,12 @@ struct EphemerisApp: App {
     // Auto-ingest of opened documents happens in ContentView when both the rig
     // profile and the parsed log are available. Construction failure is swallowed
     // for now — Phase 3 will surface a recovery UI when the store can't be opened.
-    @State private var library: EphemerisLibrary? = (try? EphemerisLibrary())
+    @State private var library: EphemerisLibrary?
 
-    // v2.0 Phase 8: embedded MCP server listening on localhost. Auto-starts at launch
-    // when the library is available. URL is surfaced in the MCP Server preferences pane.
-    @State private var mcpServer: MCPEmbeddedServer? = nil
+    // v2.0 Phase 8: embedded MCP server listening on localhost. Created eagerly so
+    // the env object is populated when macOS restores scenes (e.g. the MCP Server
+    // window) on launch — otherwise that view crashes with a missing-env-object.
+    @State private var mcpServer: MCPEmbeddedServer?
 
     // Shared coordinator for the bulk-import progress window. The LibraryWindow
     // sets `coordinator.active` and opens the import-progress window; that window
@@ -48,6 +49,26 @@ struct EphemerisApp: App {
         // Initialize TipKit at launch so the library-discovery tip is ready when the
         // third NightRecord lands.
         LibraryDiscoveryTipBootstrap.configure()
+
+        // App Shortcuts (Phase 6) post notifications that EphemerisApp wires into
+        // openWindow + an @AppStorage rig selection. We register the listener on
+        // the main actor since it touches AppKit on dispatch.
+        AppShortcutBridge.shared.registerOnce()
+
+        let library = try? EphemerisLibrary()
+        _library = State(initialValue: library)
+        if let library {
+            let server = MCPEmbeddedServer(library: library)
+            server.start()
+            _mcpServer = State(initialValue: server)
+        }
+
+        // Library-as-home launch behavior: open the Library window after the
+        // SwiftUI scene graph is up. We use AppKit at the next runloop tick so
+        // the DocumentGroup has registered its WindowGroup IDs by then.
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .ephemerisOpenLibraryWindow, object: nil)
+        }
     }
 
     var body: some Scene {
@@ -57,13 +78,7 @@ struct EphemerisApp: App {
                 .environment(\.ephemerisLibrary, library)
                 .environment(\.importCoordinator, importCoordinator)
                 .environment(mcpServer)
-                .task {
-                    if mcpServer == nil, let library {
-                        let server = MCPEmbeddedServer(library: library)
-                        server.start()
-                        mcpServer = server
-                    }
-                }
+                .modifier(OpenLibraryOnRequest())
         }
         .commands {
             // Replace the system About panel with our custom window so we can
@@ -105,6 +120,16 @@ struct EphemerisApp: App {
         .windowStyle(.hiddenTitleBar)
         .defaultPosition(.center)
 
+        // macOS Settings scene — flat single pane per HIG. Rig editing and the MCP
+        // server connector are full management surfaces (list+detail, install panels)
+        // and don't fit the Settings shape, so they live as their own Window scenes
+        // below. Settings here is for true app-wide preferences only.
+        Settings {
+            SettingsWindow()
+                .environment(\.ephemerisLibrary, library)
+                .frame(width: 520)
+        }
+
         Window("Rig Profiles", id: "rigProfiles") {
             RigProfilesWindow()
                 .environment(rigProfileStore)
@@ -143,5 +168,19 @@ struct EphemerisApp: App {
         .windowResizability(.contentSize)
         .defaultSize(width: 600, height: 460)
         .defaultPosition(.center)
+    }
+}
+
+/// Listens for `.ephemerisOpenLibraryWindow` and opens the Library scene.
+/// Attached to every document-window content so the notification has a live
+/// scene context to call `openWindow` from. Idempotent — SwiftUI's openWindow
+/// will focus an existing Library window rather than open a duplicate.
+private struct OpenLibraryOnRequest: ViewModifier {
+    @Environment(\.openWindow) private var openWindow
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: .ephemerisOpenLibraryWindow)) { _ in
+                openWindow(id: "library")
+            }
     }
 }

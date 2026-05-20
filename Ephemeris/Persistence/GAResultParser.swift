@@ -7,7 +7,7 @@ import Foundation
 /// and aggregates them into a single `GAResultEntity`. Per design §6.2: the
 /// recommender's GuidingAssistantRecommendationObserver surfaces these verbatim
 /// (`phd2Measurement` source authority) — they supersede any computed estimate.
-enum GAResultParser {
+nonisolated enum GAResultParser {
 
     /// Parsed result for one GA run. The ingestor maps this to a `GAResultEntity`.
     struct Parsed: Sendable {
@@ -79,11 +79,7 @@ enum GAResultParser {
         let tail = text[range.upperBound...]
         let scanner = Scanner(string: String(tail))
         scanner.charactersToBeSkipped = CharacterSet(charactersIn: " =:\t")
-        var value: Double = 0
-        if scanner.scanDouble(&value) {
-            return value
-        }
-        return nil
+        return scanner.scanDouble()
     }
 
     private static func extractInt(_ text: String, after prefix: String) -> Int? {
@@ -91,16 +87,12 @@ enum GAResultParser {
         let tail = text[range.upperBound...]
         let scanner = Scanner(string: String(tail))
         scanner.charactersToBeSkipped = CharacterSet(charactersIn: " =:\t")
-        var value: Int = 0
-        if scanner.scanInt(&value) {
-            return value
-        }
-        return nil
+        return scanner.scanInt()
     }
 }
 
 private extension GAResultParser.Parsed {
-    var hasAnyMeasurement: Bool {
+    nonisolated var hasAnyMeasurement: Bool {
         recommendedRAMinMovePx != nil ||
         recommendedDecMinMovePx != nil ||
         recommendedExposureSec != nil ||

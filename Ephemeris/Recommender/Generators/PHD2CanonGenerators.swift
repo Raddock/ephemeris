@@ -5,7 +5,7 @@ import Foundation
 /// Surfaces PHD2 Guiding Assistant recommendations verbatim from the log.
 /// This is the highest-authority generator — its observations supersede any parallel
 /// Ephemeris computation per design doc §6.2 and throughline #4 secondary clause.
-struct GuidingAssistantRecommendationObserver: RecommenderGenerator {
+nonisolated struct GuidingAssistantRecommendationObserver: RecommenderGenerator {
     let identifier = "guidingAssistantRecommendationObserver"
     init() {}
 
@@ -55,11 +55,7 @@ struct GuidingAssistantRecommendationObserver: RecommenderGenerator {
         let tail = text[range.upperBound...]
         let scanner = Scanner(string: String(tail))
         scanner.charactersToBeSkipped = .whitespaces
-        var value: Double = 0
-        if scanner.scanDouble(&value) {
-            return value
-        }
-        return nil
+        return scanner.scanDouble()
     }
 
     private func buildObservation(result: GuidingAssistantParsed,
@@ -99,7 +95,7 @@ struct GuidingAssistantRecommendationObserver: RecommenderGenerator {
         )
     }
 
-    private struct GuidingAssistantParsed {
+    private nonisolated struct GuidingAssistantParsed {
         var totalRmsArcsec: Double?
         var peakToPeakRaArcsec: Double?
         var suggestedRaMinMovePx: Double?
@@ -122,7 +118,7 @@ struct GuidingAssistantRecommendationObserver: RecommenderGenerator {
 /// Surfaces PHD2's four named calibration sanity alerts verbatim from the log:
 /// *Too Few Steps*, *Orthogonality Error*, *Questionable Rates*, *Inconsistent Results*.
 /// Per design doc §6.2: "Pass-through with link to Calibration Review & Modification."
-struct CalibrationSanityAlertObserver: RecommenderGenerator {
+nonisolated struct CalibrationSanityAlertObserver: RecommenderGenerator {
     let identifier = "calibrationSanityAlertObserver"
     init() {}
 
@@ -186,7 +182,7 @@ struct CalibrationSanityAlertObserver: RecommenderGenerator {
 ///
 /// Corpus-calibrated tiers (from Edge-10m post-fix subset): 0% rail rate is healthy.
 /// Tiers: >1% watch, >5% pattern, >15% alert.
-struct MaxDurationLimitObserver: RecommenderGenerator {
+nonisolated struct MaxDurationLimitObserver: RecommenderGenerator {
     let identifier = "maxDurationLimitObserver"
     init() {}
 
@@ -253,7 +249,7 @@ struct MaxDurationLimitObserver: RecommenderGenerator {
 
 /// Calibration age relative to session date. Per design doc §6.2 (corpus-calibrated):
 /// >21 days = coaching, >30 days = alert.
-struct CalibrationStalenessObserver: RecommenderGenerator {
+nonisolated struct CalibrationStalenessObserver: RecommenderGenerator {
     let identifier = "calibrationStalenessObserver"
     init() {}
 
@@ -298,7 +294,7 @@ struct CalibrationStalenessObserver: RecommenderGenerator {
 
 /// Orthogonality error from the most recent calibration. Per design doc §6.2:
 /// >5° = pattern, >10° = alert. Both reference Calibration Assistant + Star Cross.
-struct CalibrationOrthogonalityObserver: RecommenderGenerator {
+nonisolated struct CalibrationOrthogonalityObserver: RecommenderGenerator {
     let identifier = "calibrationOrthogonalityObserver"
     init() {}
 
@@ -342,7 +338,7 @@ struct CalibrationOrthogonalityObserver: RecommenderGenerator {
 
 /// When the rig is encoder-based premium and Variable Exposure Delays appears not enabled,
 /// recommend turning it on. PHD2's manual explicitly recommends this for encoder mounts.
-struct VariableExposureDelaysObserver: RecommenderGenerator {
+nonisolated struct VariableExposureDelaysObserver: RecommenderGenerator {
     let identifier = "variableExposureDelaysObserver"
     init() {}
 
@@ -383,7 +379,7 @@ struct VariableExposureDelaysObserver: RecommenderGenerator {
 
 /// Recommends multi-star guiding when not active. Per PHD2 manual: "Multi-star guiding
 /// greatly reduces the chance for the mount to chase after occasional seeing spikes."
-struct MultiStarGuidingObserver: RecommenderGenerator {
+nonisolated struct MultiStarGuidingObserver: RecommenderGenerator {
     let identifier = "multiStarGuidingObserver"
     init() {}
 
@@ -418,7 +414,7 @@ struct MultiStarGuidingObserver: RecommenderGenerator {
 /// Compares the session's active algorithms against the mount-class recommendation matrix.
 /// When they don't match, surfaces the specific delta with the source authority that backs
 /// the recommendation (`phd2Manual` for canon classes, `communityConsensus` for harmonic).
-struct AlgorithmMismatchObserver: RecommenderGenerator {
+nonisolated struct AlgorithmMismatchObserver: RecommenderGenerator {
     let identifier = "algorithmMismatchObserver"
     init() {}
 

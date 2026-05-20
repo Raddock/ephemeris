@@ -19,6 +19,7 @@ enum SchemaV1: VersionedSchema {
         [
             RigProfileEntity.self,
             NightRecordEntity.self,
+            SessionRecordEntity.self,
             ObservationEntity.self,
             AnnotationEntity.self,
             TargetClusterEntity.self,
@@ -163,6 +164,56 @@ final class NightRecordEntity {
 
     @Relationship(deleteRule: .cascade, inverse: \GAResultEntity.nightRecord)
     var gaResults: [GAResultEntity]? = nil
+
+    @Relationship(deleteRule: .cascade, inverse: \SessionRecordEntity.nightRecord)
+    var sessionRecords: [SessionRecordEntity]? = nil
+
+    init() {}
+}
+
+/// Per-session analytical artifact. One row per `GuideSession` inside the log.
+/// Surfaces within-night detail (start time, altitude, RMS-per-session) so MCP
+/// clients can test time-of-night / pointing-dependent hypotheses that night-level
+/// rollups can't answer.
+@Model
+final class SessionRecordEntity {
+    var id: UUID = UUID()
+    var nightRecord: NightRecordEntity? = nil
+    /// Denormalized rig id so MCP queries don't need a two-level join.
+    var rigProfileId: UUID = UUID()
+    /// 0-based order of this session within its night, by `startedAt`.
+    var sessionIndex: Int = 0
+
+    var startedAt: Date? = nil
+    var durationSec: Double = 0
+
+    // RMS (arcsec, after multiplying by pixel scale)
+    var rmsTotalArcsec: Double = 0
+    var rmsRAArcsec: Double = 0
+    var rmsDecArcsec: Double = 0
+    // Peak excursion (arcsec)
+    var peakRAArcsec: Double = 0
+    var peakDecArcsec: Double = 0
+    // Drift (arcsec/min)
+    var driftRAArcsecPerMin: Double = 0
+    var driftDecArcsecPerMin: Double = 0
+    var polarAlignErrorArcmin: Double = 0
+
+    var includedFrames: Int = 0
+    var excludedFrames: Int = 0
+    /// Guide pixel scale (arcsec/px) at the time the session ran.
+    var pixelScale: Double = 1.0
+
+    // Pointing + geometry (parsed from session header)
+    var raHours: Double? = nil
+    var decDegrees: Double? = nil
+    var hourAngleHours: Double? = nil
+    var altitudeDegrees: Double? = nil
+    var azimuthDegrees: Double? = nil
+    var pierSide: String? = nil
+    var hfdPixels: Double? = nil
+    var exposureMs: Int? = nil
+    var multiStarEnabled: Bool = false
 
     init() {}
 }

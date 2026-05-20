@@ -31,7 +31,7 @@ struct GuideSession: Sendable, Identifiable {
     var entries: [GuideEntry] = []
     var infos: [InfoEntry] = []
 
-    var duration: Double { entries.last?.time ?? 0 }
+    nonisolated var duration: Double { entries.last?.time ?? 0 }
     /// Count of real frames only — boundary sentinels inserted by
     /// `GuideSessionMerger` (NaN-valued, non-included) are excluded so the
     /// number matches what a user would say came from PHD2.

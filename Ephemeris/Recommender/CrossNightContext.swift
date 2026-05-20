@@ -3,7 +3,7 @@ import Foundation
 /// Value-type rollup of a `NightRecord` for cross-night generators. Built from either
 /// the SwiftData `NightRecordEntity` (production) or synthesized in tests. Keeps the
 /// generator surface pure and easily testable.
-struct NightSummary: Sendable, Identifiable {
+nonisolated struct NightSummary: Sendable, Identifiable {
     let id: UUID
     let nightDate: Date
     let sessionsCount: Int
@@ -57,7 +57,7 @@ struct NightSummary: Sendable, Identifiable {
 }
 
 /// Inputs available to cross-night generators.
-struct CrossNightContext: Sendable {
+nonisolated struct CrossNightContext: Sendable {
     let profile: RigProfile
     /// Nights sorted chronologically (oldest first). Empty corpus is valid input —
     /// generators return zero observations in that case.
@@ -89,14 +89,14 @@ struct CrossNightContext: Sendable {
 /// Cross-night generator contract — parallel to RecommenderGenerator but consumes
 /// `CrossNightContext` instead of `SingleNightContext`.
 protocol CrossNightGenerator: Sendable {
-    var identifier: String { get }
-    func observe(context: CrossNightContext) -> [RecommenderObservation]
+    nonisolated var identifier: String { get }
+    nonisolated func observe(context: CrossNightContext) -> [RecommenderObservation]
 }
 
 /// Cross-night variant of the recommender engine. Runs registered cross-night generators
 /// against the rolled-up corpus. Per design doc §6.4 (triage ordering): observations
 /// are sorted by category then severity.
-struct CrossNightEngine: Sendable {
+nonisolated struct CrossNightEngine: Sendable {
     let generators: [any CrossNightGenerator]
 
     static let `default` = CrossNightEngine(generators: [
@@ -138,7 +138,7 @@ struct CrossNightEngine: Sendable {
 /// Per design doc §9: a "new calibration" annotation should silence calibrationAngleShift
 /// for the boundary night. This module maps annotation categories to generator identifiers
 /// that the annotation explains.
-enum AnnotationSuppression {
+nonisolated enum AnnotationSuppression {
     /// Map of annotation category → set of generator identifiers that category suppresses.
     /// When an annotation in the time window has one of these categories, the matching
     /// generators are skipped (the user has already explained the event).

@@ -47,7 +47,7 @@ nonisolated struct LogAggregateStats: Sendable, Equatable {
     static let empty = LogAggregateStats()
 }
 
-enum LogAggregateStatsCalculator {
+nonisolated enum LogAggregateStatsCalculator {
 
     static func calculate(_ log: GuideLog) -> LogAggregateStats {
         var agg = LogAggregateStats()

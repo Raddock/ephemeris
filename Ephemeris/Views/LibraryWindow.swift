@@ -16,13 +16,33 @@ struct LibraryWindow: View {
     @State private var selectedRigID: RigProfile.ID?
     @State private var range: TimeRange = .month
     @State private var rigToDelete: RigProfile?
+    @State private var customStart: Date = Calendar.current.date(byAdding: .month, value: -1, to: .now) ?? .now
+    @State private var customEnd: Date = .now
+
+    /// Effective inclusive date window for the current `range` selection.
+    /// `.custom` reads the user's date pickers; everything else uses preset offsets.
+    private var dateWindow: DateInterval {
+        switch range {
+        case .custom:
+            // Order-preserving so user-flipped pickers don't yield an empty window.
+            let lo = min(customStart, customEnd)
+            let hi = max(customStart, customEnd)
+            // End of day for `hi` so a same-day picker still includes that day's nights.
+            let endOfDay = Calendar.current.date(bySettingHour: 23, minute: 59, second: 59, of: hi) ?? hi
+            return DateInterval(start: lo, end: endOfDay)
+        case .all:
+            return DateInterval(start: .distantPast, end: .distantFuture)
+        default:
+            return DateInterval(start: range.cutoffDate, end: .distantFuture)
+        }
+    }
 
     var body: some View {
         NavigationSplitView {
             sidebar
         } detail: {
             if let library, let rigID = selectedRigID, let profile = rigStore.profiles.first(where: { $0.id == rigID }) {
-                LibraryDetailView(profile: profile, range: range)
+                LibraryDetailView(profile: profile, range: range, window: dateWindow)
                     .modelContainer(library.container)
             } else {
                 ContentUnavailableView(
@@ -47,7 +67,7 @@ struct LibraryWindow: View {
                     Label("Import logs…", systemImage: "tray.and.arrow.down")
                 }
                 .disabled(library == nil)
-                .help("Bulk-import every PHD2_GuideLog_*.txt from a folder. New rigs are created automatically from each log's PHD2 profile name.")
+                .help("Bulk-import every PHD2_GuideLog_*.txt from a folder. New rigs are created automatically from each log's PHD2 profile name. Re-importing the same folder refreshes per-session detail and observations without duplicating nights.")
             }
         }
         .confirmationDialog(
@@ -129,6 +149,12 @@ struct LibraryWindow: View {
                 }
                 .pickerStyle(.inline)
                 .labelsHidden()
+                if range == .custom {
+                    DatePicker("From", selection: $customStart, displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                    DatePicker("To", selection: $customEnd, in: ...Date.now, displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                }
             }
         }
         .listStyle(.sidebar)
@@ -152,32 +178,40 @@ struct LibraryWindow: View {
         guard let rigID = selectedRigID,
               let profile = rigStore.profiles.first(where: { $0.id == rigID })
         else { return "" }
+        if range == .custom {
+            let f = DateFormatter()
+            f.dateStyle = .medium
+            return "\(profile.effectiveName) · \(f.string(from: dateWindow.start)) – \(f.string(from: dateWindow.end))"
+        }
         return "\(profile.effectiveName) · \(range.displayName)"
     }
 }
 
 /// Time-range selector for the library view. Per design doc §7.2.
+/// `.custom` is paired with a user-chosen start/end held on `LibraryWindow`.
 enum TimeRange: String, CaseIterable, Sendable {
-    case week, month, year, all
+    case week, month, year, all, custom
 
     var displayName: String {
         switch self {
-        case .week:  return "Week"
-        case .month: return "Month"
-        case .year:  return "Year"
-        case .all:   return "All"
+        case .week:   return "Week"
+        case .month:  return "Month"
+        case .year:   return "Year"
+        case .all:    return "All"
+        case .custom: return "Custom range"
         }
     }
 
-    /// Cutoff date for the range (sessions on or after this date are included).
-    /// `.all` returns the distant past.
+    /// Inclusive lower bound for preset ranges. `.custom` returns `.distantPast`
+    /// here; the caller supplies the real bound.
     var cutoffDate: Date {
         let cal = Calendar.current
         switch self {
-        case .week:  return cal.date(byAdding: .day, value: -7, to: .now) ?? .distantPast
-        case .month: return cal.date(byAdding: .day, value: -30, to: .now) ?? .distantPast
-        case .year:  return cal.date(byAdding: .year, value: -1, to: .now) ?? .distantPast
-        case .all:   return .distantPast
+        case .week:   return cal.date(byAdding: .day, value: -7, to: .now) ?? .distantPast
+        case .month:  return cal.date(byAdding: .day, value: -30, to: .now) ?? .distantPast
+        case .year:   return cal.date(byAdding: .year, value: -1, to: .now) ?? .distantPast
+        case .all:    return .distantPast
+        case .custom: return .distantPast
         }
     }
 }
@@ -193,24 +227,30 @@ struct LibraryDetailView: View {
     @Query private var annotationEntities: [AnnotationEntity]
     @Query private var gaResults: [GAResultEntity]
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
     @State private var annotatingRecord: NightRecordEntity?
     @State private var forumExportInputs: ForumPostExporter.Inputs?
 
-    init(profile: RigProfile, range: TimeRange) {
+    init(profile: RigProfile, range: TimeRange, window: DateInterval) {
         self.profile = profile
         self.range = range
         let rigID = profile.id
-        let cutoff = range.cutoffDate
+        let start = window.start
+        let end = window.end
         _nightRecords = Query(
             filter: #Predicate<NightRecordEntity> { record in
-                record.rigProfile?.id == rigID && record.nightDate >= cutoff
+                record.rigProfile?.id == rigID &&
+                record.nightDate >= start &&
+                record.nightDate <= end
             },
             sort: \NightRecordEntity.nightDate,
             order: .reverse
         )
         _annotationEntities = Query(
             filter: #Predicate<AnnotationEntity> { ann in
-                ann.rigProfileId == rigID && ann.eventDate >= cutoff
+                ann.rigProfileId == rigID &&
+                ann.eventDate >= start &&
+                ann.eventDate <= end
             },
             sort: \AnnotationEntity.eventDate,
             order: .reverse
@@ -276,6 +316,9 @@ struct LibraryDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
+                if !profile.isImagingScaleConfigured {
+                    rigIncompleteBanner
+                }
                 if nightRecords.isEmpty {
                     ContentUnavailableView(
                         "No nights ingested",
@@ -311,6 +354,36 @@ struct LibraryDetailView: View {
     private func medianRMSValue() -> Double {
         let vals = rigRMSDistribution.filter { $0 > 0 }.sorted()
         return vals.isEmpty ? 0 : vals[vals.count / 2]
+    }
+
+    /// Loud-but-friendly banner shown when the rig profile is missing imaging-train
+    /// values. Without those, StarShapePredictor returns `.unknown`, several
+    /// observation generators no-op, and the user just sees a quiet library. This
+    /// makes the gap explicit and offers a one-click path to fix it.
+    @ViewBuilder
+    private var rigIncompleteBanner: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.title3)
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Imaging train not configured")
+                    .font(.headline)
+                Text("Several observations and the star-shape predictor need this rig's imaging focal length, pixel size, and binning to compute properly. Until they're set, you'll see fewer recommendations and no predicted-shape chips on the rows below.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Configure rig…") {
+                    openWindow(id: "rigProfiles")
+                }
+                .controlSize(.small)
+                .padding(.top, 2)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(.orange.opacity(0.35), lineWidth: 1))
     }
 
     private var header: some View {
@@ -440,6 +513,36 @@ struct LibraryDetailView: View {
         }
     }
 
+    /// Tiny column-header strip placed above the recent-nights rows. Names the
+    /// trailing icons (open-log, annotation, integration, RMS, predicted shape,
+    /// rated quality) so the row isn't a mystery of glyphs.
+    @ViewBuilder
+    private var recentNightsColumnHeader: some View {
+        HStack(spacing: 10) {
+            Text("Date").font(.caption2.weight(.medium)).foregroundStyle(.tertiary)
+                .frame(width: 110, alignment: .leading)
+            Text("Sessions").font(.caption2.weight(.medium)).foregroundStyle(.tertiary)
+            Spacer()
+            columnLabel("Open", width: 26)
+            columnLabel("Note", width: 26)
+            columnLabel("Integration", width: 64, align: .trailing)
+            columnLabel("RMS", width: 60, align: .trailing)
+            columnLabel("Predicted shape", width: 40)
+                .help("Star shape predicted from the data — RMS, axis asymmetry, and drift across the night's sessions.")
+            columnLabel("Your rating", width: 30)
+                .help("Your visual rating of how the actual imaging subs came out. Compare against the predicted shape to spot flexure.")
+        }
+        .padding(.horizontal, 12)
+    }
+
+    private func columnLabel(_ text: String, width: CGFloat, align: Alignment = .center) -> some View {
+        Text(text.uppercased())
+            .font(.caption2.weight(.medium))
+            .tracking(0.3)
+            .foregroundStyle(.tertiary)
+            .frame(width: width, alignment: align)
+    }
+
     private var recentNightsList: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -447,7 +550,7 @@ struct LibraryDetailView: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
                 Text("·").foregroundStyle(.tertiary)
-                Text("most recent first")
+                Text("most recent first · double-click to open the raw log")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -455,6 +558,7 @@ struct LibraryDetailView: View {
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
+            recentNightsColumnHeader
             VStack(spacing: 0) {
                 ForEach(Array(nightRecords.prefix(20).enumerated()), id: \.element.id) { idx, record in
                     nightRow(record)
@@ -520,6 +624,15 @@ struct LibraryDetailView: View {
             annotationBadge(for: record)
             Spacer()
             Button {
+                openOriginalLog(for: record)
+            } label: {
+                Image(systemName: "doc.text.magnifyingglass")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .disabled(record.sourceFilePath.isEmpty)
+            .help("Open this night's PHD2 log in the single-night viewer.")
+            Button {
                 annotatingRecord = record
             } label: {
                 Image(systemName: "plus.circle")
@@ -534,7 +647,7 @@ struct LibraryDetailView: View {
                 .font(.callout.weight(.semibold).monospacedDigit())
                 .foregroundStyle(verdict.tint)
                 .frame(width: 60, alignment: .trailing)
-            subQualityChip(for: record)
+            shapeChip(for: record)
         }
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {
@@ -555,15 +668,17 @@ struct LibraryDetailView: View {
         }
     }
 
-    /// Opens the source PHD2 log file in a new document window. Uses NSWorkspace so the
-    /// existing DocumentGroup flow takes over — auto-ingest dedups, recommender runs, etc.
+    /// Opens the source PHD2 log file in a new document window. Routes through
+    /// `SourceFolderBookmarks` so the sandbox security scope is restored before
+    /// NSWorkspace hands the URL to Ephemeris's DocumentGroup. If the user hasn't
+    /// granted access to the parent folder yet, the bookmark store will prompt once.
     /// Handles the file-moved case gracefully with a quick alert.
     private func openOriginalLog(for record: NightRecordEntity) {
         guard !record.sourceFilePath.isEmpty else { return }
         let url = URL(fileURLWithPath: record.sourceFilePath)
         let fm = FileManager.default
         if fm.fileExists(atPath: url.path) {
-            NSWorkspace.shared.open(url)
+            _ = SourceFolderBookmarks.openLog(at: url.path)
         } else {
             let alert = NSAlert()
             alert.messageText = "Original log not found"
@@ -574,21 +689,216 @@ struct LibraryDetailView: View {
         }
     }
 
+    /// Unified shape chip — replaces the prior split between "predicted" and
+    /// "your rating" columns. By default shows the predicted shape from the data.
+    /// When the user has rated the night, the rating wins (it's ground truth) and
+    /// the predicted value is folded into the tooltip; disagreements paint the chip
+    /// orange so the differential-flexure signature is hard to miss. Click the
+    /// chip to rate or clear.
+    @ViewBuilder
+    private func shapeChip(for record: NightRecordEntity) -> some View {
+        let prediction = StarShapePredictor.predict(
+            night: record,
+            imagingPixelScale: profile.imagingPixelScale
+        )
+        let userRated = record.subQualityRaw.flatMap { SubQualityVerdict(rawValue: $0) }
+        let disagrees = userRated != nil && prediction.verdict != userRated && prediction != .unknown
+
+        // What's shown on the chip face: user rating if present, else prediction.
+        // Tooltip carries both so the comparison stays accessible. Computed in a
+        // closure so the branching stays plain control flow, not @ViewBuilder content.
+        let (primarySymbol, primaryTint, isPredicted): (String, Color, Bool) = {
+            if let rated = userRated {
+                return (rated.symbolName, rated.tint, false)
+            } else if prediction != .unknown {
+                return (predictionIcon(prediction),
+                        chipTint(prediction: prediction, disagrees: false),
+                        true)
+            } else {
+                return ("circle.dashed", .secondary, true)
+            }
+        }()
+        let resolvedTint: Color = disagrees ? .orange : primaryTint
+
+        Menu {
+            shapeRatingMenu(for: record, userRated: userRated)
+        } label: {
+            HStack(spacing: 3) {
+                if isPredicted {
+                    Image(systemName: "wand.and.stars").font(.caption2)
+                }
+                Image(systemName: primarySymbol).font(.caption2)
+            }
+            .foregroundStyle(resolvedTint)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(resolvedTint.opacity(0.12), in: Capsule())
+            .overlay(Capsule().stroke(resolvedTint.opacity(0.35), lineWidth: 0.5))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(combinedShapeTooltip(prediction: prediction, userRated: userRated, disagrees: disagrees, record: record))
+    }
+
+    @ViewBuilder
+    private func shapeRatingMenu(for record: NightRecordEntity, userRated: SubQualityVerdict?) -> some View {
+        Button {
+            setSubQuality(nil, for: record)
+        } label: {
+            Label("Use predicted", systemImage: "wand.and.stars")
+        }
+        Divider()
+        ForEach(SubQualityVerdict.allCases, id: \.self) { option in
+            Button {
+                setSubQuality(option, for: record)
+            } label: {
+                Label(option.displayName, systemImage: option.symbolName)
+            }
+        }
+    }
+
+    private func combinedShapeTooltip(prediction: PredictedStarShape,
+                                      userRated: SubQualityVerdict?,
+                                      disagrees: Bool,
+                                      record: NightRecordEntity) -> String {
+        let scaleNote: String
+        if profile.imagingPixelScale > 0 {
+            let ratio = record.medianRMSArcsec / profile.imagingPixelScale
+            scaleNote = String(format: " (RMS %.2f″ vs imaging scale %.2f″/px = %.2f×)",
+                               record.medianRMSArcsec, profile.imagingPixelScale, ratio)
+        } else {
+            scaleNote = ""
+        }
+        var lines: [String] = []
+        if let rated = userRated {
+            lines.append("Your rating: \(rated.displayName)")
+            if prediction != .unknown {
+                lines.append("Predicted from data: \(prediction.displayName.lowercased())\(scaleNote)")
+            }
+        } else {
+            lines.append("Predicted from data: \(prediction.displayName.lowercased())\(scaleNote)")
+            lines.append("(Click to rate this night against your actual subs.)")
+        }
+        if prediction.isBloated {
+            lines.append("Bloated = symmetric guiding wider than the imaging scale. Stars stay round but appear soft. Long-FL OTAs on harmonic-strain-wave mounts often live here.")
+        }
+        if case .trailed(let cause) = prediction {
+            lines.append(trailedCauseExplanation(cause))
+        }
+        if disagrees {
+            lines.append("Disagreement between your rating and the data often indicates differential flexure or another between-guider-and-imager effect.")
+        }
+        return lines.joined(separator: "\n\n")
+    }
+
+    /// Old name kept as a no-op so we don't have to ripple-rename. Returns nothing.
+    @ViewBuilder
+    private func predictedShapeChip(for record: NightRecordEntity) -> some View {
+        let prediction = StarShapePredictor.predict(
+            night: record,
+            imagingPixelScale: profile.imagingPixelScale
+        )
+        let userRated = record.subQualityRaw.flatMap { SubQualityVerdict(rawValue: $0) }
+        let disagrees = userRated != nil && prediction.verdict != userRated && prediction != .unknown
+        // Bloated round + user-rated round isn't a disagreement (they'd both pick
+        // "round" from the menu) — but it IS information worth surfacing, so the
+        // chip stays visible to show the bloat. We just don't paint it orange.
+
+        if prediction != .unknown {
+            // Always show — the user wants to see the data signal on every row.
+            // Tint scales with severity: secondary for sharp round, the chip's
+            // own color for bloated / elongated / trailed, orange for disagreements.
+            let tint = chipTint(prediction: prediction, disagrees: disagrees)
+            HStack(spacing: 3) {
+                Image(systemName: "wand.and.stars")
+                    .font(.caption2)
+                Image(systemName: predictionIcon(prediction))
+                    .font(.caption2)
+            }
+            .foregroundStyle(tint)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(tint.opacity(0.12), in: Capsule())
+            .overlay(Capsule().stroke(tint.opacity(0.35), lineWidth: 0.5))
+            .help(predictionTooltip(prediction: prediction, userRated: userRated, disagrees: disagrees, record: record))
+        }
+    }
+
+    private func chipTint(prediction: PredictedStarShape, disagrees: Bool) -> Color {
+        if disagrees { return .orange }
+        switch prediction {
+        case .round(let bloated):   return bloated ? .yellow : .secondary
+        case .slightlyElongated:    return .orange
+        case .trailed:              return .red
+        case .mixed:                return .yellow
+        case .unknown:              return .secondary
+        }
+    }
+
+    private func predictionIcon(_ prediction: PredictedStarShape) -> String {
+        switch prediction {
+        case .round(let bloated): return bloated ? "circle.dotted" : "circle.fill"
+        case .slightlyElongated:  return "oval.fill"
+        case .trailed:            return "line.diagonal"
+        case .mixed:              return "circle.lefthalf.filled"
+        case .unknown:            return "circle.dashed"
+        }
+    }
+
+    private func trailedCauseExplanation(_ cause: PredictedStarShape.TrailedCause) -> String {
+        switch cause {
+        case .decDrift:
+            return "Dec axis dominated the drift — that's the canonical polar-alignment-error fingerprint. The Guiding Assistant reports polar error directly; running Drift Alignment or Static Polar Alignment is the targeted fix."
+        case .raDrift:
+            return "RA axis dominated the drift — typical causes are mount periodic error overwhelming corrections, wind, or a tracking rate that's drifting (refraction model, sidereal vs custom)."
+        case .bothAxes:
+            return "Both axes drifted — that's rarer and usually means the mount lost tracking or the pointing model is unstable."
+        }
+    }
+
+    private func predictionTooltip(prediction: PredictedStarShape,
+                                   userRated: SubQualityVerdict?,
+                                   disagrees: Bool,
+                                   record: NightRecordEntity) -> String {
+        let scaleNote: String
+        if profile.imagingPixelScale > 0 {
+            let ratio = record.medianRMSArcsec / profile.imagingPixelScale
+            scaleNote = String(format: " (RMS %.2f″ vs imaging scale %.2f″/px = %.2f×)",
+                               record.medianRMSArcsec, profile.imagingPixelScale, ratio)
+        } else {
+            scaleNote = ""
+        }
+        var base = "Predicted from data: \(prediction.displayName.lowercased())\(scaleNote)."
+        if prediction.isBloated {
+            base += " Bloated = symmetric guiding wider than the imaging scale — stars stay round but appear soft. Long-FL OTAs on harmonic-strain-wave mounts often live here."
+        }
+        if case .trailed(let cause) = prediction {
+            base += " " + trailedCauseExplanation(cause)
+        }
+        if disagrees, let userRated {
+            base += " You rated this night \(userRated.displayName.lowercased()). Disagreement often indicates differential flexure or another between-guider-and-imager effect."
+        } else if userRated == nil {
+            base += " Rate this night to compare your eye against the data."
+        }
+        return base
+    }
+
     @ViewBuilder
     private func subQualityChip(for record: NightRecordEntity) -> some View {
         let current = record.subQualityRaw.flatMap { SubQualityVerdict(rawValue: $0) }
         Menu {
+            Button {
+                setSubQuality(nil, for: record)
+            } label: {
+                Label("Unrated", systemImage: "circle.dashed")
+            }
+            Divider()
             ForEach(SubQualityVerdict.allCases, id: \.self) { option in
                 Button {
                     setSubQuality(option, for: record)
                 } label: {
                     Label(option.displayName, systemImage: option.symbolName)
-                }
-            }
-            if current != nil {
-                Divider()
-                Button("Clear rating", role: .destructive) {
-                    setSubQuality(nil, for: record)
                 }
             }
         } label: {
@@ -653,6 +963,19 @@ struct LibraryDetailView: View {
         entity.modifiedAt = annotation.modifiedAt
         modelContext.insert(entity)
         try? modelContext.save()
+
+        // CoreSpotlight donation so this annotation is searchable from Spotlight.
+        let categoryText = annotation.categories.map { $0.rawValue.capitalized }.joined(separator: " · ")
+        var keywords: [String] = ["Ephemeris", "Annotation", profile.effectiveName]
+        keywords.append(contentsOf: annotation.categories.map { $0.rawValue })
+        CoreSpotlightIndexer.donate(annotation: AnnotationEntityDigest(
+            id: annotation.id,
+            title: categoryText.isEmpty ? annotation.label : "\(categoryText) · \(annotation.label)",
+            subtitle: annotation.detail,
+            keywords: keywords,
+            eventDate: annotation.eventDate,
+            modifiedAt: annotation.modifiedAt
+        ))
     }
 }
 

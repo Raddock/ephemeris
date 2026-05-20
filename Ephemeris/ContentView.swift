@@ -30,6 +30,7 @@ struct ContentView: View {
 
     @Environment(RigProfileStore.self) private var rigStore
     @Environment(\.ephemerisLibrary) private var library
+    @Environment(\.openWindow) private var openWindow
 
     /// Auto-ingest the opened log into the Library store when both a matching rig
     /// profile and the live library are available. Best-effort — failures are logged.
@@ -77,6 +78,17 @@ struct ContentView: View {
         }
         .navigationTitle(document.filename ?? "PHD2 Log")
         .background(WindowSubtitleSetter(subtitle: subtitleText).frame(width: 0, height: 0))
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    openWindow(id: "library")
+                } label: {
+                    Label("Library", systemImage: "books.vertical")
+                }
+                .help("Open the multi-night Library to see this log in context (⇧⌘L).")
+                .keyboardShortcut("L", modifiers: [.command, .shift])
+            }
+        }
         .task {
             await ingestIfPossible()
         }
