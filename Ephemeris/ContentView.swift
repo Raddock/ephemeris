@@ -22,6 +22,11 @@ import SwiftUI
 
 struct ContentView: View {
     let document: GuideLogDocument
+    /// On-disk URL of the opened log, from the DocumentGroup's file configuration.
+    /// `FileDocument` never sees a reliable path — `GuideLogDocument.filename` is
+    /// only the bare name — so the absolute path stored for "open original log"
+    /// must come from here, not from the document.
+    let fileURL: URL?
     @State private var selection: Set<GuideLog.SectionRef> = [.summary]
     @State private var inspectorVisible = true
     @State private var chartState = ChartViewState()
@@ -45,7 +50,7 @@ struct ContentView: View {
             let result = try await ingestor.ingest(
                 log: document.log,
                 sourceBytes: bytes,
-                sourceFilePath: document.filename ?? "",
+                sourceFilePath: fileURL?.path(percentEncoded: false) ?? "",
                 rigProfile: profile
             )
             print("[Library] Ingested night \(result.nightRecordId.uuidString.prefix(8)) — \(result.observationCount) observations \(result.didCreate ? "(new)" : "(updated)")")

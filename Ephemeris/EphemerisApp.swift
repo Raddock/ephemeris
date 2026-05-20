@@ -73,7 +73,7 @@ struct EphemerisApp: App {
 
     var body: some Scene {
         DocumentGroup(viewing: GuideLogDocument.self) { file in
-            ContentView(document: file.document)
+            ContentView(document: file.document, fileURL: file.fileURL)
                 .environment(rigProfileStore)
                 .environment(\.ephemerisLibrary, library)
                 .environment(\.importCoordinator, importCoordinator)

@@ -35,6 +35,15 @@ actor LibraryIngestor {
                                                               filePath: sourceFilePath,
                                                               nightDate: nightDate)
 
+        // Heal the stored source path on every ingest. An earlier ingest may have
+        // recorded a non-absolute value (e.g. a bare filename), which then resolves
+        // against the sandbox container instead of the real log folder. Only an
+        // absolute path is trusted to overwrite — an empty/relative one is ignored
+        // so it can't clobber a good path.
+        if sourceFilePath.hasPrefix("/") {
+            record.sourceFilePath = sourceFilePath
+        }
+
         // Recompute aggregates and recommender output every time — cheap relative to
         // the full library, and avoids needing migration for threshold changes.
         record.sessionsCount = log.guideSessions.count
