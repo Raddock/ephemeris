@@ -526,11 +526,11 @@ struct LibraryDetailView: View {
     private enum NightColumn {
         static let statusDot: CGFloat = 9
         static let date: CGFloat = 110
-        static let open: CGFloat = 34
+        static let open: CGFloat = 64
         static let note: CGFloat = 34
         static let integration: CGFloat = 82
-        static let rms: CGFloat = 58
-        static let shape: CGFloat = 58
+        static let rms: CGFloat = 68
+        static let shape: CGFloat = 72
     }
 
     /// Tiny column-header strip placed above the recent-nights rows. Names the
@@ -545,11 +545,11 @@ struct LibraryDetailView: View {
                 .frame(width: NightColumn.date, alignment: .leading)
             Text("Sessions").font(.caption2.weight(.medium)).foregroundStyle(.tertiary)
             Spacer()
-            columnLabel("Open", width: NightColumn.open)
+            columnLabel("Open Log", width: NightColumn.open)
             columnLabel("Note", width: NightColumn.note)
             columnLabel("Integration", width: NightColumn.integration, align: .trailing)
-            columnLabel("RMS", width: NightColumn.rms, align: .trailing)
-            columnLabel("Shape", width: NightColumn.shape)
+            columnLabel("RMS Error", width: NightColumn.rms, align: .trailing)
+            columnLabel("Star Shape", width: NightColumn.shape)
                 .help("Predicted star shape from the night's data — RMS vs imaging scale, axis asymmetry, and drift. Hover a row's icon for the full read.")
         }
         .padding(.horizontal, 12)
@@ -761,7 +761,9 @@ struct LibraryDetailView: View {
 
     private func predictionIcon(_ prediction: PredictedStarShape) -> String {
         switch prediction {
-        case .round(let bloated): return bloated ? "circle.dotted" : "circle.fill"
+        // Sharp = solid disc; bloated = a tight core ringed by a halo
+        // (smallcircle.filled.circle); elongated = oval; trailed = a streak.
+        case .round(let bloated): return bloated ? "smallcircle.filled.circle" : "circle.fill"
         case .slightlyElongated:  return "oval.fill"
         case .trailed:            return "line.diagonal"
         case .mixed:              return "circle.lefthalf.filled"
