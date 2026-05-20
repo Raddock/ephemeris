@@ -321,6 +321,10 @@ actor LibraryIngestor {
             predicate: #Predicate { $0.id == profileId }
         )
         if let existing = try modelContext.fetch(fetch).first {
+            // Re-sync: the user may have edited optics, display name, mount class,
+            // etc. in the rig editor since this rig was first ingested. Without
+            // this the SwiftData copy (read by MCP tools and Spotlight) goes stale.
+            existing.update(from: profile)
             return existing
         }
         let entity = RigProfileEntity(from: profile)

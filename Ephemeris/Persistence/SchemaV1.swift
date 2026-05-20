@@ -33,6 +33,8 @@ enum SchemaV1: VersionedSchema {
 final class RigProfileEntity {
     @Attribute(.allowsCloudEncryption) var id: UUID = UUID()
     var currentName: String = ""
+    /// User-facing label; falls back to `currentName` when nil. Mirrors `RigProfile`.
+    var displayName: String? = nil
     /// Codable-encoded array of historical names (SwiftData doesn't preserve array order).
     var nameHistoryData: Data = Data()
 
@@ -64,26 +66,34 @@ final class RigProfileEntity {
 
     init(from value: RigProfile) {
         self.id = value.id
-        self.currentName = value.currentName
-        self.nameHistoryData = (try? JSONEncoder().encode(value.nameHistory)) ?? Data()
-        self.imagingFocalLengthMm = value.imagingFocalLength
-        self.imagingPixelSizeMicrons = value.imagingPixelSize
-        self.imagingBinning = value.imagingBinning
-        self.reducerFactor = value.reducerFactor
-        self.guideConfigurationRaw = value.guideConfiguration.rawValue
-        self.guideCameraPixelSizeMicrons = value.guideCameraPixelSize
-        self.guideFocalLengthMm = value.guideFocalLength
-        self.guideBinning = value.guideBinning
-        self.mountModel = value.mountModel
-        self.mountClassRaw = value.mountClass.rawValue
-        self.hasHighPrecisionEncoders = value.hasHighPrecisionEncoders
-        self.typicalSubExposure = value.typicalSubExposure
-        self.notes = value.notes
         self.createdAt = value.createdAt
-        self.modifiedAt = value.modifiedAt
+        update(from: value)
     }
 
     init() {}
+
+    /// Refresh every mutable field from the value-type profile. Called on first
+    /// ingest and on every later ingest, so the SwiftData copy never drifts from
+    /// the JSON-sidecar `RigProfile` after the user edits a rig.
+    func update(from value: RigProfile) {
+        currentName = value.currentName
+        displayName = value.displayName
+        nameHistoryData = (try? JSONEncoder().encode(value.nameHistory)) ?? Data()
+        imagingFocalLengthMm = value.imagingFocalLength
+        imagingPixelSizeMicrons = value.imagingPixelSize
+        imagingBinning = value.imagingBinning
+        reducerFactor = value.reducerFactor
+        guideConfigurationRaw = value.guideConfiguration.rawValue
+        guideCameraPixelSizeMicrons = value.guideCameraPixelSize
+        guideFocalLengthMm = value.guideFocalLength
+        guideBinning = value.guideBinning
+        mountModel = value.mountModel
+        mountClassRaw = value.mountClass.rawValue
+        hasHighPrecisionEncoders = value.hasHighPrecisionEncoders
+        typicalSubExposure = value.typicalSubExposure
+        notes = value.notes
+        modifiedAt = value.modifiedAt
+    }
 
     var asValue: RigProfile {
         let history = (try? JSONDecoder().decode([String].self, from: nameHistoryData)) ?? []
@@ -91,6 +101,7 @@ final class RigProfileEntity {
         let mc = MountClass(rawValue: mountClassRaw) ?? .standardGearMount
         return RigProfile(
             id: id, currentName: currentName, nameHistory: history,
+            displayName: displayName,
             imagingFocalLength: imagingFocalLengthMm,
             imagingPixelSize: imagingPixelSizeMicrons,
             imagingBinning: imagingBinning,
