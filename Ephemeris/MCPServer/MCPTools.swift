@@ -4,9 +4,13 @@ import SwiftData
 /// In-app MCP tool registry. Each tool reads from the live `ModelContainer` so writes
 /// from the app are immediately visible without inter-process synchronization.
 ///
-/// Tool catalog matches the stdio helper (`tools/ephemeris-mcp/Sources/EphemerisMCP/Tools.swift`)
-/// but uses SwiftData FetchDescriptors instead of raw SQLite. Throughline #4 invariant
-/// (preserve `source_authority` across the protocol boundary) is enforced here.
+/// This is a deliberately smaller catalog than the stdio helper
+/// (`tools/ephemeris-mcp/Sources/EphemerisMCP/Tools.swift`): the embedded HTTP server
+/// exposes the five read-only summary tools, while the stdio helper carries the full
+/// per-entity surface. Tools shared between the two emit identical JSON field names so
+/// a client sees the same shape on either transport. Uses SwiftData FetchDescriptors
+/// instead of raw SQLite. Throughline #4 invariant (preserve `source_authority` across
+/// the protocol boundary) is enforced here.
 @MainActor
 struct MCPTool: Sendable {
     let name: String
@@ -109,8 +113,8 @@ enum MCPTools {
                     "best_session_rms_arcsec": .number(n.bestSessionRMSArcsec),
                     "worst_session_rms_arcsec": .number(n.worstSessionRMSArcsec),
                     "source_file_path": .string(n.sourceFilePath),
-                    "target": n.catalogIdentifier.map { .string($0) } ?? .null,
-                    "target_name": n.catalogCommonName.map { .string($0) } ?? .null,
+                    "catalog_identifier": n.catalogIdentifier.map { .string($0) } ?? .null,
+                    "catalog_common_name": n.catalogCommonName.map { .string($0) } ?? .null,
                     "median_ra_hours": n.medianRAHours.map { .number($0) } ?? .null,
                     "median_dec_degrees": n.medianDecDegrees.map { .number($0) } ?? .null,
                     "galactic_latitude_deg": n.galacticLatitudeDeg.map { .number($0) } ?? .null,
