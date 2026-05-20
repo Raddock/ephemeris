@@ -88,9 +88,9 @@ struct ContentView: View {
                 Button {
                     openWindow(id: "library")
                 } label: {
-                    Label("Library", systemImage: "books.vertical")
+                    Label("Log Library", systemImage: "books.vertical")
                 }
-                .help("Open the multi-night Library to see this log in context (⇧⌘L).")
+                .help("Open the multi-night Log Library to see this log in context (⇧⌘L).")
                 .keyboardShortcut("L", modifiers: [.command, .shift])
             }
         }

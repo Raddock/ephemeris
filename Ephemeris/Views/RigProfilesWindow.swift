@@ -144,7 +144,7 @@ struct RigProfilesWindow: View {
             ContentUnavailableView {
                 Label("No rigs yet", systemImage: "scope")
             } description: {
-                Text("Open a PHD2 guide log or use the bulk importer in the Library window. Rigs are created automatically from each log's `Equipment Profile = …` line.")
+                Text("Open a PHD2 guide log or use the bulk importer in the Log Library window. Rigs are created automatically from each log's `Equipment Profile = …` line.")
             }
         } else {
             ContentUnavailableView {

@@ -54,7 +54,7 @@ struct LibraryWindow: View {
                 )
             }
         }
-        .navigationTitle("Library")
+        .navigationTitle("Log Library")
         .navigationSubtitle(rangeSubtitle)
         .onAppear {
             rigStore.load()

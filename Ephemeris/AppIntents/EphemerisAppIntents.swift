@@ -91,8 +91,8 @@ struct OpenMostRecentLogIntent: AppIntent {
 struct ShowRecentTrendsIntent: AppIntent {
     static let title: LocalizedStringResource = "Show recent trends"
     static let description = IntentDescription(
-        "Opens the Library window pre-filtered to the chosen rig and the most recent week.",
-        categoryName: "Library"
+        "Opens the Log Library window pre-filtered to the chosen rig and the most recent week.",
+        categoryName: "Log Library"
     )
     static let openAppWhenRun: Bool = true
 

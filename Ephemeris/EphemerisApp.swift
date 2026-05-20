@@ -62,13 +62,8 @@ struct EphemerisApp: App {
             server.start()
             _mcpServer = State(initialValue: server)
         }
-
-        // Library-as-home launch behavior: open the Library window after the
-        // SwiftUI scene graph is up. We use AppKit at the next runloop tick so
-        // the DocumentGroup has registered its WindowGroup IDs by then.
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .ephemerisOpenLibraryWindow, object: nil)
-        }
+        // Launch-into-Log-Library is handled declaratively by
+        // `.defaultLaunchBehavior` on the scenes below — no runloop hack needed.
     }
 
     var body: some Scene {
@@ -98,7 +93,7 @@ struct EphemerisApp: App {
                 }
             }
             CommandGroup(after: .windowList) {
-                Button("Library") {
+                Button("Log Library") {
                     openWindow(id: "library")
                     LibraryDiscoveryTipBootstrap.dismissTip()
                 }
@@ -109,9 +104,12 @@ struct EphemerisApp: App {
                     openWindow(id: "library")
                 }
                 .keyboardShortcut("i", modifiers: [.command, .shift])
-                .help("Opens the Library window. Use the Import button there to choose a folder of PHD2 logs.")
+                .help("Opens the Log Library window. Use the Import button there to choose a folder of PHD2 logs.")
             }
         }
+        // Launch into the Log Library, not an open-file panel — the library is
+        // the app's home now; opening a log drills into the document viewer.
+        .defaultLaunchBehavior(.suppressed)
 
         Window("About Ephemeris", id: "about") {
             AboutView()
@@ -148,7 +146,7 @@ struct EphemerisApp: App {
 
         // v2.0 Phase 6 — multi-night library. Per design doc §5.2 / §7.1, use WindowGroup
         // (not Window) so the scene can carry a data binding (the active rig).
-        WindowGroup("Library", id: "library") {
+        WindowGroup("Log Library", id: "library") {
             LibraryWindow()
                 .environment(rigProfileStore)
                 .environment(\.ephemerisLibrary, library)
@@ -157,6 +155,7 @@ struct EphemerisApp: App {
         .windowResizability(.contentSize)
         .defaultSize(width: 980, height: 720)
         .defaultPosition(.center)
+        .defaultLaunchBehavior(.presented)
 
         // Bulk-import progress window. Standalone Window scene (not a sheet) — macOS
         // sheets were collapsing to ~120×120 in this OS version regardless of .frame

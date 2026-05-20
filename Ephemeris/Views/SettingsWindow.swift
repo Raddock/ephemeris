@@ -17,8 +17,8 @@ struct SettingsWindow: View {
 
     var body: some View {
         Form {
-            Section("Library data") {
-                LabeledContent("Reset library data") {
+            Section("Log Library data") {
+                LabeledContent("Reset Log Library data") {
                     Button("Reset…", role: .destructive) {
                         showingResetConfirm = true
                     }
@@ -93,7 +93,7 @@ struct SettingsWindow: View {
     @MainActor
     private func performReset() async {
         guard let library else {
-            resetError = "Library is not open."
+            resetError = "Log Library is not open."
             return
         }
         do {
@@ -113,7 +113,7 @@ struct SettingsWindow: View {
             try context.save()
             // Remove every Ephemeris donation from Spotlight so stale results stop appearing.
             CoreSpotlightIndexer.removeAll()
-            resetSummary = "Library data reset. Re-import your PHD2 logs to rebuild the corpus."
+            resetSummary = "Log Library data reset. Re-import your PHD2 logs to rebuild the corpus."
         } catch {
             resetError = "Reset failed: \(error.localizedDescription)"
         }
