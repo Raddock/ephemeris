@@ -661,11 +661,19 @@ final class LibraryStore: @unchecked Sendable {
             entRow = sqlite3_column_int(stmt, 0)
         }
 
-        sqlite3_exec(db, "BEGIN IMMEDIATE TRANSACTION", nil, nil, nil)
+        guard sqlite3_exec(db, "BEGIN IMMEDIATE TRANSACTION", nil, nil, nil) == SQLITE_OK else {
+            FileHandle.standardError.write(
+                "addAnnotation: BEGIN IMMEDIATE failed (store busy)\n".data(using: .utf8)!
+            )
+            return nil
+        }
 
         var newPK: Int64 = 0
         do {
-            sqlite3_exec(db, "UPDATE Z_PRIMARYKEY SET Z_MAX = Z_MAX + 1 WHERE Z_ENT = \(entRow)", nil, nil, nil)
+            guard sqlite3_exec(db, "UPDATE Z_PRIMARYKEY SET Z_MAX = Z_MAX + 1 WHERE Z_ENT = \(entRow)", nil, nil, nil) == SQLITE_OK else {
+                sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+                return nil
+            }
             let sql = "SELECT Z_MAX FROM Z_PRIMARYKEY WHERE Z_ENT = ?"
             var stmt: OpaquePointer?
             guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
@@ -739,7 +747,15 @@ final class LibraryStore: @unchecked Sendable {
             return nil
         }
 
-        sqlite3_exec(db, "COMMIT", nil, nil, nil)
+        guard sqlite3_exec(db, "COMMIT", nil, nil, nil) == SQLITE_OK else {
+            // COMMIT can fail under SQLITE_BUSY in WAL mode; the transaction is
+            // still open, so roll it back rather than leaving the handle wedged.
+            sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+            FileHandle.standardError.write(
+                "addAnnotation: COMMIT failed; write rolled back\n".data(using: .utf8)!
+            )
+            return nil
+        }
         return annUUID.uuidString
     }
 
