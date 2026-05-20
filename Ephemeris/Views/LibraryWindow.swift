@@ -512,24 +512,37 @@ struct LibraryDetailView: View {
         }
     }
 
+    /// Fixed widths shared by the recent-nights header and every row so the two
+    /// HStacks line up. The header has no status dot, so it carries a matching
+    /// leading spacer of `statusDot` width.
+    private enum NightColumn {
+        static let statusDot: CGFloat = 9
+        static let date: CGFloat = 110
+        static let open: CGFloat = 34
+        static let note: CGFloat = 34
+        static let integration: CGFloat = 82
+        static let rms: CGFloat = 58
+        static let shape: CGFloat = 64
+    }
+
     /// Tiny column-header strip placed above the recent-nights rows. Names the
-    /// trailing icons (open-log, annotation, integration, RMS, predicted shape,
-    /// rated quality) so the row isn't a mystery of glyphs.
+    /// trailing columns (open-log, annotation, integration, RMS, star shape) so
+    /// the row isn't a mystery of glyphs.
     @ViewBuilder
     private var recentNightsColumnHeader: some View {
         HStack(spacing: 10) {
+            // Mirrors the row's status dot so "Date" lines up with the row date.
+            Color.clear.frame(width: NightColumn.statusDot, height: 1)
             Text("Date").font(.caption2.weight(.medium)).foregroundStyle(.tertiary)
-                .frame(width: 110, alignment: .leading)
+                .frame(width: NightColumn.date, alignment: .leading)
             Text("Sessions").font(.caption2.weight(.medium)).foregroundStyle(.tertiary)
             Spacer()
-            columnLabel("Open", width: 26)
-            columnLabel("Note", width: 26)
-            columnLabel("Integration", width: 64, align: .trailing)
-            columnLabel("RMS", width: 60, align: .trailing)
-            columnLabel("Predicted shape", width: 40)
-                .help("Star shape predicted from the data — RMS, axis asymmetry, and drift across the night's sessions.")
-            columnLabel("Your rating", width: 30)
-                .help("Your visual rating of how the actual imaging subs came out. Compare against the predicted shape to spot flexure.")
+            columnLabel("Open", width: NightColumn.open)
+            columnLabel("Note", width: NightColumn.note)
+            columnLabel("Integration", width: NightColumn.integration, align: .trailing)
+            columnLabel("RMS", width: NightColumn.rms, align: .trailing)
+            columnLabel("Shape", width: NightColumn.shape)
+                .help("Star shape — predicted from the night's data, or your own rating once you set one. Click a row's chip to rate it.")
         }
         .padding(.horizontal, 12)
     }
@@ -539,6 +552,8 @@ struct LibraryDetailView: View {
             .font(.caption2.weight(.medium))
             .tracking(0.3)
             .foregroundStyle(.tertiary)
+            .lineLimit(1)
+            .fixedSize()
             .frame(width: width, alignment: align)
     }
 
@@ -607,7 +622,7 @@ struct LibraryDetailView: View {
                 .help(verdict.shortLabel)
             Text(record.nightDate.formatted(date: .abbreviated, time: .omitted))
                 .font(.callout.weight(.medium))
-                .frame(width: 110, alignment: .leading)
+                .frame(width: NightColumn.date, alignment: .leading)
             if let target = record.catalogIdentifier {
                 Text(target)
                     .font(.caption.weight(.medium).monospacedDigit())
@@ -631,6 +646,7 @@ struct LibraryDetailView: View {
             .buttonStyle(.plain)
             .disabled(record.sourceFilePath.isEmpty)
             .help("Open this night's PHD2 log in the single-night viewer.")
+            .frame(width: NightColumn.open)
             Button {
                 annotatingRecord = record
             } label: {
@@ -639,14 +655,17 @@ struct LibraryDetailView: View {
             }
             .buttonStyle(.plain)
             .help("Add an annotation for this night")
+            .frame(width: NightColumn.note)
             Text(String(format: "%.0f min", record.totalIntegrationMinutes))
                 .foregroundStyle(.secondary)
                 .font(.callout.monospacedDigit())
+                .frame(width: NightColumn.integration, alignment: .trailing)
             Text(String(format: "%.2f″", record.medianRMSArcsec))
                 .font(.callout.weight(.semibold).monospacedDigit())
                 .foregroundStyle(verdict.tint)
-                .frame(width: 60, alignment: .trailing)
+                .frame(width: NightColumn.rms, alignment: .trailing)
             shapeChip(for: record)
+                .frame(width: NightColumn.shape)
         }
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {
@@ -713,6 +732,10 @@ struct LibraryDetailView: View {
                 return (predictionIcon(prediction),
                         chipTint(prediction: prediction, disagrees: false),
                         true)
+            } else if profile.imagingPixelScale <= 0 {
+                // Prediction can't run without the rig's imaging scale. Show a
+                // ruler cue (no wand) so it reads as "needs setup", not "no data".
+                return ("ruler", .secondary, false)
             } else {
                 return ("circle.dashed", .secondary, true)
             }
@@ -775,6 +798,9 @@ struct LibraryDetailView: View {
             if prediction != .unknown {
                 lines.append("Predicted from data: \(prediction.displayName.lowercased())\(scaleNote)")
             }
+        } else if prediction == .unknown && profile.imagingPixelScale <= 0 {
+            lines.append("Star-shape prediction needs this rig's imaging pixel scale.")
+            lines.append("Set the imaging focal length, pixel size, and binning under App → Rig Profiles… (⇧⌘,) — predicted shapes then appear here automatically.")
         } else {
             lines.append("Predicted from data: \(prediction.displayName.lowercased())\(scaleNote)")
             lines.append("(Click to rate this night against your actual subs.)")
