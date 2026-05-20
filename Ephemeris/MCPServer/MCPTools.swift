@@ -84,6 +84,12 @@ enum MCPTools {
             let context = ModelContext(container)
             let rigIDString = args["rig_id"]?.stringValue
             let rigUUID = rigIDString.flatMap { UUID(uuidString: $0) }
+            // A supplied-but-unparseable rig_id must not silently fall through to
+            // an unfiltered fetch — that would return the whole corpus as if it
+            // were scoped to one rig.
+            if rigIDString != nil && rigUUID == nil {
+                return .object(["error": .string("invalid rig_id — expected a UUID from list_rigs")])
+            }
             let sinceDays = args["since_days"]?.intValue
             let cutoff: Date = sinceDays.map { Date().addingTimeInterval(-Double($0) * 86400) } ?? .distantPast
             let limit = args["limit"]?.intValue ?? 100
@@ -140,6 +146,11 @@ enum MCPTools {
             let context = ModelContext(container)
             let rigIDString = args["rig_id"]?.stringValue
             let rigUUID = rigIDString.flatMap { UUID(uuidString: $0) }
+            // A supplied-but-unparseable rig_id must not silently fall through to
+            // an unfiltered fetch — that would return every rig's observations.
+            if rigIDString != nil && rigUUID == nil {
+                return .object(["error": .string("invalid rig_id — expected a UUID from list_rigs")])
+            }
             let limit = args["limit"]?.intValue ?? 200
 
             var descriptor = FetchDescriptor<ObservationEntity>(
