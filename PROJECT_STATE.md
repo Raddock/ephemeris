@@ -1,294 +1,191 @@
-# Ephemeris — Project State
+# Ephemeris — Project State (v2)
 
-*Snapshot for design / strategy reference. Generated from the codebase and not from memory.*
+*Snapshot for design / strategy reference. Generated from the codebase on the `v2` branch and not from memory. Supersedes the v1 snapshot; see `docs/ephemeris-2.0-design-document.md` for the design the v2 build followed.*
 
 ## 1. Summary
 
-Ephemeris is a native macOS app for astrophotographers that reads PHD2 guide logs and turns them into a Mac-native review experience. Users open a `.txt` log produced by [PHD2](https://openphdguiding.org), and the app indexes every guiding and calibration section the file contains, then offers a sidebar of sessions, a time-series chart, an XY calibration plot, statistics rollups (RMS, peak, drift, polar-alignment estimate), an FFT periodogram, multi-session combining, drag-to-zoom and drag-to-exclude, manual-exclusion ranges, and CSV / chart-PNG export. It is a reimplementation of `agalasso/phdlogview` (C++/wxWidgets, GPLv3) in Swift / SwiftUI, with substantially redesigned visuals and analysis code that runs on Apple's Accelerate framework instead of GSL.
+Ephemeris is a native macOS app for astrophotographers built around PHD2 guide logs. Version 1 was a single-log viewer — open a `.txt` log, get a sidebar of sessions, a time-series chart, calibration plots, statistics rollups, an FFT periodogram, and CSV/PNG export. Version 2 keeps all of that and grows the app into a long-term guiding intelligence tool:
+
+- **A persistent Log Library** (SwiftData) that ingests every log you open or bulk-import, organized per rig, with a cross-night trend chart, a PHD2 hygiene strip (calibration / Guiding Assistant / polar-alignment freshness), and a Recent Nights table.
+- **A recommender engine** — 19 single-night and 4 cross-night rule generators that turn raw stats into plain-language observations ("calibration is 34 days old", "Dec drift would trail stars on a 5-minute sub at your imaging scale"), each tagged with a source authority (PHD2 manual / PHD2 measurement / heuristic) that controls how assertive the wording is.
+- **Rig profiles** — equipment metadata (imaging train, guide train, mount class) keyed to the immutable PHD2 profile name from the log, with a user-editable display name. The imaging pixel scale anchors star-shape prediction and RMS verdict colors.
+- **An embedded MCP server** — a loopback-only HTTP listener inside the app exposing read-only library tools to Claude (plus a bundled stdio helper binary with a one-click Claude Desktop / Claude Code installer).
+- **Annotations and sub-quality feedback** — user-recorded events (equipment changes, environment notes) and per-night star-shape verdicts that feed back into the recommender (e.g. "you rated this night trailed but guiding was sub-pixel — suspect differential flexure").
+- **App Intents** — "Open most recent log" and "Show recent trends" exposed to Shortcuts / Spotlight / Siri.
+
+It remains a reimplementation lineage of `agalasso/phdlogview` (GPLv3); see `CODE_PROVENANCE.md`.
 
 ## 2. Tech stack
 
-- **macOS deployment target:** 14.0 (Sonoma).
-- **Swift version:** 5.0 toolchain (Swift 6 concurrency idioms in places — `Sendable` + `nonisolated` annotations, `MainActor` default isolation via `SWIFT_DEFAULT_ACTOR_ISOLATION`).
-- **UI framework:** SwiftUI for everything user-facing. AppKit interop appears in only two places — `WindowSubtitleSetter` (an `NSViewRepresentable` that walks to the `NSWindow` to override the OS-supplied "— Locked" subtitle on read-only documents) and `ExportItems.renderImage` (which uses `ImageRenderer` to produce `NSImage`s). The custom About panel is a SwiftUI `Window` scene with `windowStyle(.hiddenTitleBar)`.
-- **Charts:** Apple's Swift Charts (`import Charts`). The main guide chart, calibration plot, scatter cluster inset, frequency-analysis chart, and diagnostic sub-charts all use it.
-- **Math:** Apple's Accelerate framework (`vDSP_fft_zripD`, `vDSP_ctozD`, `vDSP_zvabsD`) for the real-FFT periodogram. Everything else is straight Swift.
-- **Document handling:** SwiftUI's `DocumentGroup` + `FileDocument`. Logs are opened read-only.
-- **Third-party packages:** none. No SPM dependencies, no `Package.swift`. Apple frameworks only.
-- **Build system / Xcode:** Xcode 26.4. Project format `objectVersion = 77`. Uses `PBXFileSystemSynchronizedRootGroup` (Xcode-26-style synced groups) so anything dropped into the source folders is auto-included.
-- **License:** GPLv3, matching upstream `phdlogview`. See `LICENSE.txt` and `CODE_PROVENANCE.md`.
+- **macOS deployment target:** 15.0 (Sequoia).
+- **Swift version:** 5.0 toolchain with Swift 6 concurrency idioms (`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`, `nonisolated` model/stat types, a `ModelActor` ingestor).
+- **UI framework:** SwiftUI throughout; AppKit interop only for window-subtitle override, `NSOpenPanel` flows (bulk import, installer), and `ImageRenderer` export.
+- **Persistence:** SwiftData (`SchemaV1`, 7 entities), store at `~/Library/Application Support/Ephemeris/Library.store` (inside the sandbox container). No CloudKit sync, but the schema is CloudKit-clean (no unique attributes, optional relationships, defaults).
+- **Charts:** Swift Charts (guide chart, calibration plot, scatter inset, FFT, library trend chart).
+- **Math:** Accelerate (vDSP real FFT) for the periodogram; straight Swift elsewhere.
+- **Networking:** Network.framework (`NWListener`) for the embedded MCP HTTP server, loopback-only.
+- **Other Apple frameworks:** TipKit (library-discovery tip), App Intents, Core Spotlight (night-record indexing), UniformTypeIdentifiers.
+- **Third-party packages:** none in the app. The stdio MCP helper under `tools/ephemeris-mcp/` is a separate SPM executable package bundled into `Ephemeris.app/Contents/Helpers/`.
+- **Sandbox / entitlements:** app-sandboxed; `files.user-selected.read-write` plus `network.server` (for the loopback MCP listener). Security-scoped folder bookmarks (`SourceFolderBookmarks`) persist access to log folders.
+- **Build system:** Xcode 26.x project, `objectVersion = 77`, file-system-synchronized groups.
+- **License:** GPLv3 (`LICENSE.txt`, `CODE_PROVENANCE.md`).
 
 ## 3. Architecture overview
 
-The codebase is layered, but not formally so — there's no MVVM scaffolding or dependency-injection container. The layers are conventions, not enforced boundaries.
+Layered by convention, not enforcement:
 
-**Parsing layer.** `GuideLogParser.parse(_:)` is a pure function that takes a `String` (the raw log file contents) and returns a `GuideLog`. It runs a 5-state machine (SKIP, GUIDING_HDR, GUIDING, CAL_HDR, CALIBRATING) over the lines, dispatching to subordinate helpers — `HeaderParser` for guiding-section header lines, `CalibrationHeaderParser` for the calibration block headers, `InfoCoalescer` for INFO line dedup/replacement rules, and `NonMonotonicFix` for clock-jump repair. Because the parser is called from `GuideLogDocument.init(configuration:)`, parsing currently happens inline on whatever queue SwiftUI's document machinery uses (typically the main actor, sometimes a background queue depending on macOS internals — there's no explicit `Task.detached`).
+**Parsing layer (`Parser/`).** `GuideLogParser.parse(_:)` — the v1 five-state machine over log lines — plus `HeaderParser`, `CalibrationHeaderParser`, `InfoCoalescer`, `NonMonotonicFix`, and `PHD2LogSignature` (head-of-file classification that rejects non-PHD2 / binary input before parsing). `Persistence/GAResultParser.swift` additionally extracts PHD2 Guiding Assistant "GA Result" INFO lines into structured records during ingest.
 
-**Model layer.** Plain `Sendable` value types. `GuideLog` is the top-level container with a list of `SectionRef` (an enum: `.summary`, `.guide(Int)`, `.calibration(Int)`) preserving original section order, plus parallel arrays of `GuideSession` and `Calibration`. Per-frame data lives in `GuideEntry` arrays inside each session. Header metadata lives in `GuideDevice` (mount and optional AO).
+**Model layer (`Model/`).** Plain `Sendable` value types. The v1 set (`GuideLog`, `GuideSession`, `GuideEntry`, `Calibration`, …) plus v2 domain types: `RigProfile` (+ `MountClass`, `GuideConfiguration`, `ImagingScale`), `RecommenderObservation` (scope / category / severity / confidence / evidence / source authority), `Annotation`, `SubQualityVerdict`, `SourceAuthority`, `PHD2Tool`, `PHD2Algorithm`.
 
-**Analysis layer (`Stats/`).** All pure functions / `enum` namespaces, no observable objects. `SessionStatsCalculator.calculate(_:manualExclusionRanges:)` produces a `SessionStats` struct from a `GuideSession`. `LogAggregateStatsCalculator.calculate(_:)` does the frame-count-weighted aggregate. `FrequencyAnalyzer.analyze(...)` produces a `FrequencySpectrum`. `GuideSessionMerger.merge(_:)` synthesises a single virtual session from multiple. `CSVExporter` serialises any of these to CSV strings. None of the analyzers cache results — each call recomputes.
+**Stats layer (`Stats/`).** Unchanged in spirit from v1: pure functions, no caching. `SessionStatsCalculator`, `LogAggregateStats`, `FrequencyAnalyzer`, `GuideSessionMerger`, `CSVExporter`.
 
-**View layer (`Views/`).** SwiftUI views that read directly from the model, computing analysis on the fly. State of two flavours:
-- *Per-window UI state* — `chartSelectedTime`, `manualExclusions`, sidebar `selection`, etc. — held in `@State` on `ContentView` and threaded down by `@Binding`.
-- *Persistent chart preferences* — `ChartViewState` is an `@Observable @MainActor final class` that mirrors every preference (units, axis mode, drag mode, Y-scale, every overlay toggle, hover-readout visibility) to `UserDefaults` via per-property `didSet`. One instance is held on `ContentView` and shared across the chart subviews.
+**Recommender layer (`Recommender/`).** `RecommenderEngine` is stateless; it runs an array of `SingleNightGenerator`s over a `SingleNightContext` (log + rig profile + per-session stats) and `CrossNightGenerator`s over a `CrossNightContext` (the rig's `NightRecordEntity` corpus). Supporting pure logic lives beside it: `StarShapePredictor`, `TargetClustering`, `Astronomy` (galactic latitude, alt/az, hour angle), `SessionHeaderProperties`, `HelpTopic`.
 
-**Data flow.** A user drops a `.txt` file → `DocumentGroup` instantiates `GuideLogDocument` → its `init(configuration:)` calls `GuideLogParser.parse(text)` → that returns a `GuideLog` → `ContentView` is bound to that document and routes selections through `SessionDetailView`, `LogSummaryView`, etc. Stats are recomputed every render. There is currently no caching layer; for typical PHD2 logs (a few thousand frames), recomputation is fast enough that nothing blocks the UI.
+**Persistence layer (`Persistence/`).** `EphemerisLibrary` (ModelContainer facade, in-memory mode for tests), `SchemaV1` (the 7 `@Model` entities), `LibraryIngestor` (a `ModelActor` running the idempotent ingest pipeline), `LibraryBulkImporter` + `ImportCoordinator` (folder import), `SourceFolderBookmarks`, `ForumPostExporter`, `GAResultParser`, `CoreSpotlightIndexer`, `ClaudeConfigInstaller`.
 
-**Concurrency.** The project sets `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` so views are MainActor-isolated by default. Model and stat types are `nonisolated struct` / `nonisolated enum` so they can be passed across actor boundaries cleanly. There are no `Task` blocks, no async pipelines — everything is synchronous.
+**MCP layer (`MCPServer/`).** `MCPEmbeddedServer` (NWListener on 127.0.0.1, dynamic port persisted in UserDefaults, status state machine), `MCPConnectionHandler` (HTTP request handling, origin hardening), `MCPProtocolHandler` (JSON-RPC), `MCPTools` (tool registry reading the library).
+
+**View layer (`Views/`).** SwiftUI views; per-window UI state in `@State`, persisted chart preferences in `ChartViewState` (`@Observable`, UserDefaults-backed). New v2 surfaces are described in §5.
+
+**Data flow.** Opening a document parses it (as in v1) *and* auto-ingests it into the library: parse → night stats → pointing context → recommender → upsert. Bulk import drives the same ingest per file. Library views query SwiftData directly; observations are recomputed on every ingest so threshold changes propagate without re-import.
 
 ## 4. Data model
 
-**`GuideLog`** — root container parsed from a single `.txt` file.
-Fields: `phdVersion`, `logVersion` (parsed from the top-of-file banner), `sections: [SectionRef]` (chronological), `guideSessions: [GuideSession]`, `calibrations: [Calibration]`. `isEmpty` is true when no sections were recognised.
+### Value types (per-document, v1 heritage)
 
-**`GuideLog.SectionRef`** — enum: `.summary` (sentinel for the aggregate view), `.guide(Int)`, `.calibration(Int)`. The Int indexes into the parallel arrays.
+`GuideLog` / `SectionRef` / `GuideSession` / `GuideDevice` / `GuideEntry` / `InfoEntry` / `InfoKind` / `Calibration` / `CalibrationDetails` / `LegCompletion` / `CalibrationEntry` / `SessionStats` / `LogAggregateStats` / `FrequencySpectrum` — unchanged in shape from v1 (see git history of this file for the field-level detail).
 
-**`GuideSession`** — one PHD2 guiding section. Identifiable via UUID. Fields: `startedAt: Date?` (parsed from `Guiding Begins at …`), `rawHeader: [String]` (verbatim header lines for the inspector), `mount: GuideDevice`, `ao: GuideDevice?`, `pixelScale: Double` (arcsec/px), `declination: Double` (radians), `entries: [GuideEntry]`, `infos: [InfoEntry]`. Computed: `duration` (last entry's time), `frameCount`.
+### v2 domain value types
 
-**`GuideDevice`** — config for either the mount or AO. Fields: `kind` (mount/ao), `name`, `xAngle`/`yAngle` (radians), `xRate`/`yRate` (px/sec), `maxRADuration`/`maxDecDuration` (ms), `guidingEnabled`, `minMoveX`/`minMoveY` (px), `xGuideAlgorithm`/`yGuideAlgorithm` (string).
+- **`RigProfile`** — imaging train (focal length, pixel size, binning, reducer), guide train (configuration, camera, focal length), mount (class, model, high-precision-encoders flag), notes. `currentName` is the immutable PHD2 profile name parsed from the log; `displayName` is the user-facing override. Computed imaging/guide pixel scales via `ImagingScale`.
+- **`RecommenderObservation`** — scope (`singleNight`/`crossNight`), category (subQuality → opticalTrain → equipment → phd2Hygiene → pattern → suggestion, which is also the triage order), severity (alert → coaching), confidence, `SourceAuthority`, title/summary/suggestedResponse, evidence items, candidate contributors, related `PHD2Tool`s and `HelpTopic`s.
+- **`SourceAuthority`** — `phd2Manual` / `phd2Measurement` / `phd2BehaviorDocumented` / `communityConsensus` / `ephemerisHeuristic`; carries a badge label and a "soften the voice" flag.
+- **`Annotation`** — categories (equipment / calibration / environment / software / free text), short label, detail, `isRigMutating` flag, event date.
+- **`SubQualityVerdict`** — user's imaging verdict for a night: round / slightlyElongated / trailed / mixed.
+- **`PHD2Tool`** — enum of 14 PHD2 tools with canonical names and manual URLs (powers the hygiene strip and observation links).
 
-**`GuideEntry`** — a single frame. `Identifiable` by frame number. Fields: `frame`, `time` (seconds since session start), `deviceKind` (mount/ao for that frame), `dx`/`dy` (pixel offset of star from lock), `raRawDistance`/`decRawDistance` (pre-algorithm pixel distance), `raGuideDistance`/`decGuideDistance` (post-algorithm pixel distance), `raDuration`/`decDuration` (signed ms; sign encodes direction — W/S negative, E/N positive), `xStep`/`yStep` (AO step counts; nil for mount), `starMass` (int), `snr` (double), `errorCode` (PHD2 error code, 0/1 mean star-found), `included` (computed from errorCode), `guiding` (whether guiding was enabled at this frame), `info` (optional event text from PHD2).
+### SwiftData entities (`Persistence/SchemaV1.swift`)
 
-**`InfoEntry`** — a coalesced PHD2 INFO event tied to a frame. Fields: `frame` (the next frame after the event in the source log), `text`, `repeats` (how many consecutive identical events were folded into this one).
+- **`RigProfileEntity`** — mirror of `RigProfile` + timestamps; relationships to night records and target clusters. Kept in sync when rig profiles are edited.
+- **`NightRecordEntity`** — one ingested log/night: source file path + SHA-256 content hash (idempotency key), night date, session count, integration minutes, median/best/worst RMS (arcsec), serialized per-session stats and calibration data, `subQualityRaw`, pointing context (circular-median RA, Dec, galactic latitude, Messier catalog match), ingest timestamps; relationships to observations, annotations, GA results, session records.
+- **`SessionRecordEntity`** — per-session detail: stats (RMS/peak/drift/polar-align in arcsec), frame counts, pixel scale, pointing (RA/Dec/hour angle/alt/az/pier side), HFD, exposure, multi-star flag.
+- **`ObservationEntity`** — persisted recommender output (enums stored raw, evidence/contributors/help-topics as JSON), `dismissedAt` for user dismissal.
+- **`AnnotationEntity`** — persisted `Annotation`.
+- **`TargetClusterEntity`** — pointing-proximity cluster: center RA/Dec, radius, catalog match, session count, integration, median RMS, member night IDs.
+- **`GAResultEntity`** — one Guiding Assistant run: recommended min-moves, exposure, polar-align error, Dec backlash, RA peak-to-peak and max rate of change, high-frequency star motion, raw text. (Runs that report only a max rate of change are still persisted.)
 
-**`InfoKind`** — classified enum derived from `InfoEntry.text` (settling started/complete/failed, dither, mount geometry change, calibration rejected, looping exposures, star lost, frame dropped, parameter change, set lock pos, server event, other). Used for icon/colour selection in the inspector.
+## 5. Surfaces and scenes
 
-**`Calibration`** — one PHD2 calibration section. Identifiable via UUID. Fields: `startedAt: Date?`, `device` (mount/ao), `rawHeader: [String]`, `entries: [CalibrationEntry]`, `details: CalibrationDetails`.
+`EphemerisApp` declares seven scenes:
 
-**`CalibrationDetails`** — extracted metadata from the calibration's header lines. Fields: `pixelScale`, `exposureMs`, `calibrationStepMs`, `calibrationDistancePx`, `assumeOrthogonalAxes`, `raGuideSpeedArcsecPerSec`, `decGuideSpeedArcsecPerSec`, `declinationRad`, `hourAngleHours`, `pierSide`, `lockPositionX`/`lockPositionY`, `legCompletions: [Direction: LegCompletion]`. Computed: `orthogonalityErrorDeg` (signed angular distance from 90° between west and north legs).
+1. **`DocumentGroup`** (read-only `GuideLogDocument` → `ContentView`) — the v1 single-log viewer, lightly enhanced: observation cards in the inspector, auto-ingest on open, commands for Log Library (⇧⌘L), Rig Profiles, MCP Server, Import Folder.
+2. **`WindowGroup` "Log Library"** (`id: library`, 980×720, `.defaultLaunchBehavior(.presented)`) — the app now launches into the library, not an open panel. NavigationSplitView: rig sidebar → detail with date-range picker (Week/Month/Year/Custom/All), trend chart, hygiene strip, active-observations panel, Recent Nights table (verdict-tinted RMS, predicted star shape, sub-quality rating, annotations; double-click reopens the source log via bookmarks). Rig deletion via context menu or ⌘⌫.
+3. **`Window` "Rig Profiles"** (`id: rigProfiles`, 720×540) — rig list + full profile editor (imaging/guide train, mount class, display name, notes), with guide-train auto-fill from the PHD2 log header and a header-hint button.
+4. **`Window` "MCP Server"** (`id: mcpServer`, 640×620) — server status/port, connection stats, restart, one-click Claude Desktop / Claude Code installers, manual-config fallback display.
+5. **`Window` "Importing PHD2 logs"** (`id: library-import`, 600×460) — bulk-import progress. A standalone window rather than a sheet (sheets were collapsing under this OS version).
+6. **`Window` "About Ephemeris"** — custom About panel (v1 heritage).
+7. **`Settings`** — flat single-pane app settings, including a library-reset action (open library windows refresh after a reset).
 
-**`LegCompletion`** — per-direction calibration completion record. `angleDeg`, `ratePxPerSec`, optional `parity` ("Even" / "Odd" / etc.).
+Plus the Apple Help Book (⌘?) and the frequency-analysis sheet from v1.
 
-**`CalibrationEntry`** — one calibration step. Identifiable via UUID. `direction` (West/East/North/South/Backlash, with Left → west and Up → north for AO logs), `step` (int), `dx`/`dy` (pixels).
+## 6. The recommender engine
 
-**`SessionStats`** — recomputed per-render rollup. `includedFrames`, `excludedFrames`, `rmsRA`/`rmsDec`/`rmsTotal` (pixels), `peakRA`/`peakDec` (pixels, abs deviation from mean), `driftRA`/`driftDec` (px/min), optional `polarAlignErrorArcmin`. There's also a static helper for converting display units.
+`RecommenderEngine` registers **19 single-night generators** in three authority tiers, and **4 cross-night generators** run during ingest against the rig's corpus. Output is sorted by category then severity; heuristic-tier findings use softened, non-imperative voice per the design's voice rules.
 
-**`LogAggregateStats`** — same shape but across the whole log. Includes `bestSessionIndex`/`worstSessionIndex` for the summary's pill chips and quality bar.
+**PHD2-canon tier** (`Generators/PHD2CanonGenerators.swift`): GuidingAssistantRecommendation (surfaces PHD2's own GA measurements/recommendations verbatim), CalibrationSanityAlert, MaxDurationLimit, CalibrationStaleness (pattern at 21d, alert at 30d), CalibrationOrthogonality (pattern > 5°, alert > 10°), VariableExposureDelays, MultiStarGuiding, AlgorithmMismatch.
 
-**`FrequencySpectrum`** — output of the FFT pipeline. `periods: [Double]` (seconds), `magnitudes: [Double]` (normalised so peak == 1), `dominantPeriod: Double?`, plus diagnostic fields `sampleInterval`, `sampleCount` (zero-padded length), `driftCorrected`.
+**Heuristic tier** (`Generators/HeuristicGenerators.swift`): DecPolarityBias, AtmosphericConditionsProxy.
 
-**`ChartViewState`** — view-level (`@Observable @MainActor`). Holds every chart preference and persists each via `UserDefaults`. Counts as part of the data model because its values shape what the chart actually shows.
+**Gap-analysis tier** (`Generators/GapAnalysisObservers.swift`, closing the matrix in `docs/observation-gap-analysis.md`): StarShapePrediction, PierSideBias, CooldownSignature, MinMoveValidation, GuideRateValidation, Aggressiveness, DataDrivenAlgorithmHint, GuideScaleMismatch, StarLost.
 
-## 5. Features inventory
+**Cross-night** (`Generators/CrossNightGenerators.swift`): CalibrationAngleShift (≈10° step change = rig-mutation signature; suppressed by a rig-mutating annotation), GAFreshness, BaselineRegression (recent median RMS vs the corpus p90; needs ≥10 nights), SubQualityDiscrepancy (user verdict contradicts guide RMS → flexure suspicion).
 
-### 5a. Currently working features
+**`StarShapePredictor`** is a pure function from night RMS, drift, per-session spread, and the *imaging* pixel scale (not the guide scale — all call paths feed the same RMS input) to round(±bloated) / slightlyElongated / trailed(cause) / mixed / unknown. Its verdict maps onto `SubQualityVerdict` for the predicted-vs-rated comparison shown in Recent Nights.
 
-**Log loading**
-- Open via File → Open or drag-and-drop onto Dock / app icon.
-- Reads UTF-8 / ASCII; tolerates Windows CRLF (the parser splits on `Character.isNewline`).
-- Tolerates malformed rows (silently skipped) and missing fields (defaulted to 0/empty).
-- Old PHD2 logs (rates in px/ms instead of px/sec) are auto-corrected via the < 0.05 heuristic.
-- Non-monotonic timestamps (NTP jumps mid-session) are repaired using the median positive-delta algorithm; a fake "Timestamp jumped backwards" info marker is inserted at the first jump.
+**Baselines:** per-rig percentiles (p75/p90) over night median RMS drive relative verdicts (`NightVerdict` tiers tint the trend chart and tables); when an imaging scale is configured, absolute sub-pixel/at-resolution tiers are used instead.
 
-**Summary view**
-- Aggregate header strip: guide-session count, calibration count, total integration time, frame counts (included / excluded), pixel scale, weighted RMS RA / Dec / total.
-- Best / Worst session capsules in the header — clickable to jump.
-- Sortable table of every guiding session with Started, Duration, Frames, RMS RA (red-tinted), RMS Dec (blue-tinted), Total RMS columns.
-- Leading "quality" column with green ★ Best / orange ⚠︎ Worst chips on matching rows.
-- Total RMS column shows a thin horizontal bar scaled to the worst RMS in the log.
+## 7. MCP server
 
-**Sidebar**
-- Lists Summary plus every section in chronological order. Per-row icon (crosshair for guide, target for calibration), start time, duration.
-- Multi-select with ⌘-click or ⇧-click to combine sessions into one chart.
-- Single-select returns to per-section view.
+Two transports, one data source (the SwiftData library):
 
-**Per-session guiding view**
-- Time-series chart with RA (red, 2pt) and Dec (blue, 2pt) lines, hover/pin selection, drag-to-zoom or drag-to-exclude (modal, switchable).
-- Y-scale: Auto, ±0.5″, ±1″, ±2″, ±5″, ±10″. Plot area is clipped so spikes don't bleed into the stats strip.
-- Units: Pixels or Arc-sec (toggle). Axes: RA/Dec or dx/dy (toggle).
-- Stats strip above the chart: frames, duration, pixel scale, RMS RA, RMS Dec, Total RMS, peak RA, peak Dec.
-- Hover readout card fixed to the chart's top-leading corner (toggleable). Shows frame, time, RA, Dec, SNR, plus inclusion state and any nearby info text.
-- Pinned selection: clicking a frame anchors the rule (accent-coloured, 2pt) and adds filled circular markers on the RA and Dec data points.
-- Overlays menu: RA, Dec, corrections (per-frame pulse bars), star mass sub-chart, SNR sub-chart, events (rule + settling bands), limits (max guide pulse), grid, scatter cluster, hover readout.
-- Scatter cluster overlay: square XY scatter inset (top-right of chart), translucent, dashed concentric reference rings every 0.5 unit (matching PHD2's target convention), the cursor-active point highlighted in green and enlarged.
-- Settling bands: faint orange when settling failed, neutral grey when succeeded.
-- Diagnostic sub-charts: star mass (yellow) and SNR (green), each with its own active rule synced to the main chart's hover.
-- Manual exclusion drag: per-session exclusion ranges that filter stats and the scatter overlay; cleared via toolbar button.
+**Embedded (primary).** `MCPEmbeddedServer` runs inside the app — Network.framework listener bound to 127.0.0.1 only, dynamic port persisted across launches, JSON-RPC over HTTP POST. Hardened against browser cross-origin probing and malformed input (a supplied-but-invalid `rig_id` is an error, not a fall-through to "all rigs"; `list_nights` date/limit are bound as SQL parameters). Five read-only tools: `list_rigs`, `list_nights`, `list_observations`, `get_aggregate_stats`, `get_corpus_summary`. Source-authority labels survive into tool output so an AI consumer can distinguish PHD2-measured facts from Ephemeris heuristics.
 
-**Per-session inspector (right panel)**
-- Bordered cards (dark fill + thin separator stroke) for: Session, Statistics, Optics, Mount, AO (when present), Events.
-- 12pt trailing margin so the scrollbar doesn't sit flush against card edges.
-- Statistics card colour-tints RA and Dec rows (red / blue), shows both pixel and arcsec values for distance metrics, and shows polar-align in arcminutes.
-- Mount card lists name, guiding-enabled state, max RA / Dec durations, RA / Dec algorithms, and minimum-move thresholds (axis-tinted dots in front of each).
-- Events card icons-by-kind (e.g. checkmark.circle for settling complete, exclamationmark.triangle for star lost). Click any event row to jump the chart's selection rule.
+**Stdio helper (for clients that can't speak HTTP).** `tools/ephemeris-mcp/` — a separate SPM executable bundled into `Ephemeris.app/Contents/Helpers/`, reading the library store directly (read-only SQLite). Same tool surface plus an opt-in write tool `add_annotation` (off by default; failed writes report failure). `ClaudeConfigInstaller` does the one-click setup: NSOpenPanel grant → JSON-merge of the `ephemeris` entry into the Claude Desktop / Claude Code config, idempotent and atomic.
 
-**Calibration view**
-- Square XY plot, 1:1 aspect ratio.
-- Per-direction line + endpoint label: West/East red, North/South blue, Backlash orange.
-- Concentric dashed reference rings at "nice" 1/2/5×10ⁿ radii.
-- Header stats strip: device kind, step count, started, RA rate (from West leg), Dec rate (from North leg), orthogonality error (orange if > 5°).
+## 8. Persistence and ingest
 
-**Frequency analysis**
-- Modal sheet (⌘F) showing a log-X-axis FFT periodogram for RA or Dec.
-- Drift-correct toggle (default on).
-- Vertical rule at the dominant period with annotation, hover readout footer.
+`LibraryIngestor` (ModelActor) pipeline, idempotent on the log's SHA-256: parse → frame-weighted night RMS in arcsec (handles mixed-pixel-scale logs) → pointing context (circular-median RA with wrap handling, galactic latitude, ±0.5° Messier match) → run recommender, upsert observations → create per-session records → parse and persist GA results. The real source path is stored (not a bare filename) so "open original log" works; `SourceFolderBookmarks` resolves a covering security-scoped bookmark (correct path-prefix matching at component boundaries) or prompts once per new folder. Bulk import matches each log's PHD2 profile name to an existing rig or auto-creates one.
 
-**Combined sessions**
-- Multi-select sessions in the sidebar to view as a single virtual log.
-- Real wall-clock gaps preserved (meridian flips, cloud breaks show as flat sections).
-- All single-session features (zoom, exclusion, FFT, export) work on the merged session.
+## 9. PHD2 log format handling
 
-**Export**
-- Toolbar Share menu (⌘E):
-  - Chart as PNG (rendered via `ImageRenderer` at 2× scale, 1280×600 base).
-  - Session stats CSV.
-  - Frame data CSV (one row per `GuideEntry`).
-  - Log summary CSV (one row per session in the file).
-- Delivered through the system share sheet — sandbox-safe, no entitlement required.
+Unchanged from v1 (five-state machine, quote-aware 18/19-column tokenizer, signed W/S durations, AO step overwrite, px/ms heuristic, INFO coalescing, non-monotonic-timestamp repair, `PHD2LogSignature` front gate, 500 MB hard refusal) — plus v2 additions: Guiding Assistant result extraction matches PHD2's real "GA Result" line shapes, and session header properties (RA/Dec/hour angle/alt/az/pier side/HFD/exposure/multi-star) are extracted for pointing awareness.
 
-**Help**
-- In-app Apple Help Book (⌘?) opens Help Viewer with a card-grid landing page and 9 topic pages (getting started, main window, reading the chart, statistics, zoom & exclusions, combining sessions, frequency analysis, calibration, exporting, shortcuts).
-- Search index built with `hiutil`.
+## 10. Known limitations and rough edges
 
-**About panel**
-- Custom SwiftUI window (replacing the system About). Large 160pt app icon, app name, version (from CFBundleShortVersionString + CFBundleVersion), tagline, copyright, Documentation / Support links, acknowledgements footer crediting Andy Galasso.
+- **`MARKETING_VERSION` is still 1.0** — needs a bump before a v2 release is cut.
+- **No auto-update mechanism.** Phase 0 named distribution/auto-update as the foundation; no Sparkle (or other) integration is present in the project. Distribution remains a bare zip on GitHub.
+- **No cached per-render analysis** in the document window (v1 carryover) — stats recompute on every render; fine at typical log sizes.
+- **UI tests are minimal** (launch smoke test only). The library/import/MCP windows have no UI-level coverage; unit coverage is strong (see §11).
+- **`hourAngleHours` / `pierSide`** are now used for pier-side bias analysis, but calibration-side values still surface only in the inspector.
+- **Settings ↔ separate windows split** — rig editing and MCP install intentionally live in their own windows, not Settings; revisit if Settings grows tabs.
+- **Embedded server has no auth token** — it relies on loopback binding plus origin/method hardening; any local process can read library summaries while the app runs.
+- **Help topics** referenced by observations (`HelpTopic`) exist as IDs and stubs; the full v2 topic catalog from design §8.3 is not fully written.
+- **100 MB "may take a while" confirmation** still deferred (only the 500 MB refusal shipped).
+- **Legacy `.appiconset` + `.icon` package dual-maintenance** and the post-CodeSign icon copy phase (v1 carryovers).
 
-### 5b. UI surfaces
-
-- **Document window — Summary mode.** Sidebar + aggregate header strip + sortable session table.
-- **Document window — Guide-session mode.** Sidebar + stats strip + main chart (with optional scatter inset, hover card overlay) + diagnostic sub-charts + chart-controls bar + inspector.
-- **Document window — Calibration mode.** Sidebar + stats strip + XY calibration plot + inspector with calibration-specific cards.
-- **Document window — Combined-sessions mode.** Routes through the guide-session UI with a synthesised virtual log, filename appended with `· N sessions combined`.
-- **Frequency analysis sheet.** Modal sheet over the document window with the periodogram, axis picker, drift-correct toggle, footer readout.
-- **About Ephemeris window.** Standalone hidden-titlebar window with icon, version, links.
-- **Help Viewer (Apple Help).** Separate system app launched via the Help menu / ⌘?, displaying the embedded help bundle.
-
-## 6. Analysis subsystems
-
-**Per-session statistics (`Stats/SessionStatsCalculator.swift`).** Two-pass algorithm: filter included frames (and any user manual-exclusion ranges), compute means of `raRawDistance` / `decRawDistance` / `time`, then compute population standard deviation of RA and Dec around their means. Total RMS is the geometric sum. Peak is `max(|value − mean|)`. Drift uses textbook least-squares linear-regression slope of value vs. time, scaled to per-minute. König polar-alignment formula (`3.82 × |drift_dec_arcsec_per_min| / cos δ`) is suppressed when |δ| > 85° because the cosine term explodes. All values stored in pixels; arcsec views multiply by `pixelScale` at display time.
-
-**Aggregate statistics (`Stats/LogAggregateStats.swift`).** Frame-count-weighted RMS — `sqrt(Σ(rms_i² · n_i) / Σn_i)`. Best / worst session indices computed on per-session total RMS. Pixel scale is reported only when all sessions agree (single-system assumption); otherwise it's left at 0.
-
-**Frequency analysis (`Stats/FrequencyAnalyzer.swift`).** Pipeline: filter to included frames (must have ≥ 32) → compute mean dt, build a uniform sample grid of length `N = span/dt + 1` → linear interpolation at the grid points → optional linear-regression detrend, otherwise mean-subtract → Hann window → zero-pad to next power of two → real FFT via `vDSP_fft_zripD` → magnitudes via `vDSP_zvabsD` → drop the DC bin → map bin index `i` to period `N · dt / i` → normalise so the peak is 1. Dominant period is the index of the peak. The Hann window (vs. PHD2's Hamming) and zero-padding (vs. PHD2's no-pad) are deliberate independent choices.
-
-**Calibration geometry (`Model/Calibration.swift` + `Parser/CalibrationHeaderParser.swift`).** Parses per-leg `<Direction> calibration complete. Angle = X deg, Rate = Y px/sec, Parity = Z` lines into `LegCompletion` records. Orthogonality error is the absolute difference between the West-vs-North angle delta and 90°, computed via signed angular distance on the 360° circle. Highlighted orange in the UI when > 5°.
-
-**Multi-session merge (`Stats/GuideSessionMerger.swift`).** Sorts sessions by `startedAt`. When all sessions have wall-clock dates, rebases each session's frame timestamps relative to the earliest start (`offset = startedAt − baseDate`), preserving real-world gaps. Frame numbers are renumbered globally so the inspector remains coherent. When dates are missing, falls back to end-to-end concatenation with a 1-second nominal gap. Pixel scale, declination, and mount config are inherited from the first session.
-
-**INFO coalescing (`Parser/InfoCoalescer.swift`).** Three rules, applied per session: (1) identical text on consecutive frames merges into one entry with `repeats++`; (2) on the same frame, an entry whose `key=` prefix matches the previous entry replaces it (parameter-change deduplication); (3) on the same frame, a `DITHER` event replaces a preceding `SET LOCK POS` (PHD2 emits both — only the dither matters). Behaviour-mirrors `logparser.cpp`.
-
-**Non-monotonic timestamp fix (`Parser/NonMonotonicFix.swift`).** Computes the median of positive deltas across the session (the "typical sample interval"). Walks frames; whenever a delta is ≤ 0, sets the entry's time to `prev + median` and accumulates the corrective offset into all subsequent entries. Inserts a single synthesised `"Timestamp jumped backwards"` info entry at the first jump frame.
-
-## 7. PHD2 log format handling
-
-The parser implements a 5-state machine recognising PHD2's section delimiters (`Guiding Begins at …`, `Frame,Time,mount`, `Guiding Ends`, `Calibration Begins at …`, `Direction,Step,dx,dy,x,y,Dist`, `Calibration complete`). It quote-aware-tokenises the 18-or-19 column guide rows, treats W/S direction tokens as negative durations, overrides `raDuration`/`decDuration` with `xStep`/`yStep` when the latter are non-empty (AO frames), and recognises both mount direction tokens (West/East/North/South/Backlash) and AO synonyms (Left → West, Up → North). Header lines accumulate verbatim and are also pattern-matched into structured fields by `HeaderParser` (mount/AO, axis rates and angles, pixel scale, declination, guide algorithms, minimum-move thresholds). Old-format px/ms rate logs are auto-corrected when a rate < 0.05 (scale by 1000). Malformed rows are silently skipped. Empty fields default to 0. INFO lines are coalesced (see §6). Non-monotonic timestamp jumps are repaired (see §6). No automatic settling-frame exclusion — a frame is excluded only if PHD2 reported `errorCode > 1` or the user has dragged a manual-exclusion range over its time. The Swift parser is a behavioural reimplementation of `agalasso/phdlogview/logparser.cpp` rather than a line-by-line port; see `CODE_PROVENANCE.md` for the full lineage analysis (specific behavioural fingerprints, recommended licensing, attribution language).
-
-## 8. Known limitations and rough edges
-
-### Fixed in pre-launch hardening pass (Phases 1–5)
-
-- ~~**Combined-session lines connect across gaps.**~~ `GuideSessionMerger` now inserts a NaN-valued boundary sentinel between merged sessions; Swift Charts breaks `LineMark`s on NaN, producing a clean visual gap. Sentinels are filtered out of all seven downstream read sites (frame counts, stats, hover lookup, event/settling-band lookup, diagnostic sub-charts, CSV export, scatter overlay) via the `!raRawDistance.isNaN` discriminator. The discriminator distinguishes synthetic sentinels from parser-flagged dropped frames (which are real, finite, and still surface in the UI with the orange "Excluded" badge).
-- ~~**Frame-jump from an event in the inspector doesn't scroll the chart.**~~ `GuideSessionDetail` observes `selectedTime` and animates `visibleDomain = nil` (reset to full session) when the new pinned time falls outside the current zoom window.
-- ~~**About panel "Documentation" link points at GitHub README.**~~ Now calls `NSApplication.shared.showHelp(nil)` to open the in-app Help Book (matches ⌘?).
-- ~~**`assumeOrthogonalAxes` parsed but never displayed.**~~ The `Orthogonal axes: Assumed/Measured` row was already implemented; the bug was in the Configuration card's visibility predicate, which didn't include `assumeOrthogonalAxes` in its OR chain. Fixed.
-
-### Still present
-
-- **No cached analysis.** `SessionStats` is recomputed on every render. For typical logs this is fast, but a 30,000-frame combined-session view will recompute on every hover. Has not become a problem, but no caching layer exists.
-- **No test for the multi-session UI flow.** `MergerTests` covers the merger function (now including the sentinel/dropped-frame discriminator); nothing covers the virtual-log routing in `ContentView.makeVirtualLog`.
-- **`hourAngleHours` and `pierSide`** parsed and stored on `CalibrationDetails`; surfaced in the calibration inspector but not used for any analysis.
-- **No multi-document comparison.** Each window is one log. Comparing nights requires opening two windows side by side; there's no built-in cross-night view.
-- **No keyboard shortcuts for series toggles.** RA / Dec / Corrections / Star mass / SNR / etc. are menu-only.
-- **Settling-band detection** is heuristic — looks for adjacent "Settling started" + "Settling complete/failed" pairs. Settling events at session boundaries can be miscounted.
-- **Frequency analysis Y-axis** is unitless / unlabelled. Magnitudes are arbitrary; only relative comparisons are meaningful.
-- **Polar-align estimate is a single-session approximation.** Suppressed near the pole, but no warning when the session is short / drift fit is poor.
-- **No export of the FFT / periodogram data.** Frequency analysis is read-only.
-- **The legacy `.appiconset` is maintained alongside the `.icon` package.** Apple has no documented "single source" for both Tahoe-and-earlier; we ship both. Means the icon needs updating in two places when the visual changes.
-- **Build phase that copies `AppIcon.icon` into the bundle** runs after Xcode's CodeSign step, so the icon directory is not in `CodeResources`. macOS accepts this for non-executable resources, but App Store distribution may require a re-sign workaround.
-- **`CFBundleIconFile` and `CFBundleIconName`** both set to `AppIcon` by `actool`; runtime preference is intentional but not documented in-app.
-- **No high-DPI testing of help book CSS.** Verified visually in Safari but not in Help Viewer at scaled-up text-size accessibility settings.
-
-### Deferred from the hardening pass
-
-- **100 MB confirmation prompt.** Spec asked for a "Loading may take a while — continue?" alert at 100 MB; only the 500 MB hard refusal shipped. Interactive confirmation in `FileDocument.init(configuration:)` would require lifting document loading out of `DocumentGroup` into a custom `Window` scene with explicit alert presentation. Deferred until real-world demand surfaces — files in the 100–500 MB range are rare for PHD2 guide logs.
-
-### New since the hardening pass
-
-- **File loading hardened against non-PHD2 input.** `PHD2LogSignature` runs a head-of-file classification (returns `.confirmed` / `.likely` / `.notPHD2` / `.binary`) before the document parses. `GuideLogDocument` throws a typed `GuideLogLoadError` whose `LocalizedError` conformance feeds SwiftUI's standard `DocumentGroup` alert with a friendly title and recovery suggestion. Empty files open as a graceful empty document. Files > 500 MB are refused outright. 10 new tests in `SignatureTests.swift` cover real PHD2 logs, arbitrary text, source code, binary blobs, empty input, banner-stripped fragments, calibration-only files, CRLF logs, and the parser's empty-input contract.
-
-## 9. Not-yet-implemented features the human has discussed
-
-- **Interpretive / plain-language verdict layer.** Greenfield. No scaffolding. `SessionStats` produces numbers but nothing classifies "this is good / mediocre / bad" or annotates *why* (e.g. "0.8″ RMS with 0.3″/min Dec drift suggests polar misalignment, not seeing"). Would be a new module that takes `SessionStats` + `GuideSession` + `CalibrationDetails` and emits structured findings. The chip-style design language already in `LogSummaryView` (Best / Worst pills) is a ready visual idiom for surfacing verdicts.
-- **Pattern detection (periodic error, polar misalignment, backlash).** Partial scaffolding. `FrequencyAnalyzer` already finds a dominant period; there's no logic that *interprets* it ("this 480s spike on RA looks like worm-gear PE for an SkyWatcher EQ6"). Polar-align estimate exists. Backlash is detectable in calibration data (`Backlash` direction entries) but not analysed. Cross-axis correlation is greenfield.
-- **Cross-session trend analysis.** Greenfield. `LogAggregateStats` aggregates but doesn't trend. There's no concept of comparing across multiple log files. Would require either a multi-document UI or a dedicated "library" view that ingests a folder of logs.
-- **MCP server for conversational analysis.** Fully greenfield. The Swift app has no IPC / network exposure. The data structures (especially `GuideLog`, `SessionStats`, `LogAggregateStats`) are `Sendable` and serialisable, so they could be re-shaped into a CLI / MCP tool with modest effort. The CSV exporter already proves the data model serialises cleanly.
-- **PHD2 debug log parsing.** Greenfield. Ephemeris reads only the guide log (`PHD2_GuideLog_*.txt`), not the PHD2 debug log (`PHD2_DebugLog_*.txt`). Correlating the two would require a second parser plus a UI surface for the correlation. The `infos`-on-frame model is the obvious place to thread debug events into the existing chart.
-
-## 10. Build, run, test
+## 11. Build, run, test
 
 **Build:**
 ```
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   xcodebuild -project Ephemeris.xcodeproj -scheme Ephemeris build
 ```
-The scheme is `Ephemeris`. Output ends up under `~/Library/Developer/Xcode/DerivedData/Ephemeris-*/Build/Products/Debug/Ephemeris.app`.
 
-**Run:** Open the `.app` from DerivedData, or `open` it from the CLI.
+**Tests:** `xcodebuild … test`. The unit suite covers: parser + signature + calibration headers, session/aggregate stats, FFT, merger, CSV, rig profiles and the JSON-sidecar store, annotations, the recommender engine (single-night and cross-night generators, threshold boundaries), library ingest idempotency, and a corpus-validation pass that parses every bundled real log and asserts the recommender fires (skips gracefully when the corpus folder is absent).
 
-**Tests:** `xcodebuild ... test` runs the `EphemerisTests` and `EphemerisUITests` targets. As of writing, ~56 unit tests cover: parser (CRLF, sections, calibration, info kinds, coalescing rules), session stats (RMS, drift, peak, polar-align), aggregate stats, frequency analyzer (sine recovery, drift removal, edge cases), CSV exporter, calibration header parser, and the multi-session merger. UI tests are minimal — a launch test and an empty `testExample`.
+**Sample data:** `EphemerisTests/Fixtures/` small fixture log; corpus tests look for an optional local folder of real logs (not committed).
 
-**Sample log:** `EphemerisTests/Fixtures/sample_short.txt` — a small bundled log used by the parser and stats tests. No real-world logs are committed (deliberately — they'd be large and contain timestamps that look like personal data).
-
-**Developer-only debug features:** None. There's no debug menu, no profiling logging, no internal inspector. Print statements are absent.
-
-## 11. File map (compact)
+## 12. File map (compact)
 
 ```
-Parser/        — turns text into model
-  GuideLogParser.swift          Top-level state machine + entry-row tokenizer
-  HeaderParser.swift             Guiding-section header line parser (mount/AO/algos)
-  CalibrationHeaderParser.swift  Per-direction completion lines, lock pos, pier side, etc.
-  InfoCoalescer.swift            Three-rule INFO event dedup / replacement
-  NonMonotonicFix.swift          Median-delta clock-jump repair
+Ephemeris/
+  Parser/          GuideLogParser, HeaderParser, CalibrationHeaderParser,
+                   InfoCoalescer, NonMonotonicFix, PHD2LogSignature
+  Model/           GuideLog, GuideSession, Calibration, RigProfile, RigProfileStore,
+                   MountClass, GuideConfiguration, ImagingScale, RecommenderObservation,
+                   Annotation, SubQualityVerdict, SourceAuthority, PHD2Tool, PHD2Algorithm
+  Stats/           SessionStats(+Calculator), LogAggregateStats, FrequencyAnalyzer,
+                   GuideSessionMerger, CSVExporter
+  Recommender/     RecommenderEngine, SingleNightContext, CrossNightContext,
+                   StarShapePredictor, TargetClustering, Astronomy,
+                   SessionHeaderProperties, HelpTopic
+    Generators/    PHD2CanonGenerators (8), HeuristicGenerators (2),
+                   GapAnalysisObservers (9), CrossNightGenerators (4)
+  Persistence/     EphemerisLibrary, SchemaV1 (7 @Model entities), LibraryIngestor,
+                   LibraryBulkImporter, ImportCoordinator, SourceFolderBookmarks,
+                   GAResultParser, ForumPostExporter, CoreSpotlightIndexer,
+                   ClaudeConfigInstaller
+  MCPServer/       MCPEmbeddedServer, MCPConnectionHandler, MCPProtocolHandler, MCPTools
+  AppIntents/      EphemerisAppIntents (OpenMostRecentLog, ShowRecentTrends,
+                   EphemerisRigEntity), MostRecentLogResolver, AppShortcutBridge
+  Document/        GuideLogDocument
+  Views/           ContentView, EphemerisApp, LibraryWindow, TrendChartView,
+                   PHD2HygieneStrip, NightVerdict, ObservationCard, AnnotationSheet,
+                   SubQualityPicker, ImagingScaleVerdictChip, LibraryImportSheet,
+                   LibraryDiscoveryTip, RigProfilesWindow, RigProfileEditorView,
+                   RigProfileConfigureSheet, MCPServerWindow, SettingsWindow,
+                   ForumExportSheet, + the v1 chart/inspector/export views
 
-Model/         — pure data structures
-  GuideLog.swift           Top-level container + GuideDevice
-  GuideSession.swift       GuideSession, GuideEntry, InfoEntry
-  Calibration.swift        Calibration, CalibrationDetails, LegCompletion, CalibrationEntry
+tools/ephemeris-mcp/   SPM stdio MCP helper (bundled into Contents/Helpers/)
 
-Stats/         — analysis (no caching, all enums of static funcs)
-  SessionStats.swift              Stats struct + display-unit conversion helper
-  SessionStatsCalculator.swift    Per-session RMS / peak / drift / polar-align
-  LogAggregateStats.swift         Frame-count-weighted aggregate, best/worst
-  FrequencyAnalyzer.swift         Hann + Accelerate vDSP real-FFT periodogram
-  GuideSessionMerger.swift        Multi-session stitching with wall-clock rebasing
-  CSVExporter.swift               Three CSV serializers (session / frames / aggregate)
+docs/
+  ephemeris-2.0-design-document.md   The v2 design this build followed
+  observation-gap-analysis.md        Observation-coverage matrix the gap tier closes
 
-Document/      — file I/O
-  GuideLogDocument.swift   FileDocument; opens read-only via DocumentGroup
+EphemerisTests/    Unit tests (parser, stats, recommender, cross-night, ingest,
+                   rig profiles, annotations, corpus validation)
+EphemerisUITests/  Launch smoke test
 
-Views/         — SwiftUI UI
-  ContentView.swift               Top-level NavigationSplitView, selection routing
-  EphemerisApp.swift              @main scene + custom About window scene
-  AboutView.swift                 Custom About panel (icon, version, links)
-  ChartViewState.swift            @Observable persisted chart preferences
-  SessionListView.swift           Sidebar list of sections
-  LogSummaryView.swift            Aggregate header + sortable session table with quality bar
-  SessionDetailView.swift         Routes to guide / calibration / virtual log; chart-controls bar
-  GuideGraphView.swift            Main time-series chart, hover/pin, settling bands, drag
-  ScatterInsetView.swift          Translucent overlay scatter cluster with reference rings
-  DiagnosticGraphView.swift       Star mass / SNR sub-charts
-  CalibrationGraphView.swift      Square XY calibration plot with reference rings
-  FrequencyAnalysisView.swift     FFT periodogram modal sheet
-  SessionInspectorView.swift      Bordered-card inspector for guide and calibration
-  ExportItems.swift               Transferable wrappers for ShareLink (CSV + PNG)
-  WindowSubtitleSetter.swift      AppKit hop to override "— Locked" subtitle
-
-Top-level resources:
-  Assets.xcassets/AppIcon.appiconset/    Legacy PNGs for macOS 14/15 (.icns target)
-  AppIcon.icon/                          Icon Composer Liquid Glass package for macOS 26
-  Credits.html                           Legacy About-panel credits (now unused — custom AboutView)
-  Info.plist                             Custom partial — help book + copyright keys
-  Ephemeris Help.help/                   Apple Help Book bundle (HTML + helpindex)
-
-Tests:
-  EphemerisTests/      Unit tests (parser, stats, FFT, merger, CSV)
-  EphemerisUITests/    UI smoke tests (launch only)
-  Fixtures/sample_short.txt    Small log fixture
-
-Project root:
-  README.md            Public-facing intro + attribution + license
-  LICENSE.txt          Canonical GPL-3.0
-  CODE_PROVENANCE.md   Formal lineage analysis vs phdlogview
-  PROJECT_STATE.md     This document
+README.md / LICENSE.txt / CODE_PROVENANCE.md / PROJECT_STATE.md (this file)
 ```
