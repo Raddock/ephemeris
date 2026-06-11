@@ -245,6 +245,9 @@ struct ObservationCard: View {
 struct ObservationsPanel: View {
     let observations: [RecommenderObservation]
     let title: String
+    /// Empty-state copy — the panel serves both the document window (per-log)
+    /// and the library (per-range), and "this log" reads wrong in the latter.
+    var emptyMessage: String = "Nothing to surface on this log."
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -266,7 +269,7 @@ struct ObservationsPanel: View {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle")
                         .foregroundStyle(.green)
-                    Text("Nothing to surface on this log.")
+                    Text(emptyMessage)
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }

@@ -387,7 +387,8 @@ struct LibraryDetailView: View {
                     )
                     ObservationsPanel(
                         observations: crossNightObservations,
-                        title: "Cross-night observations · \(profile.effectiveName)"
+                        title: "Cross-night observations · \(profile.effectiveName)",
+                        emptyMessage: "Nothing to surface in this range."
                     )
                     recentNightsList
                 }
