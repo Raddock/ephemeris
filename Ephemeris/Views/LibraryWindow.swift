@@ -90,6 +90,9 @@ struct LibraryWindow: View {
         ) { profile in
             Button("Delete \"\(profile.effectiveName)\"", role: .destructive) {
                 try? rigStore.delete(profile)
+                // Cascade the SwiftData side too — entity, nights, observations —
+                // as this dialog's message promises.
+                library?.deleteRigProfile(id: profile.id)
                 if selectedRigID == profile.id {
                     selectedRigID = rigStore.profiles.first?.id
                 }
@@ -105,6 +108,12 @@ struct LibraryWindow: View {
 
     private func chooseFolderAndImport() {
         guard let library, let importCoordinator else { return }
+        // An import is already in flight — surface its progress window instead of
+        // silently starting a second importer over the same store.
+        if importCoordinator.active?.isWorking == true {
+            openWindow(id: "library-import")
+            return
+        }
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
@@ -709,14 +718,14 @@ struct LibraryDetailView: View {
     /// Handles the file-moved case gracefully with a quick alert.
     private func openOriginalLog(for record: NightRecordEntity) {
         guard !record.sourceFilePath.isEmpty else { return }
-        let url = URL(fileURLWithPath: record.sourceFilePath)
-        let fm = FileManager.default
-        if fm.fileExists(atPath: url.path) {
-            _ = SourceFolderBookmarks.openLog(at: url.path)
-        } else {
+        // No fileExists pre-gate here: under the sandbox a stat on a path we
+        // haven't been granted access to reports "missing" for files that exist.
+        // SourceFolderBookmarks restores the scope (or asks once) and only
+        // reports failure when the file is truly gone or access was declined.
+        if !SourceFolderBookmarks.openLog(at: record.sourceFilePath) {
             let alert = NSAlert()
-            alert.messageText = "Original log not found"
-            alert.informativeText = "The file at \(url.path) is no longer there — it may have been moved or deleted. The analytical data Ephemeris ingested from it is still in the library."
+            alert.messageText = "Original log couldn't be opened"
+            alert.informativeText = "The file at \(record.sourceFilePath) may have been moved or deleted, or access wasn't granted. The analytical data Ephemeris ingested from it is still in the library."
             alert.alertStyle = .warning
             alert.addButton(withTitle: "OK")
             alert.runModal()

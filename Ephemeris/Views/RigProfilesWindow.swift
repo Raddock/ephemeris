@@ -7,6 +7,7 @@ import SwiftUI
 /// "Discard changes". Saving writes back into `RigProfileStore` and keeps the editor open.
 struct RigProfilesWindow: View {
     @Environment(RigProfileStore.self) private var store
+    @Environment(\.ephemerisLibrary) private var library
     @State private var selectedID: RigProfile.ID?
     @State private var draft: RigProfile?
 
@@ -115,6 +116,7 @@ struct RigProfilesWindow: View {
         ) { profile in
             Button("Delete \"\(profile.effectiveName)\"", role: .destructive) {
                 try? store.delete(profile)
+                library?.deleteRigProfile(id: profile.id)
                 if selectedID == profile.id {
                     selectedID = store.profiles.first?.id
                     draft = selectedID.flatMap { id in store.profiles.first(where: { $0.id == id }) }
@@ -172,6 +174,7 @@ struct RigProfilesWindow: View {
               let profile = store.profiles.first(where: { $0.id == id })
         else { return }
         try? store.delete(profile)
+        library?.deleteRigProfile(id: profile.id)
         selectedID = store.profiles.first?.id
         draft = selectedID.flatMap { id in store.profiles.first(where: { $0.id == id }) }
     }
@@ -179,6 +182,9 @@ struct RigProfilesWindow: View {
     private func saveDraft(currentlySelected id: RigProfile.ID) {
         guard let d = draft else { return }
         try? store.save(d)
+        // Keep the SwiftData mirror (MCP tools, Spotlight, library relationships)
+        // in step — ingest only re-syncs when a log for this rig is re-imported.
+        library?.syncRigProfile(d)
         // Refresh from store so the saved-state comparison shows clean
         draft = store.profiles.first(where: { $0.id == id })
     }

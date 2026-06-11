@@ -27,6 +27,7 @@ struct SessionInspectorView: View {
     let manualExclusions: [ClosedRange<Double>]
 
     @Environment(RigProfileStore.self) private var rigStore
+    @Environment(\.ephemerisLibrary) private var library
     @State private var showConfigureRigSheet = false
 
     /// PHD2 profile name parsed from the most recent guide-session header.
@@ -121,6 +122,7 @@ struct SessionInspectorView: View {
                 guideTrainHint: guideTrainHint
             ) { newProfile in
                 try? rigStore.save(newProfile)
+                library?.syncRigProfile(newProfile)
             }
         }
     }

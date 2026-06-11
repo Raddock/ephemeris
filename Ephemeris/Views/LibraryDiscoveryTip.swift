@@ -60,4 +60,11 @@ enum LibraryDiscoveryTipBootstrap {
     static func dismissTip() {
         UserDefaults.standard.set(true, forKey: "library.discovery.tipDismissed")
     }
+
+    /// Called when the user resets the Log Library — the counter mirrors library
+    /// contents, so an emptied library must start over or the tip points at nothing.
+    static func reset() {
+        UserDefaults.standard.removeObject(forKey: ingestedKey)
+        UserDefaults.standard.removeObject(forKey: shownKey)
+    }
 }

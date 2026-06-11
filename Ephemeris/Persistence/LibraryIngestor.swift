@@ -312,7 +312,12 @@ actor LibraryIngestor {
             predicate: #Predicate { $0.sourceContentHash == hash }
         )
         if let existing = try modelContext.fetch(fetch).first {
-            existing.sourceFilePath = filePath  // refresh in case the file moved
+            // Do NOT assign sourceFilePath here — ingest() heals it behind an
+            // absolute-path guard; the raw caller value can be "" (document with
+            // no resolvable fileURL) and would destroy a good stored path.
+            // Re-attach the rig relationship: the rig entity may have been
+            // recreated (delete + re-import) since this night was first stored.
+            existing.rigProfile = rigEntity
             return (existing, false)
         }
         let record = NightRecordEntity()

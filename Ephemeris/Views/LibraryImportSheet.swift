@@ -21,6 +21,15 @@ struct LibraryImportWindow: View {
             }
         }
         .frame(minWidth: 540, minHeight: 380)
+        .onDisappear {
+            // Traffic-light close skips the Done button — without this the importer
+            // keeps ingesting headless with no UI able to reach it, and a second
+            // "Import logs…" would run concurrently over the same store.
+            if let importer = coordinator?.active {
+                importer.cancel()
+                coordinator?.active = nil
+            }
+        }
     }
 
     private func closeWindow() {

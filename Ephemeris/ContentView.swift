@@ -54,6 +54,11 @@ struct ContentView: View {
                 rigProfile: profile
             )
             print("[Library] Ingested night \(result.nightRecordId.uuidString.prefix(8)) — \(result.observationCount) observations \(result.didCreate ? "(new)" : "(updated)")")
+            // The document grant covers only this file, not its folder — bookmark
+            // the file itself so "Open original log" works after relaunch.
+            if let fileURL {
+                SourceFolderBookmarks.saveFileBookmark(fileURL)
+            }
             if result.didCreate {
                 LibraryDiscoveryTipBootstrap.recordIngestedNight()
             }

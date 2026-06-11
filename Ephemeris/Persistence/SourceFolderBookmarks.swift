@@ -25,6 +25,18 @@ enum SourceFolderBookmarks {
     /// Persist a security-scoped bookmark for a folder the user just granted access to.
     /// Idempotent — re-saving an existing folder replaces the prior bookmark with a fresh one.
     static func save(folder url: URL) {
+        saveBookmark(for: url)
+    }
+
+    /// Persist a security-scoped bookmark for a single log file the app currently has
+    /// access to (a document the user opened via File → Open or drag-and-drop). The
+    /// sandbox grant for an opened document covers only the file, not its folder, so
+    /// without this the library can never reopen a document-ingested log after relaunch.
+    static func saveFileBookmark(_ url: URL) {
+        saveBookmark(for: url)
+    }
+
+    private static func saveBookmark(for url: URL) {
         do {
             let data = try url.bookmarkData(
                 options: [.withSecurityScope],
@@ -35,7 +47,7 @@ enum SourceFolderBookmarks {
             store[url.path] = data
             writeStore(store)
         } catch {
-            NSLog("[Bookmarks] Failed to create folder bookmark for %@ — %@", url.path, error.localizedDescription)
+            NSLog("[Bookmarks] Failed to create bookmark for %@ — %@", url.path, error.localizedDescription)
         }
     }
 
@@ -49,19 +61,30 @@ enum SourceFolderBookmarks {
     /// 3. Save the new bookmark and retry
     @MainActor
     static func openLog(at path: String) -> Bool {
-        guard !path.isEmpty, FileManager.default.fileExists(atPath: path) else {
-            return false
-        }
+        guard !path.isEmpty else { return false }
         let fileURL = URL(fileURLWithPath: path)
 
+        // 1. A stored bookmark — an exact file bookmark or a covering folder —
+        //    restores the sandbox scope. Only with the scope active does a stat
+        //    tell the truth about whether the file still exists.
         if let scoped = resolveScopedURL(coveringPath: path) {
             // Hold the scope open for the session; document windows read the file repeatedly.
             activeScopes.append(scoped)
+            guard FileManager.default.fileExists(atPath: path) else { return false }
             openInDocumentViewer(fileURL)
             return true
         }
 
-        // No bookmark covers this file — ask the user to authorize once.
+        // 2. No bookmark, but the path may be reachable anyway (inside the app
+        //    container, or covered by a grant still active this session). A
+        //    positive stat is trustworthy; a NEGATIVE one is not — under the
+        //    sandbox it can simply mean "no access", so fall through and ask.
+        if FileManager.default.fileExists(atPath: path) {
+            openInDocumentViewer(fileURL)
+            return true
+        }
+
+        // 3. Ask the user to authorize the folder once, then retry.
         let folder = fileURL.deletingLastPathComponent()
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
@@ -76,6 +99,7 @@ enum SourceFolderBookmarks {
 
         if let scoped = resolveScopedURL(coveringPath: path) {
             activeScopes.append(scoped)
+            guard FileManager.default.fileExists(atPath: path) else { return false }
             openInDocumentViewer(fileURL)
             return true
         }
@@ -121,10 +145,11 @@ enum SourceFolderBookmarks {
 
         // Match longest folder path first so nested bookmarks win over their parents.
         for (folderPath, data) in store.sorted(by: { $0.key.count > $1.key.count }) {
-            // Require a path-component boundary so "/Logs" doesn't falsely cover
-            // "/LogsBackup". A bookmarked folder always contains the file below it.
+            // An exact match is a per-file bookmark (document-opened logs).
+            // Otherwise require a path-component boundary so "/Logs" doesn't
+            // falsely cover "/LogsBackup".
             let folderPrefix = folderPath.hasSuffix("/") ? folderPath : folderPath + "/"
-            guard path.hasPrefix(folderPrefix) else { continue }
+            guard folderPath == path || path.hasPrefix(folderPrefix) else { continue }
             var isStale = false
             do {
                 let resolved = try URL(

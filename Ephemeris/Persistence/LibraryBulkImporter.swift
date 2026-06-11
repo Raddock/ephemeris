@@ -29,6 +29,15 @@ final class LibraryBulkImporter {
 
     var status: Status = .idle
 
+    /// True while an import is pending or running. `.idle` counts: the coordinator
+    /// installs the importer before `importFolder` flips the status to `.running`.
+    var isWorking: Bool {
+        switch status {
+        case .idle, .running: return true
+        case .completed, .cancelled: return false
+        }
+    }
+
     private let library: EphemerisLibrary
     private let rigStore: RigProfileStore
     private var currentTask: Task<Void, Never>?

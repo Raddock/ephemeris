@@ -113,6 +113,8 @@ struct SettingsWindow: View {
             try context.save()
             // Remove every Ephemeris donation from Spotlight so stale results stop appearing.
             CoreSpotlightIndexer.removeAll()
+            // The discovery tip's counter mirrors library contents — reset it too.
+            LibraryDiscoveryTipBootstrap.reset()
             resetSummary = "Log Library data reset. Re-import your PHD2 logs to rebuild the corpus."
         } catch {
             resetError = "Reset failed: \(error.localizedDescription)"

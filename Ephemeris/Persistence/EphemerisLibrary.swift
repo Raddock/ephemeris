@@ -24,6 +24,38 @@ final class EphemerisLibrary {
         self.container = try ModelContainer(for: schema, configurations: [configuration])
     }
 
+    /// Upsert the SwiftData mirror of a rig profile. Call after every rig-editor
+    /// save: ingest also re-syncs, but only when a log for this rig is re-imported —
+    /// without this, MCP tools and Spotlight serve stale optics until then.
+    func syncRigProfile(_ profile: RigProfile) {
+        let profileId = profile.id
+        let fetch = FetchDescriptor<RigProfileEntity>(
+            predicate: #Predicate { $0.id == profileId }
+        )
+        let context = container.mainContext
+        if let existing = try? context.fetch(fetch).first {
+            existing.update(from: profile)
+        } else {
+            context.insert(RigProfileEntity(from: profile))
+        }
+        try? context.save()
+    }
+
+    /// Delete the SwiftData mirror of a rig profile. The entity's cascade rules
+    /// remove its night records, and each night cascades its observations,
+    /// annotations, GA results, and session records — keeping the delete-rig
+    /// confirmation dialog's promise.
+    func deleteRigProfile(id: UUID) {
+        let fetch = FetchDescriptor<RigProfileEntity>(
+            predicate: #Predicate { $0.id == id }
+        )
+        let context = container.mainContext
+        if let entity = try? context.fetch(fetch).first {
+            context.delete(entity)
+            try? context.save()
+        }
+    }
+
     static func defaultStoreURL() -> URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let dir = appSupport.appendingPathComponent("Ephemeris", isDirectory: true)
