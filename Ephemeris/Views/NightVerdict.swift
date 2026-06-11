@@ -60,13 +60,17 @@ enum NightVerdictCalculator {
     ) -> NightVerdict {
         guard rmsArcsec > 0 else { return .unknown }
 
-        // Primary: against imaging scale when configured. RMS at or under one
-        // imaging pixel is sub-pixel guiding — the imager can't fault it.
+        // Primary: against imaging scale when configured. ImagingScale.verdict is
+        // the single source of the §5.2 tiering — the document window's session
+        // chip uses it directly, and the library must agree with that chip for the
+        // same RMS (these two copies once diverged and contradicted each other).
         if imagingPixelScale > 0 {
-            let ratio = rmsArcsec / imagingPixelScale
-            if ratio <= 1.0 { return .subPixel }
-            if ratio <= 1.5 { return .atResolution }
-            return .overResolution
+            switch ImagingScale.verdict(rmsArcsec: rmsArcsec, imagingPixelScale: imagingPixelScale) {
+            case .subPixel:       return .subPixel
+            case .atResolution:   return .atResolution
+            case .overResolution: return .overResolution
+            case .unconfigured:   return .unknown  // unreachable: scale > 0
+            }
         }
 
         // Fallback: rig-relative tiering
@@ -97,11 +101,14 @@ enum NightVerdictCalculator {
                            imagingPixelScale: 0,
                            rigDistribution: rigDistribution).tint
         }
+        // Ramp breakpoints follow the §5.2 verdict tiers (ImagingScale.verdict):
+        // solid green through the sub-pixel band, green→orange across at-resolution
+        // (0.7–1.0), orange→red once over-resolved.
         let red = Color(red: 0.95, green: 0.30, blue: 0.30)
         let ratio = rmsArcsec / imagingPixelScale
-        if ratio <= 1.0 { return .green }
-        if ratio <= 1.5 { return Color.green.mix(with: .orange, by: (ratio - 1.0) / 0.5) }
-        if ratio <= 2.5 { return Color.orange.mix(with: red, by: (ratio - 1.5) / 1.0) }
+        if ratio < 0.7 { return .green }
+        if ratio <= 1.0 { return Color.green.mix(with: .orange, by: (ratio - 0.7) / 0.3) }
+        if ratio <= 2.0 { return Color.orange.mix(with: red, by: (ratio - 1.0) / 1.0) }
         return red
     }
 }

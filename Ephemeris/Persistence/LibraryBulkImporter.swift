@@ -96,6 +96,7 @@ final class LibraryBulkImporter {
         }
 
         let ingestor = LibraryIngestor(modelContainer: library.container)
+        var touchedRigIds: Set<UUID> = []
 
         for (index, url) in urls.enumerated() {
             if Task.isCancelled {
@@ -106,25 +107,36 @@ final class LibraryBulkImporter {
                               processed: index,
                               total: urls.count)
 
-            // Read bytes
-            guard let data = try? Data(contentsOf: url) else {
+            // Read + decode + parse off the main actor — this is the most expensive
+            // CPU work in the app, and the progress window (and every other window)
+            // stutters if it runs on main.
+            enum Prepared {
+                case parsed(data: Data, log: GuideLog)
+                case unreadable, empty, notUTF8
+            }
+            let prepared = await Task.detached(priority: .userInitiated) { () -> Prepared in
+                guard let data = try? Data(contentsOf: url) else { return .unreadable }
+                guard !data.isEmpty else { return .empty }
+                guard let text = String(data: data, encoding: .utf8) else { return .notUTF8 }
+                let log = GuideLogParser.parse(text)
+                return log.isEmpty ? .empty : .parsed(data: data, log: log)
+            }.value
+
+            let data: Data
+            let log: GuideLog
+            switch prepared {
+            case .unreadable:
                 summary.errors.append("\(url.lastPathComponent): unreadable")
                 continue
-            }
-            guard !data.isEmpty else {
+            case .empty:
                 summary.skippedEmpty.append(url.lastPathComponent)
                 continue
-            }
-
-            // Parse
-            guard let text = String(data: data, encoding: .utf8) else {
+            case .notUTF8:
                 summary.errors.append("\(url.lastPathComponent): not UTF-8")
                 continue
-            }
-            let log = GuideLogParser.parse(text)
-            if log.isEmpty {
-                summary.skippedEmpty.append(url.lastPathComponent)
-                continue
+            case .parsed(let d, let l):
+                data = d
+                log = l
             }
 
             // Match rig profile by PHD2 profile name; auto-create a stub if none exists.
@@ -143,14 +155,17 @@ final class LibraryBulkImporter {
                 summary.autoCreatedRigs.append(phd2Name)
             }
 
-            // Ingest
+            // Ingest. Cluster rebuilds are deferred to one batch pass per rig below —
+            // per-file rebuilds are O(N²) over the whole import.
             do {
                 let result = try await ingestor.ingest(
                     log: log,
                     sourceBytes: data,
                     sourceFilePath: url.path,
-                    rigProfile: profile
+                    rigProfile: profile,
+                    recomputeClusters: false
                 )
+                touchedRigIds.insert(profile.id)
                 if result.didCreate {
                     summary.imported += 1
                 } else {
@@ -159,6 +174,10 @@ final class LibraryBulkImporter {
             } catch {
                 summary.errors.append("\(url.lastPathComponent): \(error.localizedDescription)")
             }
+        }
+
+        if !touchedRigIds.isEmpty {
+            try? await ingestor.recomputeClusters(rigIds: touchedRigIds)
         }
 
         NSLog("[BulkImport] Done — imported: %d, dedup: %d, auto-created rigs: %d, empty: %d, errors: %d",

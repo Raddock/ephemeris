@@ -273,13 +273,18 @@ struct MCPServerWindow: View {
                     .padding(.top, 4)
                 HStack {
                     Button(server.status == .stopped ? "Start server" : "Restart server") {
-                        if server.status == .stopped { server.start() } else { server.restart() }
+                        if server.status == .stopped { server.setEnabled(true) } else { server.restart() }
                     }
                     Button("Stop", role: .destructive) {
-                        server.stop()
+                        server.setEnabled(false)
                     }
                     .disabled(server.status == .stopped)
                 }
+                Text(server.isEnabled
+                     ? "The server starts automatically when Ephemeris launches."
+                     : "The server is off and stays off across launches until you start it.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
             .font(.caption)
         } label: {

@@ -31,9 +31,10 @@ struct EphemerisApp: App {
 
     // v2.0 Phase 3: SwiftData library backing the multi-night surface (Phase 6+).
     // Auto-ingest of opened documents happens in ContentView when both the rig
-    // profile and the parsed log are available. Construction failure is swallowed
-    // for now — Phase 3 will surface a recovery UI when the store can't be opened.
+    // profile and the parsed log are available. When the store fails to open,
+    // `libraryOpenError` carries the reason into the Library window's recovery UI.
     @State private var library: EphemerisLibrary?
+    @State private var libraryOpenError: String?
 
     // v2.0 Phase 8: embedded MCP server listening on localhost. Created eagerly so
     // the env object is populated when macOS restores scenes (e.g. the MCP Server
@@ -55,11 +56,20 @@ struct EphemerisApp: App {
         // the main actor since it touches AppKit on dispatch.
         AppShortcutBridge.shared.registerOnce()
 
-        let library = try? EphemerisLibrary()
+        let library: EphemerisLibrary?
+        do {
+            library = try EphemerisLibrary()
+        } catch {
+            library = nil
+            _libraryOpenError = State(initialValue: error.localizedDescription)
+            NSLog("[Library] Store failed to open: %@", error.localizedDescription)
+        }
         _library = State(initialValue: library)
         if let library {
             let server = MCPEmbeddedServer(library: library)
-            server.start()
+            // Opt-in: a local listening socket only opens when the user has
+            // enabled it in the MCP Server window (or via the Claude installer).
+            server.startIfEnabled()
             _mcpServer = State(initialValue: server)
         }
         // Launch-into-Log-Library is handled declaratively by
@@ -131,6 +141,7 @@ struct EphemerisApp: App {
         Window("Rig Profiles", id: "rigProfiles") {
             RigProfilesWindow()
                 .environment(rigProfileStore)
+                .environment(\.ephemerisLibrary, library)
         }
         .windowResizability(.contentSize)
         .defaultSize(width: 720, height: 540)
@@ -147,7 +158,7 @@ struct EphemerisApp: App {
         // v2.0 Phase 6 — multi-night library. Per design doc §5.2 / §7.1, use WindowGroup
         // (not Window) so the scene can carry a data binding (the active rig).
         WindowGroup("Log Library", id: "library") {
-            LibraryWindow()
+            LibraryWindow(libraryOpenError: libraryOpenError)
                 .environment(rigProfileStore)
                 .environment(\.ephemerisLibrary, library)
                 .environment(\.importCoordinator, importCoordinator)

@@ -36,8 +36,27 @@ final class MCPEmbeddedServer {
     @UserDefault("mcp.preferredPort", defaultValue: 0)
     private var preferredPort: Int
 
+    /// Whether the server should run. Off by default — a listening socket that any
+    /// local process can query is opt-in, not something the app opens silently on
+    /// first launch. Set from the MCP Server window (Start/Stop persist) and by the
+    /// Claude installer flow. The app honors this at launch.
+    @ObservationIgnored
+    @UserDefault("mcp.serverEnabled", defaultValue: false)
+    private(set) var isEnabled: Bool
+
     init(library: EphemerisLibrary) {
         self.library = library
+    }
+
+    /// Start the server only when the user has previously enabled it.
+    func startIfEnabled() {
+        if isEnabled { start() }
+    }
+
+    /// User-initiated start/stop — persists the choice across launches.
+    func setEnabled(_ enabled: Bool) {
+        isEnabled = enabled
+        if enabled { start() } else { stop() }
     }
 
     /// URL clients should connect to. Returns nil until the server is running.

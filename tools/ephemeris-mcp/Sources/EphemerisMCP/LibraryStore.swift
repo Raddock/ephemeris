@@ -63,6 +63,10 @@ final class LibraryStore: @unchecked Sendable {
         let imagingFocalLengthMm: Double
         let imagingPixelSizeMicrons: Double
         let imagingBinning: Int
+        /// Focal reducer / flattener factor (< 1 shortens effective focal length).
+        /// nil means "not set" and is treated as 1.0 in scale math, matching
+        /// `ImagingScale.compute` in the app.
+        let reducerFactor: Double?
         let mountModel: String?
         let notes: String?
     }
@@ -72,7 +76,7 @@ final class LibraryStore: @unchecked Sendable {
         let sql = """
         SELECT ZID, ZCURRENTNAME, ZMOUNTCLASSRAW, ZHASHIGHPRECISIONENCODERS,
                ZIMAGINGFOCALLENGTHMM, ZIMAGINGPIXELSIZEMICRONS, ZIMAGINGBINNING,
-               ZMOUNTMODEL, ZNOTES
+               ZREDUCERFACTOR, ZMOUNTMODEL, ZNOTES
           FROM ZRIGPROFILEENTITY
          WHERE ZID = ?
          LIMIT 1
@@ -82,7 +86,11 @@ final class LibraryStore: @unchecked Sendable {
         defer { sqlite3_finalize(stmt) }
         guard bindUUID(stmt, idx: 1, uuid: uuid) else { return nil }
         guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
-        return RigRow(
+        return readRigRow(stmt)
+    }
+
+    private func readRigRow(_ stmt: OpaquePointer?) -> RigRow {
+        RigRow(
             uuid: readUUID(stmt, col: 0) ?? "",
             currentName: readString(stmt, col: 1) ?? "",
             mountClass: readString(stmt, col: 2) ?? "",
@@ -90,8 +98,9 @@ final class LibraryStore: @unchecked Sendable {
             imagingFocalLengthMm: sqlite3_column_double(stmt, 4),
             imagingPixelSizeMicrons: sqlite3_column_double(stmt, 5),
             imagingBinning: Int(sqlite3_column_int(stmt, 6)),
-            mountModel: readString(stmt, col: 7),
-            notes: readString(stmt, col: 8)
+            reducerFactor: sqlite3_column_type(stmt, 7) == SQLITE_NULL ? nil : sqlite3_column_double(stmt, 7),
+            mountModel: readString(stmt, col: 8),
+            notes: readString(stmt, col: 9)
         )
     }
 
@@ -100,7 +109,7 @@ final class LibraryStore: @unchecked Sendable {
         let sql = """
         SELECT ZID, ZCURRENTNAME, ZMOUNTCLASSRAW, ZHASHIGHPRECISIONENCODERS,
                ZIMAGINGFOCALLENGTHMM, ZIMAGINGPIXELSIZEMICRONS, ZIMAGINGBINNING,
-               ZMOUNTMODEL, ZNOTES
+               ZREDUCERFACTOR, ZMOUNTMODEL, ZNOTES
           FROM ZRIGPROFILEENTITY
          ORDER BY ZCURRENTNAME
         """
@@ -109,17 +118,7 @@ final class LibraryStore: @unchecked Sendable {
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
         defer { sqlite3_finalize(stmt) }
         while sqlite3_step(stmt) == SQLITE_ROW {
-            rows.append(RigRow(
-                uuid: readUUID(stmt, col: 0) ?? "",
-                currentName: readString(stmt, col: 1) ?? "",
-                mountClass: readString(stmt, col: 2) ?? "",
-                hasHighPrecisionEncoders: sqlite3_column_int(stmt, 3) != 0,
-                imagingFocalLengthMm: sqlite3_column_double(stmt, 4),
-                imagingPixelSizeMicrons: sqlite3_column_double(stmt, 5),
-                imagingBinning: Int(sqlite3_column_int(stmt, 6)),
-                mountModel: readString(stmt, col: 7),
-                notes: readString(stmt, col: 8)
-            ))
+            rows.append(readRigRow(stmt))
         }
         return rows
     }
@@ -328,7 +327,8 @@ final class LibraryStore: @unchecked Sendable {
 
     struct ObservationRow: Sendable {
         let uuid: String
-        let nightUUID: String
+        /// nil when the observation isn't linked to a night (cross-night observations).
+        let nightUUID: String?
         let title: String
         let summary: String
         let suggestedResponse: String
@@ -364,7 +364,7 @@ final class LibraryStore: @unchecked Sendable {
         while sqlite3_step(stmt) == SQLITE_ROW {
             rows.append(ObservationRow(
                 uuid: readUUID(stmt, col: 0) ?? "",
-                nightUUID: readUUID(stmt, col: 1) ?? "",
+                nightUUID: readUUID(stmt, col: 1),
                 title: readString(stmt, col: 2) ?? "",
                 summary: readString(stmt, col: 3) ?? "",
                 suggestedResponse: readString(stmt, col: 4) ?? "",
@@ -398,7 +398,7 @@ final class LibraryStore: @unchecked Sendable {
         guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
         return ObservationRow(
             uuid: readUUID(stmt, col: 0) ?? "",
-            nightUUID: readUUID(stmt, col: 1) ?? "",
+            nightUUID: readUUID(stmt, col: 1),
             title: readString(stmt, col: 2) ?? "",
             summary: readString(stmt, col: 3) ?? "",
             suggestedResponse: readString(stmt, col: 4) ?? "",
@@ -692,6 +692,9 @@ final class LibraryStore: @unchecked Sendable {
         }
 
         // 2. Resolve the optional nightRecord FK (the column stores Z_PK, not UUID).
+        //    A supplied-but-unresolvable night_id is a hard failure: silently degrading
+        //    to a rig-level annotation would misattribute the event. (The tool layer
+        //    pre-validates this too, but the store is the last line of defense.)
         var nightFK: Int64? = nil
         if let nightUUID {
             let sql = "SELECT Z_PK FROM ZNIGHTRECORDENTITY WHERE ZID = ? LIMIT 1"
@@ -701,6 +704,13 @@ final class LibraryStore: @unchecked Sendable {
                     nightFK = sqlite3_column_int64(stmt, 0)
                 }
                 sqlite3_finalize(stmt)
+            }
+            guard nightFK != nil else {
+                sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+                FileHandle.standardError.write(
+                    "addAnnotation: night_id \(nightUUID) not found; write rolled back\n".data(using: .utf8)!
+                )
+                return nil
             }
         }
 
@@ -724,25 +734,38 @@ final class LibraryStore: @unchecked Sendable {
         let eventTS = eventDate.timeIntervalSinceReferenceDate
         let categoriesData = (try? JSONEncoder().encode(categories)) ?? Data()
 
-        sqlite3_bind_int64(stmt, 1, newPK)
-        sqlite3_bind_int(stmt, 2, entRow)
-        _ = bindUUID(stmt, idx: 3, uuid: annUUID.uuidString)
-        _ = bindUUID(stmt, idx: 4, uuid: rigProfileId)
+        // Every bind result is checked: a silently-failed bind would insert a row
+        // with NULL in a load-bearing column (e.g. the rig UUID) and corrupt the
+        // annotation timeline.
+        let nightBindOK: Bool
         if let nightFK {
-            sqlite3_bind_int64(stmt, 5, nightFK)
+            nightBindOK = sqlite3_bind_int64(stmt, 5, nightFK) == SQLITE_OK
         } else {
-            sqlite3_bind_null(stmt, 5)
+            nightBindOK = sqlite3_bind_null(stmt, 5) == SQLITE_OK
         }
-        sqlite3_bind_double(stmt, 6, eventTS)
-        _ = categoriesData.withUnsafeBytes { buf -> Int32 in
+        let categoriesBindOK = categoriesData.withUnsafeBytes { buf -> Bool in
             sqlite3_bind_blob(stmt, 7, buf.baseAddress, Int32(categoriesData.count),
-                              unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+                              unsafeBitCast(-1, to: sqlite3_destructor_type.self)) == SQLITE_OK
         }
-        sqlite3_bind_text(stmt, 8, label, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
-        sqlite3_bind_text(stmt, 9, detail, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
-        sqlite3_bind_int(stmt, 10, isRigMutating ? 1 : 0)
-        sqlite3_bind_double(stmt, 11, now)
-        sqlite3_bind_double(stmt, 12, now)
+        let bindsOK = sqlite3_bind_int64(stmt, 1, newPK) == SQLITE_OK
+            && sqlite3_bind_int(stmt, 2, entRow) == SQLITE_OK
+            && bindUUID(stmt, idx: 3, uuid: annUUID.uuidString)
+            && bindUUID(stmt, idx: 4, uuid: rigProfileId)
+            && nightBindOK
+            && sqlite3_bind_double(stmt, 6, eventTS) == SQLITE_OK
+            && categoriesBindOK
+            && sqlite3_bind_text(stmt, 8, label, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self)) == SQLITE_OK
+            && sqlite3_bind_text(stmt, 9, detail, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self)) == SQLITE_OK
+            && sqlite3_bind_int(stmt, 10, isRigMutating ? 1 : 0) == SQLITE_OK
+            && sqlite3_bind_double(stmt, 11, now) == SQLITE_OK
+            && sqlite3_bind_double(stmt, 12, now) == SQLITE_OK
+        guard bindsOK else {
+            sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+            FileHandle.standardError.write(
+                "addAnnotation: parameter bind failed; write rolled back\n".data(using: .utf8)!
+            )
+            return nil
+        }
 
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             sqlite3_exec(db, "ROLLBACK", nil, nil, nil)

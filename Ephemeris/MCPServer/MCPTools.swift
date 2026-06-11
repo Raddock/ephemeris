@@ -50,15 +50,19 @@ enum MCPTools {
                     binning: r.imagingBinning,
                     reducerFactor: r.reducerFactor
                 )
+                let mountClass = MountClass(rawValue: r.mountClassRaw) ?? .standardGearMount
+                let configured = scale > 0
                 return .object([
                     "id": .string(r.id.uuidString),
                     "name": .string(r.currentName),
                     "mount_class": .string(r.mountClassRaw),
+                    "mount_class_display": .string(mountClass.displayName),
                     "has_high_precision_encoders": .bool(r.hasHighPrecisionEncoders),
                     "imaging_focal_length_mm": .number(r.imagingFocalLengthMm),
                     "imaging_pixel_size_microns": .number(r.imagingPixelSizeMicrons),
                     "imaging_binning": .integer(r.imagingBinning),
                     "reducer_factor": r.reducerFactor.map { .number($0) } ?? .null,
+                    "imaging_configured": .bool(configured),
                     "imaging_pixel_scale_arcsec_per_px": .number(scale),
                     "mount_model": r.mountModel.map { .string($0) } ?? .null,
                     "notes": r.notes.map { .string($0) } ?? .null,
@@ -243,18 +247,32 @@ enum MCPTools {
             "properties": .object([:]),
         ]),
         invoke: { _, container in
+            // Counts via fetchCount and the date range via two limit-1 fetches —
+            // this is the documented opening tool, so it must not materialize the
+            // whole store (observations carry Data blobs) on the main actor.
             let context = ModelContext(container)
-            let rigs = (try? context.fetch(FetchDescriptor<RigProfileEntity>())) ?? []
-            let nights = (try? context.fetch(FetchDescriptor<NightRecordEntity>())) ?? []
-            let observations = (try? context.fetch(FetchDescriptor<ObservationEntity>())) ?? []
-            let dates = nights.map { $0.nightDate }
+            let rigs = (try? context.fetch(FetchDescriptor<RigProfileEntity>(
+                sortBy: [SortDescriptor(\.currentName)]
+            ))) ?? []
+            let nightCount = (try? context.fetchCount(FetchDescriptor<NightRecordEntity>())) ?? 0
+            let observationCount = (try? context.fetchCount(FetchDescriptor<ObservationEntity>())) ?? 0
+            var oldestFetch = FetchDescriptor<NightRecordEntity>(
+                sortBy: [SortDescriptor(\.nightDate, order: .forward)]
+            )
+            oldestFetch.fetchLimit = 1
+            var newestFetch = FetchDescriptor<NightRecordEntity>(
+                sortBy: [SortDescriptor(\.nightDate, order: .reverse)]
+            )
+            newestFetch.fetchLimit = 1
+            let oldest = (try? context.fetch(oldestFetch))?.first?.nightDate
+            let newest = (try? context.fetch(newestFetch))?.first?.nightDate
             let iso = ISO8601DateFormatter()
             return .object([
                 "rig_count": .integer(rigs.count),
-                "night_count": .integer(nights.count),
-                "observation_count": .integer(observations.count),
-                "oldest_night": dates.min().map { .string(iso.string(from: $0)) } ?? .null,
-                "newest_night": dates.max().map { .string(iso.string(from: $0)) } ?? .null,
+                "night_count": .integer(nightCount),
+                "observation_count": .integer(observationCount),
+                "oldest_night": oldest.map { .string(iso.string(from: $0)) } ?? .null,
+                "newest_night": newest.map { .string(iso.string(from: $0)) } ?? .null,
                 "rig_names": .array(rigs.map { .string($0.currentName) }),
             ])
         }

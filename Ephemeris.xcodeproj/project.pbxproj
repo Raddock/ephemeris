@@ -274,7 +274,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\nHELPER_SRC=\"${SRCROOT}/tools/ephemeris-mcp\"\nDST_DIR=\"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/Contents/Helpers\"\nDST=\"${DST_DIR}/ephemeris-mcp\"\n\nif [ ! -f \"${HELPER_SRC}/Package.swift\" ]; then\n  echo \"warning: ephemeris-mcp package not found at ${HELPER_SRC}; skipping\"\n  exit 0\nfi\n\necho \"Building ephemeris-mcp helper (release)…\"\ncd \"${HELPER_SRC}\"\nswift build -c release 2>&1 | tail -10\n\nBUILT=\"${HELPER_SRC}/.build/release/ephemeris-mcp\"\nif [ ! -f \"${BUILT}\" ]; then\n  echo \"error: helper binary not found at ${BUILT} after build\"\n  exit 1\nfi\n\nmkdir -p \"${DST_DIR}\"\ncp \"${BUILT}\" \"${DST}\"\nchmod +x \"${DST}\"\n\nif [ -n \"${EXPANDED_CODE_SIGN_IDENTITY}\" ]; then\n  echo \"Code-signing helper with ${EXPANDED_CODE_SIGN_IDENTITY_NAME:-${EXPANDED_CODE_SIGN_IDENTITY}}\"\n  codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" --options runtime --timestamp=none \"${DST}\"\nfi\n\necho \"Helper bundled at ${DST}\"\n";
+			shellScript = "set -e\nHELPER_SRC=\"${SRCROOT}/tools/ephemeris-mcp\"\nDST_DIR=\"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/Contents/Helpers\"\nDST=\"${DST_DIR}/ephemeris-mcp\"\n\nif [ ! -f \"${HELPER_SRC}/Package.swift\" ]; then\n  echo \"warning: ephemeris-mcp package not found at ${HELPER_SRC}; skipping\"\n  exit 0\nfi\n\ncd \"${HELPER_SRC}\"\nif [ \"${CONFIGURATION}\" = \"Release\" ]; then\n  # Release ships inside a universal app — build the helper universal too.\n  echo \"Building ephemeris-mcp helper (release, universal)...\"\n  swift build -c release --arch arm64 --arch x86_64 2>&1 | tail -10\n  BUILT=\"${HELPER_SRC}/.build/apple/Products/Release/ephemeris-mcp\"\nelse\n  echo \"Building ephemeris-mcp helper (release, host arch)...\"\n  swift build -c release 2>&1 | tail -10\n  BUILT=\"${HELPER_SRC}/.build/release/ephemeris-mcp\"\nfi\n\nif [ ! -f \"${BUILT}\" ]; then\n  echo \"error: helper binary not found at ${BUILT} after build\"\n  exit 1\nfi\n\nmkdir -p \"${DST_DIR}\"\ncp \"${BUILT}\" \"${DST}\"\nchmod +x \"${DST}\"\n\nif [ -n \"${EXPANDED_CODE_SIGN_IDENTITY}\" ]; then\n  echo \"Code-signing helper with ${EXPANDED_CODE_SIGN_IDENTITY_NAME:-${EXPANDED_CODE_SIGN_IDENTITY}}\"\n  if [ \"${EXPANDED_CODE_SIGN_IDENTITY}\" = \"-\" ]; then\n    # Ad-hoc (debug) signatures cannot carry a secure timestamp.\n    codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" --options runtime --timestamp=none \"${DST}\"\n  else\n    # Notarization rejects nested code without a secure timestamp.\n    codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" --options runtime --timestamp \"${DST}\"\n  fi\nfi\n\necho \"Helper bundled at ${DST}\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -450,7 +450,7 @@
 				INFOPLIST_FILE = Ephemeris/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.macobservatory.Ephemeris;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -484,7 +484,7 @@
 				INFOPLIST_FILE = Ephemeris/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.macobservatory.Ephemeris;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -503,13 +503,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_ENTITLEMENTS = Ephemeris/Ephemeris.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 5B5LD8F9AA;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.macobservatory.EphemerisTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -527,13 +526,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_ENTITLEMENTS = Ephemeris/Ephemeris.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 5B5LD8F9AA;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.macobservatory.EphemerisTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -550,13 +548,12 @@
 		5F9BE2D52F9C5F1E00DD97D8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = Ephemeris/Ephemeris.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 5B5LD8F9AA;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.macobservatory.EphemerisUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -573,13 +570,12 @@
 		5F9BE2D62F9C5F1E00DD97D8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = Ephemeris/Ephemeris.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 5B5LD8F9AA;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.macobservatory.EphemerisUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;

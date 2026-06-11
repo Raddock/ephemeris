@@ -21,14 +21,18 @@ struct TrendChartView: View {
         nights.map { $0.medianRMSArcsec }
     }
 
-    /// One point per calendar night. Multi-log nights (PHD2 splits a single
+    /// One point per *observing* night. Multi-log nights (PHD2 splits a single
     /// observing run when it's restarted mid-session) collapse into a single
     /// time-weighted RMS so the trend curve doesn't pivot around two
     /// data points sharing the same x value — that produced a sharp
     /// area-fill triangle when monotone interpolation hit a vertical segment.
+    ///
+    /// Bucketing is noon-to-noon, not civil midnight: a restart at 00:10 belongs
+    /// to the previous evening's run, and yesterday's 04:00 pre-dawn session is a
+    /// different night from tonight's 22:00 session even though they share a date.
     private var chartPoints: [NightSummary] {
         let buckets = Dictionary(grouping: nights) {
-            Calendar.current.startOfDay(for: $0.nightDate)
+            Self.observingNightStart(for: $0.nightDate)
         }
         let merged: [NightSummary] = buckets.map { day, group in
             let totalMin = group.reduce(0.0) { $0 + $1.totalIntegrationMinutes }
@@ -57,6 +61,12 @@ struct TrendChartView: View {
             )
         }
         return merged.sorted { $0.nightDate < $1.nightDate }
+    }
+
+    /// Calendar day (midnight) of the evening this observing night began —
+    /// timestamps before local noon roll back to the previous day.
+    private static func observingNightStart(for date: Date) -> Date {
+        Calendar.current.startOfDay(for: date.addingTimeInterval(-12 * 3600))
     }
 
     struct AnnotationMarker: Sendable, Identifiable {

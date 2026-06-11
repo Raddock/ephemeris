@@ -99,7 +99,18 @@ struct MCPServer: Sendable {
                                          message: "Unknown tool: \(name)",
                                          data: nil))
         }
-        let resultValue = tool.invoke(arguments, store)
+        let resultValue: JSONValue
+        do {
+            resultValue = try tool.invoke(arguments, store)
+        } catch let rpcError as JSONRPCError {
+            // Validation failures (e.g. add_annotation with an unknown category)
+            // reject the call at the JSON-RPC level rather than returning a result.
+            return .failure(rpcError)
+        } catch {
+            return .failure(JSONRPCError(code: -32603,
+                                         message: "Internal error: \(error)",
+                                         data: nil))
+        }
         // MCP tool results are wrapped in { content: [...], isError: bool }
         let contentBlock: JSONValue = .object([
             "type": JSONValue.string("text"),

@@ -2,12 +2,14 @@ import Foundation
 
 /// Tool registry for the MCP server.
 /// Each Tool declares its MCP schema and a function that, given args + the store,
-/// returns a JSON-serializable result.
+/// returns a JSON-serializable result. Throwing a `JSONRPCError` rejects the call
+/// at the protocol level (used for validation failures such as an unknown
+/// annotation category) instead of silently storing or degrading.
 struct Tool: Sendable {
     let name: String
     let description: String
     let inputSchema: JSONValue
-    let invoke: @Sendable ([String: JSONValue], LibraryStore) -> JSONValue
+    let invoke: @Sendable ([String: JSONValue], LibraryStore) throws -> JSONValue
 }
 
 enum Tools {
@@ -52,29 +54,20 @@ enum Tools {
         ]),
         invoke: { _, store in
             let rigs = store.listRigs()
-            return .array(rigs.map { r in
-                let scale = (r.imagingFocalLengthMm > 0 && r.imagingPixelSizeMicrons > 0)
-                    ? 206.265 * r.imagingPixelSizeMicrons * Double(r.imagingBinning) / r.imagingFocalLengthMm
-                    : 0
-                let imagingConfigured = r.imagingFocalLengthMm > 0 && r.imagingPixelSizeMicrons > 0
-                return .object([
-                    "id": .string(r.uuid),
-                    "name": .string(r.currentName),
-                    "mount_class": .string(r.mountClass),
-                    "mount_class_display": .string(mountClassDisplay(r.mountClass)),
-                    "has_high_precision_encoders": .bool(r.hasHighPrecisionEncoders),
-                    "imaging_focal_length_mm": .number(r.imagingFocalLengthMm),
-                    "imaging_pixel_size_microns": .number(r.imagingPixelSizeMicrons),
-                    "imaging_binning": .integer(r.imagingBinning),
-                    "imaging_pixel_scale_arcsec_per_px": .number(scale),
-                    "imaging_configured": .bool(imagingConfigured),
-                    "mount_model": r.mountModel.map { .string($0) } ?? .null,
-                    "notes": r.notes.map { .string($0) } ?? .null,
-                    "description": .string(rigDescription(r)),
-                ])
-            })
+            return .array(rigs.map { rigObject($0) })
         }
     )
+
+    /// Imaging pixel scale in arcsec/px, matching the app's `ImagingScale.compute`:
+    /// 206.265 × pixel_size_μm × binning / (focal_length_mm × reducer_factor).
+    /// A reducer factor < 1 shortens effective focal length; nil is treated as 1.0.
+    /// Returns nil when the imaging train isn't configured.
+    private static func imagingScale(for r: LibraryStore.RigRow) -> Double? {
+        guard r.imagingFocalLengthMm > 0, r.imagingPixelSizeMicrons > 0, r.imagingBinning > 0 else { return nil }
+        let effectiveFL = r.imagingFocalLengthMm * (r.reducerFactor ?? 1.0)
+        guard effectiveFL > 0 else { return nil }
+        return 206.265 * r.imagingPixelSizeMicrons * Double(r.imagingBinning) / effectiveFL
+    }
 
     private static func mountClassDisplay(_ raw: String) -> String {
         switch raw {
@@ -95,12 +88,16 @@ enum Tools {
         if let model = r.mountModel, !model.isEmpty {
             parts.append("mount: \(model)")
         }
-        if r.imagingFocalLengthMm > 0 && r.imagingPixelSizeMicrons > 0 {
-            let scale = 206.265 * r.imagingPixelSizeMicrons * Double(r.imagingBinning) / r.imagingFocalLengthMm
-            parts.append(String(
-                format: "imaging: %.0f mm focal × %.2f µm pixel × bin %d → %.2f″/px",
-                r.imagingFocalLengthMm, r.imagingPixelSizeMicrons, r.imagingBinning, scale
-            ))
+        if let scale = imagingScale(for: r) {
+            var line = String(
+                format: "imaging: %.0f mm focal × %.2f µm pixel × bin %d",
+                r.imagingFocalLengthMm, r.imagingPixelSizeMicrons, r.imagingBinning
+            )
+            if let reducer = r.reducerFactor {
+                line += String(format: " × %.2f reducer", reducer)
+            }
+            line += String(format: " → %.2f″/px", scale)
+            parts.append(line)
         } else {
             parts.append("imaging train NOT configured (no focal length / pixel size on profile — recommendations that depend on imaging scale will be wrong)")
         }
@@ -139,9 +136,7 @@ enum Tools {
     static func observationJSON(_ o: LibraryStore.ObservationRow) -> JSONValue { observationObject(o) }
 
     private static func rigObject(_ r: LibraryStore.RigRow) -> JSONValue {
-        let scale = (r.imagingFocalLengthMm > 0 && r.imagingPixelSizeMicrons > 0)
-            ? 206.265 * r.imagingPixelSizeMicrons * Double(r.imagingBinning) / r.imagingFocalLengthMm
-            : 0
+        let scale = imagingScale(for: r)
         return .object([
             "id": .string(r.uuid),
             "name": .string(r.currentName),
@@ -151,8 +146,9 @@ enum Tools {
             "imaging_focal_length_mm": .number(r.imagingFocalLengthMm),
             "imaging_pixel_size_microns": .number(r.imagingPixelSizeMicrons),
             "imaging_binning": .integer(r.imagingBinning),
-            "imaging_pixel_scale_arcsec_per_px": .number(scale),
-            "imaging_configured": .bool(r.imagingFocalLengthMm > 0 && r.imagingPixelSizeMicrons > 0),
+            "reducer_factor": r.reducerFactor.map { .number($0) } ?? .null,
+            "imaging_pixel_scale_arcsec_per_px": .number(scale ?? 0),
+            "imaging_configured": .bool(scale != nil),
             "mount_model": r.mountModel.map { .string($0) } ?? .null,
             "notes": r.notes.map { .string($0) } ?? .null,
             "description": .string(rigDescription(r)),
@@ -317,7 +313,8 @@ enum Tools {
     private static func observationObject(_ o: LibraryStore.ObservationRow) -> JSONValue {
         .object([
             "id": .string(o.uuid),
-            "night_id": .string(o.nightUUID),
+            // JSON null (not "") for unlinked observations — matches the embedded server.
+            "night_id": o.nightUUID.map { .string($0) } ?? .null,
             "title": .string(o.title),
             "summary": .string(o.summary),
             "suggested_response": .string(o.suggestedResponse),
@@ -532,21 +529,57 @@ enum Tools {
         ]),
         invoke: { args, store in
             guard let rigID = args["rig_id"]?.stringValue, !rigID.isEmpty else {
-                return .object(["error": .string("missing rig_id")])
+                throw JSONRPCError(code: -32602, message: "missing rig_id", data: nil)
             }
             let label = args["label"]?.stringValue ?? ""
             guard !label.isEmpty else {
-                return .object(["error": .string("missing label")])
+                throw JSONRPCError(code: -32602, message: "missing label", data: nil)
             }
             let nightID = args["night_id"]?.stringValue
             let detail = args["detail"]?.stringValue ?? ""
             let isMutating = args["is_rig_mutating"]?.boolValue ?? false
-            let categories: [String]
-            if case .array(let arr) = args["categories"] ?? .null {
-                categories = arr.compactMap { $0.stringValue }
-            } else {
-                categories = []
+
+            // Validate categories against the app's AnnotationCategory raw values —
+            // an unknown string must reject the call, not be silently stored where
+            // the app would drop it on decode.
+            let allowedCategories = ["equipment", "calibration", "environment", "software", "freeText"]
+            var categories: [String] = []
+            switch args["categories"] {
+            case nil, .some(.null):
+                break  // omitted — no categories
+            case .some(.array(let arr)):
+                for entry in arr {
+                    guard let s = entry.stringValue, allowedCategories.contains(s) else {
+                        let got = entry.stringValue ?? JSONFormatter.toPrettyString(entry)
+                        throw JSONRPCError(
+                            code: -32602,
+                            message: "unknown annotation category \"\(got)\"; allowed values: \(allowedCategories.joined(separator: ", "))",
+                            data: nil
+                        )
+                    }
+                    categories.append(s)
+                }
+            case .some:
+                throw JSONRPCError(
+                    code: -32602,
+                    message: "categories must be an array of strings; allowed values: \(allowedCategories.joined(separator: ", "))",
+                    data: nil
+                )
             }
+
+            // The rig must exist — an annotation against a phantom rig UUID would be
+            // invisible in the app forever.
+            guard store.rig(uuid: rigID) != nil else {
+                throw JSONRPCError(code: -32602, message: "rig not found: \(rigID)", data: nil)
+            }
+            // A supplied night_id must resolve; only an *omitted* night_id means
+            // "rig-level annotation". Don't silently degrade.
+            if let nightID {
+                guard store.night(uuid: nightID) != nil else {
+                    throw JSONRPCError(code: -32602, message: "night not found: \(nightID)", data: nil)
+                }
+            }
+
             let eventDate: Date
             if let s = args["event_date"]?.stringValue, let d = ISO8601DateFormatter().date(from: s) {
                 eventDate = d
@@ -562,7 +595,7 @@ enum Tools {
                 categories: categories,
                 isRigMutating: isMutating
             ) else {
-                return .object(["error": .string("insert failed")])
+                throw JSONRPCError(code: -32603, message: "insert failed", data: nil)
             }
             return .object([
                 "id": .string(newID),
@@ -637,6 +670,7 @@ enum Tools {
                 "observation_count": .integer(observations.count),
                 "oldest_night": (dates.min()).map { .string(ISO8601DateFormatter().string(from: $0)) } ?? .null,
                 "newest_night": (dates.max()).map { .string(ISO8601DateFormatter().string(from: $0)) } ?? .null,
+                "rig_names": .array(rigs.map { .string($0.currentName) }),
                 "rigs": .array(rigs.map { r in
                     .object([
                         "name": .string(r.currentName),

@@ -9,6 +9,10 @@ import AppKit
 /// Opened via `Window → Library` (⇧⌘L). Per design doc §5.2 / §7.1 the window is never
 /// auto-opened; a TipKit popover on the menu item fires when the third NightRecord lands.
 struct LibraryWindow: View {
+    /// Why the SwiftData store failed to open, when it did. Drives the recovery
+    /// view instead of a silently disabled window.
+    var libraryOpenError: String? = nil
+
     @Environment(RigProfileStore.self) private var rigStore
     @Environment(\.ephemerisLibrary) private var library
     @Environment(\.importCoordinator) private var importCoordinator
@@ -46,6 +50,16 @@ struct LibraryWindow: View {
                 LibraryDetailView(profile: profile, range: range, window: dateWindow)
                     .modelContainer(library.container)
                     .id(profile.id)
+            } else if library == nil {
+                ContentUnavailableView {
+                    Label("Library couldn't be opened", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text("""
+                    \(libraryOpenError ?? "The library database failed to open.")
+
+                    Quit Ephemeris, move the file at \(EphemerisLibrary.defaultStoreURL().path) aside, and relaunch — a fresh library is created automatically. Your rig profiles are stored separately and are unaffected; re-import your logs to rebuild the corpus.
+                    """)
+                }
             } else {
                 ContentUnavailableView(
                     "Select a rig",
@@ -271,18 +285,43 @@ struct LibraryDetailView: View {
             sort: \AnnotationEntity.eventDate,
             order: .reverse
         )
-        _gaResults = Query(
-            filter: #Predicate<GAResultEntity> { result in
+        // The hygiene strip only needs GA recency (most recent run, most recent
+        // polar-align measurement) — cap the fetch instead of materializing every
+        // GAResultEntity (each carries a rawText blob) for the rig's whole history.
+        var gaDescriptor = FetchDescriptor<GAResultEntity>(
+            predicate: #Predicate<GAResultEntity> { result in
                 result.rigProfileId == rigID
             },
-            sort: \GAResultEntity.runAt,
-            order: .reverse
+            sortBy: [SortDescriptor(\.runAt, order: .reverse)]
+        )
+        gaDescriptor.fetchLimit = 25
+        _gaResults = Query(gaDescriptor)
+    }
+
+    /// Cache key for the cross-night engine run. Re-running the engine on every body
+    /// evaluation scaled with corpus size and was paid on interactions as trivial as
+    /// opening a sheet; the engine now runs only when its inputs actually change.
+    private struct AnalysisKey: Hashable {
+        let rigId: UUID
+        let nightCount: Int
+        let latestAnalysis: Date?
+        let annotationCount: Int
+        let latestAnnotation: Date?
+    }
+
+    private var analysisKey: AnalysisKey {
+        AnalysisKey(
+            rigId: profile.id,
+            nightCount: nightRecords.count,
+            latestAnalysis: nightRecords.map { $0.lastAnalyzedAt }.max(),
+            annotationCount: annotationEntities.count,
+            latestAnnotation: annotationEntities.map { $0.modifiedAt }.max()
         )
     }
 
-    /// Cross-night observations from the recommender. Computed once per render off the
-    /// SwiftData snapshots, which Phase 7 considers acceptable at typical corpus sizes.
-    private var crossNightObservations: [RecommenderObservation] {
+    @State private var crossNightObservations: [RecommenderObservation] = []
+
+    private func computeCrossNightObservations() -> [RecommenderObservation] {
         let summaries: [NightSummary] = nightRecords
             .reversed()  // chronological
             .map { NightSummary(entity: $0) }
@@ -312,16 +351,10 @@ struct LibraryDetailView: View {
     private func prepareForumExport() {
         let summaries = nightRecords.reversed().map { NightSummary(entity: $0) }
         let annotations = annotationEntities.compactMap { Annotation(entity: $0) }
-        let context = CrossNightContext(
-            profile: profile,
-            nights: summaries,
-            annotations: annotations
-        )
-        let observations = CrossNightEngine.default.analyze(context: context)
         forumExportInputs = ForumPostExporter.Inputs(
             profile: profile,
             summaries: summaries,
-            observations: observations,
+            observations: crossNightObservations,
             annotations: annotations,
             format: .markdown,
             userQuestion: nil
@@ -360,6 +393,9 @@ struct LibraryDetailView: View {
                 }
             }
             .padding(20)
+        }
+        .task(id: analysisKey) {
+            crossNightObservations = computeCrossNightObservations()
         }
     }
 
@@ -447,11 +483,12 @@ struct LibraryDetailView: View {
     @ViewBuilder
     private var metricsRow: some View {
         let totalMin = nightRecords.reduce(0.0) { $0 + $1.totalIntegrationMinutes }
+        let distribution = rigRMSDistribution
         let medianRMS = medianRMSValue()
         let medianVerdict = NightVerdictCalculator.verdict(
             rmsArcsec: medianRMS,
             imagingPixelScale: profile.imagingPixelScale,
-            rigDistribution: rigRMSDistribution
+            rigDistribution: distribution
         )
 
         HStack(spacing: 12) {
@@ -593,9 +630,11 @@ struct LibraryDetailView: View {
             // Every night in the selected range — not a capped "recent" slice;
             // the trend chart above shows them all, so the table must too.
             // LazyVStack keeps a long range (the All filter) cheap to scroll.
+            // The distribution is built once here, not once per row.
+            let distribution = rigRMSDistribution
             LazyVStack(spacing: 0) {
                 ForEach(Array(nightRecords.enumerated()), id: \.element.id) { idx, record in
-                    nightRow(record)
+                    nightRow(record, distribution: distribution)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(idx.isMultiple(of: 2) ? Color.clear : Color.primary.opacity(0.03))
@@ -629,16 +668,16 @@ struct LibraryDetailView: View {
     }
 
     @ViewBuilder
-    private func nightRow(_ record: NightRecordEntity) -> some View {
+    private func nightRow(_ record: NightRecordEntity, distribution: [Double]) -> some View {
         let verdict = NightVerdictCalculator.verdict(
             rmsArcsec: record.medianRMSArcsec,
             imagingPixelScale: profile.imagingPixelScale,
-            rigDistribution: rigRMSDistribution
+            rigDistribution: distribution
         )
         let rmsTint = NightVerdictCalculator.rmsColor(
             rmsArcsec: record.medianRMSArcsec,
             imagingPixelScale: profile.imagingPixelScale,
-            rigDistribution: rigRMSDistribution
+            rigDistribution: distribution
         )
         HStack(spacing: 10) {
             Circle()

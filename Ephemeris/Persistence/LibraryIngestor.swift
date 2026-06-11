@@ -22,10 +22,14 @@ actor LibraryIngestor {
     /// - Idempotent on `sourceContentHash` (SHA-256 of the raw bytes).
     /// - Always runs the recommender; observations are upserted on every ingest so
     ///   threshold changes propagate without re-importing.
+    /// - `recomputeClusters: false` defers the per-rig target-cluster rebuild; bulk
+    ///   import passes false per file and rebuilds once per rig at the end —
+    ///   per-file rebuilds are O(N²) across an N-night import.
     func ingest(log: GuideLog,
                 sourceBytes: Data,
                 sourceFilePath: String,
-                rigProfile: RigProfile) throws -> IngestResult {
+                rigProfile: RigProfile,
+                recomputeClusters: Bool = true) throws -> IngestResult {
         let contentHash = Self.sha256(of: sourceBytes)
         let nightDate = log.guideSessions.compactMap { $0.startedAt }.min() ?? Date()
 
@@ -202,8 +206,10 @@ actor LibraryIngestor {
         try modelContext.save()
 
         // Phase 9: re-cluster this rig's nights by pointing. Greedy + idempotent.
-        try recomputeTargetClusters(for: rigEntity)
-        try modelContext.save()
+        if recomputeClusters {
+            try recomputeTargetClusters(for: rigEntity)
+            try modelContext.save()
+        }
 
         // Phase 3: donate to CoreSpotlight so Spotlight surfaces nights & annotations.
         // Best-effort; build a value-type digest first so we don't capture the
@@ -299,6 +305,19 @@ actor LibraryIngestor {
             entity.nightRecordIdsData = (try? JSONEncoder().encode(cluster.nightIDs.map { $0.uuidString })) ?? Data()
             modelContext.insert(entity)
         }
+    }
+
+    /// Rebuild target clusters for the given rigs in one pass. The bulk importer
+    /// calls this once after the batch instead of once per ingested file.
+    func recomputeClusters(rigIds: Set<UUID>) throws {
+        for rigId in rigIds {
+            let fetch = FetchDescriptor<RigProfileEntity>(
+                predicate: #Predicate { $0.id == rigId }
+            )
+            guard let rigEntity = try modelContext.fetch(fetch).first else { continue }
+            try recomputeTargetClusters(for: rigEntity)
+        }
+        try modelContext.save()
     }
 
     /// Look up a `NightRecordEntity` by content hash, or create a new one.
