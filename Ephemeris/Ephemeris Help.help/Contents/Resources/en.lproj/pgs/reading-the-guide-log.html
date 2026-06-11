@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Reading your guide log">
+<meta name="description" content="What PHD2 writes to its guide log and how Ephemeris's chart maps to it.">
+<meta name="keywords" content="guide log, PHD2, sections, INFO, RMS, drift, settling, corrections, excluded frames">
+<meta name="robots" content="anchors">
+<title>Reading your guide log</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="reading-the-guide-log"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Reading your guide log</p>
+<h1>Reading your guide log</h1>
+<p class="lede">PHD2 records everything it does to a plain-text log. Ephemeris is built entirely on that file &mdash; here is what's in it and how the chart maps to it.</p>
+
+<h2>What PHD2 writes</h2>
+<p>Each time PHD2 runs it creates a file named like <code>PHD2_GuideLog_2026-06-09_213045.txt</code> (on the Mac, in <code>~/Documents/PHD2/</code>). Inside is an ordered stream of independent <strong>sections</strong>:</p>
+<ul>
+    <li><strong>Guiding sections</strong> &mdash; begin with <code>Guiding Begins at &hellip;</code>, then a header (equipment, guide algorithms, pixel scale, target RA / Dec), then one table row per guide exposure until <code>Guiding Ends</code>. Every section becomes a session in Ephemeris's sidebar.</li>
+    <li><strong>Calibration sections</strong> &mdash; begin with <code>Calibration Begins at &hellip;</code> and record each calibration step. These feed the <a href="calibration.html">Calibration view</a>.</li>
+    <li><strong>INFO events</strong> &mdash; lines interleaved with the frame table: dithers, settling state changes, guiding-parameter changes, lock-position moves, star-lost messages. Ephemeris shows these as event markers on the chart and in the inspector's Events card.</li>
+</ul>
+
+<h2>The frame table</h2>
+<p>Each guide exposure is one row. The columns Ephemeris uses most:</p>
+<table class="spec">
+    <tr><td><code>Time</code></td><td>Seconds since the session started &mdash; the chart's X axis.</td></tr>
+    <tr><td><code>dx, dy</code></td><td>Star offset from the lock position, in camera-frame pixels. Shown when the axis mode is <strong>dx / dy</strong>.</td></tr>
+    <tr><td><code>RARawDistance, DECRawDistance</code></td><td>The same offset decomposed onto the sky axes &mdash; the <span class="tag-ra">RA</span> and <span class="tag-dec">Dec</span> lines on the chart. "Raw" means before the guide algorithm filters it.</td></tr>
+    <tr><td><code>RAGuideDistance, DECGuideDistance</code></td><td>The offset <em>after</em> the guide algorithm (hysteresis, min-move, etc.) &mdash; what PHD2 actually computed a pulse from.</td></tr>
+    <tr><td><code>RADuration / RADirection</code><br><code>DECDuration / DECDirection</code></td><td>The correction pulse in milliseconds, plus a direction letter. Ephemeris stores these <strong>signed</strong> &mdash; East and North positive, West and South negative &mdash; so the Corrections overlay draws bars above or below zero matching pulse direction.</td></tr>
+    <tr><td><code>StarMass, SNR</code></td><td>Brightness and signal-to-noise of the guide star &mdash; the <span class="tag-mass">Star mass</span> and <span class="tag-snr">SNR</span> diagnostic sub-charts.</td></tr>
+    <tr><td><code>ErrorCode</code></td><td>Non-zero (other than "saturated") means the frame failed &mdash; star lost, low SNR &mdash; and is <strong>excluded</strong> from statistics automatically.</td></tr>
+</table>
+
+<h2>Camera axes vs sky axes</h2>
+<p>The guide camera measures <code>dx / dy</code> in its own frame; PHD2's calibration determines the rotation that maps those onto RA and Dec:</p>
+<svg viewBox="0 0 360 150" width="360" height="150" role="img" aria-label="dx/dy camera axes decomposed onto rotated RA/Dec sky axes">
+    <line x1="60" y1="115" x2="160" y2="115" stroke="var(--muted-2)" stroke-width="1.5"/>
+    <line x1="60" y1="115" x2="60" y2="25" stroke="var(--muted-2)" stroke-width="1.5"/>
+    <text x="166" y="119" fill="var(--muted)" font-size="11">dx</text>
+    <text x="54" y="18" fill="var(--muted)" font-size="11">dy</text>
+    <line x1="220" y1="115" x2="312" y2="78" stroke="var(--ra)" stroke-width="2"/>
+    <line x1="220" y1="115" x2="255" y2="28" stroke="var(--dec)" stroke-width="2"/>
+    <text x="318" y="80" fill="var(--ra)" font-size="11" font-weight="600">RA</text>
+    <text x="258" y="22" fill="var(--dec)" font-size="11" font-weight="600">Dec</text>
+    <path d="M 268 96 A 50 50 0 0 1 262 110" fill="none" stroke="var(--muted-2)" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="276" y="108" fill="var(--muted)" font-size="10">cal angle</text>
+</svg>
+<p>That is why the chart offers both axis modes: <strong>RA / Dec</strong> for guiding quality, <strong>dx / dy</strong> for mechanical issues that live in the camera frame. See <a href="reading-the-chart.html">Reading the guide chart</a>.</p>
+
+<h2>RMS, drift, settling, exclusions</h2>
+<ul>
+    <li><strong>RMS RA / RMS Dec</strong> &mdash; the standard deviation of each axis's raw distance across included frames; <strong>Total RMS</strong> is the geometric sum <code>&radic;(RA&sup2; + Dec&sup2;)</code>. Details in <a href="statistics.html">Statistics &amp; drift</a>.</li>
+    <li><strong>Drift</strong> &mdash; the slow linear trend under the noise, in ″/min. Dec drift is the classic <a href="polar-alignment-fundamentals.html">polar-alignment</a> signature.</li>
+    <li><strong>Settling</strong> &mdash; after a dither, PHD2 waits for the star to stay within a tolerance before imaging resumes. Settling periods are drawn as translucent bands on the chart &mdash; orange when settling failed.</li>
+    <li><strong>Excluded frames</strong> &mdash; rows with an error code are skipped in every statistic, as are ranges you exclude by hand (<a href="zoom-and-exclusions.html">Zoom &amp; exclusions</a>). The frame count <code>X / Y</code> means X included of Y total.</li>
+</ul>
+
+<div class="tip"><strong>Tip:</strong> The guide log is documented authoritatively by the PHD2 project itself &mdash; see the <a href="https://openphdguiding.org/manual/">PHD2 manual</a> for what each setting that appears in the section header means.</div>
+
+<div class="warn"><strong>Remember:</strong> the log records the <em>guide</em> camera only. Problems that never reach the guide sensor &mdash; flexure, mirror flop, focus drift &mdash; leave no trace here. See <a href="what-the-guide-log-cant-tell-you.html">What the guide log can't tell you</a>.</div>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>Everything described above is the document window: the sidebar lists each guiding and calibration section, the chart plots the frame table, the <span class="tag-mass">Star mass</span> / <span class="tag-snr">SNR</span> sub-charts plot the diagnostics columns, and the inspector's <strong>Events</strong> card lists the INFO lines. The statistics cards and the Library's per-night numbers are all computed from these same rows.</p>
+</div>
+</body>
+</html>

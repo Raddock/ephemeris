@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Reading observations">
+<meta name="description" content="The observation card anatomy, severity tiers, source-authority badges, and how to triage and silence findings.">
+<meta name="keywords" content="observations, severity, evidence, source authority, heuristic, PHD2 manual, triage, dismiss">
+<meta name="robots" content="anchors">
+<title>Reading observations</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="observations"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Reading observations</p>
+<h1>Reading observations</h1>
+<p class="lede">Observations are Ephemeris's findings — single-night ones appear in the document window, cross-night ones in the Library. Every card states its evidence and where its advice comes from.</p>
+
+<h2>Anatomy of a card</h2>
+<p>Click anywhere on a card to expand it. From top to bottom:</p>
+<ul>
+    <li><strong>Severity bar</strong> — the colored bar on the card's leading edge (and the matching dot beside the severity label).</li>
+    <li><strong>Title</strong> — a specific statement, with the measured number in it where possible.</li>
+    <li><strong>Severity · source badge</strong> — the metadata row beneath the title.</li>
+    <li><strong>Summary</strong> — what was seen and why it matters (clamped to three lines until expanded).</li>
+    <li><strong>Evidence</strong> — the measured values the finding rests on, with thresholds where relevant.</li>
+    <li><strong>Possible contributors</strong> — candidate causes, when the data can't single one out.</li>
+    <li><strong>Suggested response</strong> — the concrete next step, usually naming the PHD2 tool to reach for.</li>
+    <li><strong>PHD2 tools referenced / Learn more</strong> — links to the PHD2 manual and to related Ephemeris help topics.</li>
+</ul>
+
+<h2>Severity tiers</h2>
+<table class="spec">
+    <tr><td><strong>Alert</strong> (red)</td><td>Strong evidence of a genuine problem. Rare by design.</td></tr>
+    <tr><td><strong>Pattern</strong> (orange)</td><td>A named, observed pattern that needs your judgment.</td></tr>
+    <tr><td><strong>Equipment</strong> (yellow)</td><td>Optical-train or mechanical category.</td></tr>
+    <tr><td><strong>Hygiene</strong> (blue)</td><td>PHD2 tool freshness or configuration — calibration age, GA staleness.</td></tr>
+    <tr><td><strong>Suggestion</strong> (teal)</td><td>Imaging-side decisions.</td></tr>
+    <tr><td><strong>Coaching</strong> (gray)</td><td>Process improvements within normal operation.</td></tr>
+</table>
+
+<h2>Source-authority badges</h2>
+<p>Every observation declares where its advice comes from, so you can weigh it accordingly:</p>
+<table class="spec">
+    <tr><td><strong>PHD2 docs</strong></td><td>Cited directly from PHD2's manual or Best Practices document.</td></tr>
+    <tr><td><strong>PHD2 measured</strong></td><td>PHD2 itself measured this — Guiding Assistant or Calibration Assistant output, quoted verbatim. Supersedes anything Ephemeris computes in parallel.</td></tr>
+    <tr><td><strong>PHD2 alert</strong></td><td>Behavior PHD2 documents as an alert — calibration sanity checks, max-duration limits, star-lost codes.</td></tr>
+    <tr><td><strong>community consensus</strong></td><td>Not in the PHD2 docs but widely accepted — harmonic-mount tuning, OAG-vs-guide-scope wisdom.</td></tr>
+    <tr><td><strong>Ephemeris heuristic</strong></td><td>Computed from your corpus by Ephemeris itself — rig-relative baselines, threshold tiers.</td></tr>
+</table>
+<div class="note"><strong>Note:</strong> Heuristic and community-consensus observations deliberately use softened language ("worth checking" rather than "is wrong"). That's intentional — only PHD2's own measurements and documentation get the assertive register.</div>
+
+<h2>Triage order</h2>
+<ol>
+    <li>Start with <strong>Alert</strong>-severity cards — they carry the strongest evidence.</li>
+    <li>Prefer <strong>PHD2 measured</strong> values over anything computed: if the Guiding Assistant has spoken, its min-move and backlash numbers win.</li>
+    <li>Hygiene items (stale calibration, GA never run) are cheap to clear and often resolve downstream patterns — handle them before chasing equipment theories.</li>
+</ol>
+
+<h2>Making an observation go away</h2>
+<p>Observations aren't to-dos you check off — they recompute from the data, and clear when the underlying condition clears. Two ways to silence one deliberately:</p>
+<ul>
+    <li><strong>Annotate the night.</strong> If a step-change observation fired because you <em>did</em> change something (new OAG, camera rotation, recalibration), add an annotation with the matching category. The engine attributes the change to your note and stops flagging it within a few nights of the event. See <a href="annotations-and-sub-quality.html">Annotations and rating your nights</a>.</li>
+    <li><strong>Fix the input.</strong> Several findings hinge on the rig profile — a wrong guide focal length or missing imaging scale can produce observations that vanish once <a href="rig-profiles.html">the profile</a> is corrected.</li>
+</ul>
+
+<hr>
+<p><strong>Related:</strong> <a href="annotations-and-sub-quality.html">Annotations and rating your nights</a> · <a href="log-library.html">The Log Library</a> · <a href="pre-flight-checklist.html">Setting up for the night</a></p>
+</div>
+</body>
+</html>

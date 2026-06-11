@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Optical-train health">
+<meta name="description" content="Guide-camera focus, dew, OAG vs guide scope, and SCT mirror flop — keeping the optical train honest.">
+<meta name="keywords" content="optical train, guide camera focus, HFD, dew, OAG, off-axis guider, guide scope, mirror flop, SCT, star mass, SNR">
+<meta name="robots" content="anchors">
+<title>Optical-train health</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="optical-train-health"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Optical-train health</p>
+<h1>Optical-train health</h1>
+<p class="lede">Guiding quality starts before the first correction: a well-focused guide star, dry optics, and a rigid path from guide sensor to imaging sensor.</p>
+
+<h2>Focus on the guide camera</h2>
+<p>PHD2 finds the star by its centroid, and centroid precision depends on the star's profile. A badly focused guide star &mdash; large HFD, low peak brightness &mdash; gives a mushy centroid that adds measurement noise to every frame, which then gets guided on. Focus the guide camera until the star's HFD is small and stable; near focus is what matters, perfection isn't. Avoid the opposite extreme too: a <em>saturated</em> star clips its profile and degrades the centroid just as surely. PHD2's star profile tool (see the <a href="https://openphdguiding.org/manual/">PHD2 manual</a>) shows both problems at a glance.</p>
+
+<h2>Dew</h2>
+<p>Dew forming on the guide optics shows up in the log as a slow, hours-long decline in <span class="tag-mass">star mass</span> and <span class="tag-snr">SNR</span> &mdash; the star dims and bloats until PHD2 starts losing it. Dew on the <em>imaging</em> optics, by contrast, never appears in the guide log at all (see <a href="what-the-guide-log-cant-tell-you.html">What the guide log can't tell you</a>). Dew heaters on both ends of the train are cheaper than a lost night.</p>
+
+<h2>OAG vs guide scope</h2>
+<table class="spec">
+    <tr><td><strong>Off-axis guider</strong></td><td>Guides through the imaging optics. Differential flexure is eliminated by construction, and mirror movement is <em>seen</em> and corrected. Costs: smaller star selection at the field edge, fainter stars at long focal ratios, fussier focus, and back-focus to budget.</td></tr>
+    <tr><td><strong>Guide scope</strong></td><td>Easy bright stars, simple setup, no back-focus impact. Costs: the entire <a href="differential-flexure.html">differential-flexure</a> failure mode, and blindness to anything that moves only the imaging path. Fine at short imaging focal lengths; increasingly risky past ~1000&nbsp;mm.</td></tr>
+</table>
+<p>The rule of thumb: the longer the imaging focal length and the heavier the moving mirror, the stronger the case for an OAG.</p>
+
+<h2>Mirror flop on SCTs</h2>
+<p>SCTs and similar designs focus by moving the primary mirror, and a moving mirror can shift on its baffle as the gravity vector changes &mdash; crossing the meridian is the classic trigger. The image jumps or drifts while a separate guide scope sees nothing. Telltales: guiding (or image quality) that is consistently different on one pier side, position jumps right after a flip, and trailed subs that an OAG would have caught. Mitigations: use the mirror locks if the OTA has them (focus &rarr; lock &rarr; trim with an external focuser), guide with an OAG so the flop is at least corrected, and recalibrate per pier side when PHD2 asks for it.</p>
+
+<h2>Reading the diagnostics</h2>
+<ul>
+    <li><strong>Slow star-mass decline</strong> all session &mdash; dew or focus drift on the guide optics.</li>
+    <li><strong>Star-mass flicker</strong> with steady mean &mdash; transparency / seeing, not the train (<a href="seeing-vs-equipment.html">Seeing vs equipment</a>).</li>
+    <li><strong>Step changes</strong> in star mass or position &mdash; something mechanical moved: mirror, cable, clamp.</li>
+    <li><strong>Frequent star-lost frames</strong> at normal star mass &mdash; the star may be too faint or doubled; pick a better one or enable multi-star guiding in PHD2.</li>
+</ul>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>The <span class="tag-mass">Star mass</span> and <span class="tag-snr">SNR</span> sub-charts in the document window (Overlays &rsaquo; Diagnostics) are the primary instruments for everything on this page. The recommender's <strong>"Pier-side asymmetry detected"</strong> observation compares west- and east-side sessions within a night &mdash; on an SCT, a persistent asymmetry is one of the few log-visible hints of mirror flop (stale per-side calibration is the other usual suspect). <strong>"Star lost on N% of frames"</strong> flags acquisition problems, and the discrepancy card <strong>"Trailed subs despite sub-pixel guide RMS"</strong> covers the failures the guide log can't see directly.</p>
+</div>
+</body>
+</html>

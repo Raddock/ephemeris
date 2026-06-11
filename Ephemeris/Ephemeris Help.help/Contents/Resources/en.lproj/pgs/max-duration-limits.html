@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Max RA / Dec duration">
+<meta name="description" content="What the maximum pulse-duration settings do, and what railed corrections mean.">
+<meta name="keywords" content="max duration, max RA duration, max Dec duration, rail, railed, pulse limit, clipped corrections">
+<meta name="robots" content="anchors">
+<title>Max RA / Dec duration</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="max-duration-limits"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Max RA / Dec duration</p>
+<h1>Max RA / Dec duration</h1>
+<p class="lede">A safety ceiling on the length of any single guide pulse, per axis. Useful insurance &mdash; until your corrections start hitting it.</p>
+
+<h2>What the limits do</h2>
+<p><strong>Max RA duration</strong> and <strong>Max Dec duration</strong> (Advanced Settings &rsaquo; Algorithms tab, in milliseconds) cap each correction pulse. If the algorithm computes a pulse longer than the cap, PHD2 sends the cap instead. The point is to keep one bad measurement &mdash; a cosmic ray, a hot pixel grabbed as the star, a wind gust &mdash; from yanking the mount far off target. The deficit is made up over the following frames.</p>
+
+<h2>Railed corrections</h2>
+<p>A frame whose pulse equals the cap is <em>railed</em> (also "rail-limited" or "clipped"): PHD2 wanted to correct more than the limit allowed. Occasional rails after a dither are normal &mdash; the settle is supposed to take big steps. Rails scattered through ordinary guiding mean the error is growing faster than the capped corrections can remove it: <strong>the mount can't keep up</strong>.</p>
+
+<h2>If more than a few percent of frames are railed</h2>
+<p>The limit isn't the problem; the error source is. Check, roughly in order:</p>
+<ul>
+    <li><strong>Polar alignment</strong> &mdash; large steady drift consumes correction budget continuously.</li>
+    <li><strong>Balance</strong> &mdash; an axis fighting gravity stalls or surges instead of moving the commanded amount.</li>
+    <li><strong>Wind or vibration</strong> &mdash; bursts of rails correlated in time, often visible on both axes at once.</li>
+    <li><strong>Cable snags</strong> &mdash; rails that begin at a particular pointing position and clear after a slew.</li>
+    <li><strong>Dec backlash</strong> &mdash; rails clustered on direction reversals; see <a href="backlash-and-uni-directional.html">Backlash and uni-directional guiding</a>.</li>
+</ul>
+
+<div class="tip"><strong>Raising the limit</strong> is occasionally right &mdash; e.g. a slow guide rate (0.5&times; sidereal) genuinely needs longer pulses for the same correction. But raise it after ruling out the mechanical causes above, not instead of doing so.</div>
+
+<p>Reference: <a href="https://openphdguiding.org/manual/Advanced_settings.htm">PHD2 manual &mdash; Advanced settings</a>. The chart's <strong>Limits</strong> overlay (see <a href="reading-the-chart.html">Reading the guide chart</a>) draws the cap so railed pulses are visible directly.</p>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>Ephemeris counts railed frames per axis and raises a <strong>rail-rate</strong> observation card in three tiers: <strong>&gt;1%</strong> of frames is a watch, <strong>&gt;5%</strong> a pattern, and <strong>&gt;15%</strong> an alert. The card names the limiting axis and the configured cap read from the log header.</p>
+</div>
+</body>
+</html>

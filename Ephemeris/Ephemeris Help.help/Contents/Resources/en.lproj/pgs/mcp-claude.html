@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Connecting Claude (MCP)">
+<meta name="description" content="The opt-in MCP server: what it exposes, one-click installers for Claude Desktop and Claude Code, and privacy.">
+<meta name="keywords" content="MCP, Claude, Claude Desktop, Claude Code, server, tools, privacy, localhost">
+<meta name="robots" content="anchors">
+<title>Connecting Claude (MCP)</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="mcp-claude"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Connecting Claude (MCP)</p>
+<h1>Connecting Claude (MCP)</h1>
+<p class="lede">Ephemeris can expose your library to Claude over the Model Context Protocol, so you can ask "why did last Tuesday guide worse than usual?" and Claude answers from your actual data.</p>
+
+<h2>What Claude can see</h2>
+<p>Five read-only tools, surfaced from the library:</p>
+<table class="spec">
+    <tr><td><code>get_corpus_summary</code></td><td>High-level inventory of the library — a useful first call.</td></tr>
+    <tr><td><code>list_rigs</code></td><td>Rig profiles with their imaging-train values.</td></tr>
+    <tr><td><code>list_nights</code></td><td>Per-night rollups: RMS, integration, target, sub-quality rating.</td></tr>
+    <tr><td><code>list_observations</code></td><td>Recommender output, including severity and source authority.</td></tr>
+    <tr><td><code>get_aggregate_stats</code></td><td>Median / p75 / p90 RMS across a rig's nights.</td></tr>
+</table>
+<p>Every observation carries its <code>source_authority</code>, so Claude can tell PHD2-canon advice apart from Ephemeris heuristics. An optional toggle, <strong>Allow Claude to add annotations</strong>, enables one write tool (<code>add_annotation</code>) so Claude can record equipment changes or notes on your behalf — it's off by default, and changing it only affects connectors you install afterwards (re-run Connect to update an existing one).</p>
+
+<h2>Opt-in, and it stays that way</h2>
+<p>The server is <strong>off by default</strong> and nothing is exposed until you turn it on. Open <strong>Ephemeris &rsaquo; MCP Server…</strong> and use <strong>Start server</strong> under Advanced. Your choice persists: once started, the server comes up automatically on later launches; once stopped, it stays off across launches until you start it again.</p>
+
+<h2>One-click setup</h2>
+<p>The MCP Server window has a connect tile for each client:</p>
+<ul>
+    <li><strong>Connect to Claude Desktop</strong> — adds an entry to <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>.</li>
+    <li><strong>Connect to Claude Code</strong> — adds an entry to <code>~/.claude.json</code>.</li>
+</ul>
+<p>Each tile points the client at a small stdio helper bundled inside Ephemeris.app — no terminal, no JSON editing. You'll see one macOS file-access prompt (click <strong>Grant Access</strong>); that authorizes Ephemeris to update the config file. Existing connectors in the file are preserved, and the config is written atomically. Restart the Claude client afterwards to see the Ephemeris tools appear.</p>
+
+<h2>Manual configuration</h2>
+<p>For other MCP clients, the <strong>Advanced</strong> disclosure shows the helper binary's path (use it as a stdio <code>command</code> entry) and a direct HTTP endpoint for clients that accept localhost URLs.</p>
+
+<h2>Privacy</h2>
+<div class="note"><strong>Note:</strong> The server listens on the loopback interface (<code>127.0.0.1</code>) only — nothing leaves your Mac, there is no outbound network traffic, and no telemetry. All tools are read-only unless you explicitly enable the annotation-write toggle.</div>
+
+<hr>
+<p><strong>Related:</strong> <a href="log-library.html">The Log Library</a> · <a href="asking-for-help-well.html">When to ask for help and how</a> · <a href="app-shortcuts.html">Shortcuts and automation</a></p>
+</div>
+</body>
+</html>

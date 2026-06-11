@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Polar-alignment fundamentals">
+<meta name="description" content="What polar-alignment error causes, the König drift relation, and PHD2's three alignment tools.">
+<meta name="keywords" content="polar alignment, drift align, polar drift align, static polar align, field rotation, Dec drift, König">
+<meta name="robots" content="anchors">
+<title>Polar-alignment fundamentals</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="polar-alignment-fundamentals"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Polar-alignment fundamentals</p>
+<h1>Polar-alignment fundamentals</h1>
+<p class="lede">An equatorial mount only tracks the sky if its RA axis points at the celestial pole. Here's what the error costs, how Ephemeris estimates it, and which PHD2 tool fixes it.</p>
+
+<h2>What polar-alignment error causes</h2>
+<p>If the mount's axis is offset from the true pole, the mount rotates about the wrong point. Two things follow:</p>
+<ul>
+    <li><strong>Declination drift</strong> &mdash; targets slide steadily in Dec at a rate proportional to the alignment error. Guiding corrects this, but it costs a constant stream of one-directional Dec pulses (and fights backlash on the way).</li>
+    <li><strong>Field rotation</strong> &mdash; the whole field slowly rotates around the guide star. <em>Guiding cannot correct this</em>: PHD2 keeps one point fixed while the corners arc around it. The further the target from the guide star and the longer the sub, the longer the corner-star arcs.</li>
+</ul>
+<svg viewBox="0 0 420 120" width="420" height="120" role="img" aria-label="Mount axis offset from the true pole produces drift and field rotation">
+    <circle cx="90" cy="60" r="4" fill="var(--fg-2)"/>
+    <text x="60" y="40" fill="var(--muted)" font-size="11">true pole</text>
+    <circle cx="140" cy="78" r="4" fill="var(--ra)"/>
+    <text x="120" y="100" fill="var(--ra)" font-size="11" font-weight="600">mount axis</text>
+    <line x1="90" y1="60" x2="140" y2="78" stroke="var(--muted-2)" stroke-width="1" stroke-dasharray="3 2"/>
+    <circle cx="310" cy="60" r="34" fill="none" stroke="var(--rule-strong)" stroke-width="1.5"/>
+    <circle cx="310" cy="60" r="3" fill="var(--snr)"/>
+    <path d="M 310 26 A 34 34 0 0 1 340 44" fill="none" stroke="var(--dec)" stroke-width="2"/>
+    <path d="M 336 36 L 342 45 L 331 46 Z" fill="var(--dec)"/>
+    <text x="352" y="44" fill="var(--dec)" font-size="11" font-weight="600">field rotation</text>
+    <text x="266" y="110" fill="var(--muted)" font-size="11">guide star held fixed</text>
+</svg>
+
+<h2>The König relation</h2>
+<p>The Dec drift rate encodes the alignment error. Ephemeris uses König's method to turn a session's measured drift into an estimate, in arc-minutes:</p>
+<p><code>PA error (arcmin) &asymp; 3.82 &times; |Dec drift ″/min| / cos(&delta;)</code></p>
+<p>where <code>&delta;</code> is the target's declination from the log header. The estimate is suppressed near the celestial pole (the <code>cos&delta;</code> term blows up) and it can't tell you the <em>direction</em> of misalignment &mdash; only its size. Details of the computation are in <a href="statistics.html">Statistics &amp; drift</a>.</p>
+
+<h2>PHD2's three alignment tools</h2>
+<p>All three live in PHD2's <a href="https://openphdguiding.org/manual/Tools.htm">Tools menu</a>:</p>
+<table class="spec">
+    <tr><td><strong>Drift Align</strong></td><td>The gold standard. Measures drift on a star near the meridian/equator (for the azimuth axis), then near the eastern or western horizon (for altitude), and shows a bullseye to adjust against. Most accurate; takes the longest; needs those two sky regions visible.</td></tr>
+    <tr><td><strong>Polar Drift Align</strong></td><td>Point at a star near the pole and let PHD2 watch it drift; it computes where the star <em>should</em> sit and you move the mount until it gets there. Simple, one position, no plate solving &mdash; good when only the pole region is clear. Slower to converge to high precision.</td></tr>
+    <tr><td><strong>Static Polar Align</strong></td><td>Uses known bright stars near the pole and a rotation around the RA axis to find the mount's axis directly &mdash; quick, no waiting for drift. Best for getting close fast (or when the pole star is visible but drift time isn't available); finish with a drift method if you need the last arc-minute.</td></tr>
+</table>
+
+<h2>How good is good enough?</h2>
+<ul>
+    <li><strong>&lt; 5′</strong> &mdash; good. Dec drift stays small, guiding absorbs it without drama, and field rotation is negligible for ordinary sub lengths.</li>
+    <li><strong>5&ndash;10′</strong> &mdash; workable but visible: expect persistent one-direction Dec corrections and some rotation in the far corners on long subs.</li>
+    <li><strong>&gt; 10′</strong> &mdash; fix it. Guiding spends its effort fighting drift, settling after dithers slows down, and corner stars arc on long exposures no matter how good the RMS looks.</li>
+</ul>
+
+<div class="warn"><strong>Caveat:</strong> an estimate from one session's drift is approximate &mdash; refraction and flexure also produce Dec drift. Treat a single night's number as a hint; a repeated number across nights as a finding; PHD2's Drift Align as the measurement.</div>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>The <strong>polar alignment estimate</strong> appears with the session statistics, computed from Dec drift via the König relation above. The recommender raises <strong>"Dec corrections heavily one-directional"</strong> when a session's Dec pulses are dominated by one direction &mdash; the steady-drift signature &mdash; and points back to this topic. Persistent Dec drift is also one of the causes the gap-analysis observations distinguish in <a href="common-patterns.html">Common patterns</a>.</p>
+</div>
+</body>
+</html>

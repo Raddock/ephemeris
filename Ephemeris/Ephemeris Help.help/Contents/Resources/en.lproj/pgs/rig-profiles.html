@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Rig profiles">
+<meta name="description" content="Why the imaging pixel scale anchors verdicts, and how rig identity, imaging train, guide train, and mount class are configured.">
+<meta name="keywords" content="rig, profile, imaging scale, pixel scale, focal length, reducer, guide train, mount class, display name">
+<meta name="robots" content="anchors">
+<title>Rig profiles</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="rig-profiles"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Rig profiles</p>
+<h1>Rig profiles</h1>
+<p class="lede">A rig profile tells Ephemeris what the guide log can't: the imaging side of your telescope. Open it from the app menu — <strong>Ephemeris &rsaquo; Rig Profiles…</strong> (<kbd>⇧⌘,</kbd>).</p>
+
+<h2>Why the imaging scale matters</h2>
+<p>A PHD2 log only knows the <em>guide</em> camera. Whether 0.8″ RMS is excellent or a problem depends entirely on your <em>imaging</em> pixel scale — 0.8″ is invisible at 2″/px and ruinous at 0.4″/px. The imaging scale anchors:</p>
+<ul>
+    <li><strong>Night verdicts</strong> — the sub-pixel / at-resolution / over-resolution coloring across the Library.</li>
+    <li><strong>Star-shape prediction</strong> — the per-night chip that says whether stars rendered sharp, bloated, elongated, or trailed.</li>
+    <li><strong>Several observation generators</strong> — they stay silent without it.</li>
+</ul>
+<p>Until the imaging train is configured, verdicts fall back to rig-relative tiers (Best / Typical / Elevated / Worst, computed against the rig's own history) and the Library shows a banner offering to take you to this window.</p>
+
+<h2>Identity: PHD2 name vs display name</h2>
+<p>The <strong>PHD2 profile name</strong> is the rig's identity — it comes from the <code>Equipment Profile = …</code> line in each log's header and is the key that matches logs to rigs. It's set when the first log for that profile is opened or imported (rigs are auto-created; you never predeclare them) and it can't be edited, which is why it carries a lock icon.</p>
+<p>The <strong>display name</strong> is purely a label for you — sidebar entries, chart titles, export headers. Leave it blank to fall back to the PHD2 name. If you've renamed the profile inside PHD2 over the years, past names are listed under <strong>Past PHD2 names</strong>.</p>
+
+<h2>Imaging train</h2>
+<table class="spec">
+    <tr><td><strong>OTA focal length</strong></td><td>The telescope's nominal focal length in mm — <em>without</em> any reducer.</td></tr>
+    <tr><td><strong>Imaging camera pixel size</strong></td><td>In microns. This is the imaging camera, not the guide camera.</td></tr>
+    <tr><td><strong>Binning</strong></td><td>1×1 through 4×4.</td></tr>
+    <tr><td><strong>Reducer factor</strong></td><td>Optional — e.g. <code>0.7</code> for a 0.7× reducer. Leave blank if you image at native focal length.</td></tr>
+</table>
+<p>Once these are set, the form shows the <strong>computed imaging scale</strong> in arc-seconds per pixel (and the effective focal length when a reducer is in play). That single number is what the rest of the app keys on.</p>
+
+<h2>Guide train</h2>
+<p>Pick the configuration — <strong>Off-axis guider</strong>, <strong>Separate guide scope</strong>, or <strong>Same optics</strong> — then the guide focal length, guide-camera pixel size, and guide binning. Unlike the imaging train, these values <em>do</em> appear in the PHD2 log header, so Ephemeris pre-fills them when it auto-creates a rig, and a <strong>Fill from open log</strong> button appears when a log with usable header values is open.</p>
+
+<h2>Mount class</h2>
+<p>The mount class steers algorithm and tuning advice: <strong>Standard gear / belt mount</strong>, <strong>Encoder-based premium mount</strong>, <strong>Harmonic strain-wave mount</strong>, or <strong>Adaptive optics device</strong>. The <strong>high-precision encoders</strong> toggle mirrors the checkbox in PHD2's New Profile Wizard — when on, the recommender biases toward encoder-mount advice such as LowPass2 and Variable Exposure Delays. Advice for harmonic mounts is labeled <em>community consensus</em>, since the PHD2 manual doesn't cover that class.</p>
+
+<div class="tip"><strong>Tip:</strong> Edits here take effect immediately — switch back to the Library and verdicts, chips, and observations recompute against the new scale.</div>
+
+<hr>
+<p><strong>Related:</strong> <a href="log-library.html">The Log Library</a> · <a href="observations.html">Reading observations</a> · <a href="getting-started.html">Getting started</a></p>
+</div>
+</body>
+</html>

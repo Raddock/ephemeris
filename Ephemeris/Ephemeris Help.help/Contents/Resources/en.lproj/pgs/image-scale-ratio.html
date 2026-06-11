@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="The image-scale ratio and round stars">
+<meta name="description" content="RMS divided by imaging scale — the single number that predicts whether stars stay round.">
+<meta name="keywords" content="image scale ratio, RMS, round stars, sub-pixel, at resolution, over resolution, verdict, elongation">
+<meta name="robots" content="anchors">
+<title>The image-scale ratio and round stars</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="image-scale-ratio"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; The image-scale ratio and round stars</p>
+<h1>The image-scale ratio and round stars</h1>
+<p class="lede">One division turns a night's guide RMS into a prediction about your stars.</p>
+
+<h2>The ratio</h2>
+<p><code>ratio = Total RMS (arcsec) &divide; imaging pixel scale (arcsec/px)</code></p>
+<p>It answers the only question guiding numbers exist to answer: <em>how far does the mount wander, measured in imaging pixels?</em> A ratio of 1.0 means the guide star wandered by exactly one imaging pixel (RMS). The imaging scale &mdash; not the guide scale &mdash; is the denominator; see <a href="pixel-scale-and-resolution.html">Pixel scale and imaging resolution</a> for why.</p>
+
+<h2>The three tiers</h2>
+<p>Ephemeris buckets the ratio into the same three tiers it shows as a colored verdict pill:</p>
+<table class="spec">
+    <tr><td><span class="pill best"><span class="dot"></span>Sub-pixel</span></td><td><strong>ratio &lt; 0.7</strong> &mdash; mount motion is comfortably inside one imaging pixel. Stars stay round; guiding is not your limiting factor.</td></tr>
+    <tr><td><span class="pill worst"><span class="dot"></span>At resolution</span></td><td><strong>0.7 &le; ratio &le; 1.0</strong> &mdash; motion is about the size of an imaging pixel. Results depend on seeing and sub length: good nights look fine, marginal nights show softness. Amber, not a failure.</td></tr>
+    <tr><td><span class="pill ra"><span class="dot"></span>Over resolution</span></td><td><strong>ratio &gt; 1.0</strong> &mdash; motion exceeds an imaging pixel. Symmetric excess blurs stars into soft, bloated discs; axis-asymmetric excess elongates them. Either way the imager can see the guiding error.</td></tr>
+</table>
+
+<h2>Bloated vs elongated</h2>
+<p>Over-resolution guiding does not automatically mean egg-shaped stars. If RA and Dec wander by similar amounts with no drift, stars stay <em>round but soft</em> &mdash; Ephemeris flags these nights with the bloated-star icon rather than predicting elongation. Elongation needs an <em>asymmetry</em>: one axis distinctly worse than the other, or a steady drift in one direction. See <a href="common-patterns.html">Common patterns</a> for what causes each.</p>
+
+<div class="note"><strong>Rule of thumb:</strong> if you want guiding off the suspect list entirely, aim for sub-pixel (green). At-resolution nights are usually rescued by ordinary seeing blur; over-resolution nights will show up in the subs.</div>
+
+<div class="warn"><strong>Caveat:</strong> a green ratio is a statement about the guide camera only. Round-star guiding with trailed subs points at the optical train, not the mount &mdash; see <a href="what-the-guide-log-cant-tell-you.html">What the guide log can't tell you</a>.</div>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>These tiers are exactly Ephemeris's verdict colors: the <strong>green / amber / coral pill</strong> in the Library's verdict column and the <strong>session chip</strong> in the document window both display <em>Sub-pixel</em>, <em>At resolution</em>, or <em>Over resolution</em> from this ratio (it reads "—" until the rig profile has an imaging scale). The same ratio drives the predicted star shape &mdash; including the bloated-star icon on round-but-soft nights &mdash; and the recommender cites it in observations such as <strong>"Guide scale far from imaging scale"</strong>.</p>
+</div>
+</body>
+</html>

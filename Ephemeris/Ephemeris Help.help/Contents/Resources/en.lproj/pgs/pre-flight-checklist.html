@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Setting up for the night">
+<meta name="description" content="A practical pre-imaging checklist — and the Ephemeris observation that fires when each step is skipped.">
+<meta name="keywords" content="checklist, pre-flight, balance, cables, focus, calibration, Guiding Assistant, polar alignment, settle">
+<meta name="robots" content="anchors">
+<title>Setting up for the night</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="pre-flight-checklist"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Setting up for the night</p>
+<h1>Setting up for the night</h1>
+<p class="lede">Most "bad guiding" is decided before the first frame. Each item below is cheap at dusk and expensive at 2&nbsp;a.m. — and each one has a fingerprint Ephemeris will flag the next morning if it was skipped.</p>
+
+<h2>1. Balance the mount</h2>
+<p>Balance both axes with the full imaging payload attached — camera, filters, dew strap, cables. Slight east-heavy bias is fine on a gear mount; gross imbalance makes one correction direction fight gravity.</p>
+<p><strong>If skipped:</strong> expect <em>"Dec corrections heavily one-directional"</em> or <em>"Pulse-rail saturation"</em> — corrections piling up on one side of an axis until they hit the duration limit.</p>
+
+<h2>2. Route and dress cables</h2>
+<p>Loop cables to the mount head, leave slack through the full slew range, and check nothing drags as the scope tracks. A cable snag is a step-change generator: everything is fine until the angle where it isn't.</p>
+<p><strong>If skipped:</strong> a snag mid-night shows up as a sudden RMS jump, and across nights as <em>"Calibration orthogonality shifted"</em> — the engine sees a mechanical change it can't attribute and asks you to annotate it.</p>
+
+<h2>3. Focus the guide camera</h2>
+<p>Bloated guide stars lower SNR and make the centroid wander. Focus the guide camera as deliberately as the imaging camera — once per season is usually enough on a fixed OAG, but verify after any train change.</p>
+<p><strong>If skipped:</strong> low star mass and SNR, frame drops, and at worst <em>"Star lost on N% of frames"</em>.</p>
+
+<h2>4. Calibrate in the right place — when you need to</h2>
+<p>Calibrate near the intersection of the celestial equator (Dec&nbsp;≈&nbsp;0) and the meridian, where star motion per guide pulse is greatest and the geometry is honest. PHD2's Calibration Assistant slews there and pre-clears Dec backlash for you. You don't need to recalibrate every night — but do recalibrate after rotating the guide camera or changing the train.</p>
+<p><strong>If skipped:</strong> <em>"Calibration orthogonality error"</em> (axes not measured at 90°), PHD2's own calibration alerts, and the hygiene strip's Calibration pill aging toward red — see <a href="calibration.html">Calibration</a>.</p>
+
+<h2>5. Run the Guiding Assistant when conditions changed</h2>
+<p>New site, new season, new equipment, or a long layoff? Give the Guiding Assistant a few minutes before imaging. Its measured min-move, backlash, and polar-error values are the highest-authority numbers in the whole pipeline — they supersede every heuristic Ephemeris computes.</p>
+<p><strong>If skipped:</strong> the <em>"Guiding Assistant is N days old"</em> / <em>"never been run"</em> hygiene observation, and a GA pill that sits orange or red in the Library.</p>
+
+<h2>6. Check polar alignment</h2>
+<p>A few arc-minutes of polar error is fine for guided imaging; tens of arc-minutes turn into Dec drift the guide loop has to fight all night.</p>
+<p><strong>If skipped:</strong> Dec-dominated drift in the night's statistics, a <em>trailed</em> star-shape prediction whose tooltip names Dec drift as the cause, and a polar-alignment pill quoting the last GA measurement. See <a href="statistics.html">Statistics and drift</a> for the drift-based estimate.</p>
+
+<h2>7. Confirm settle thresholds</h2>
+<p>Make sure your imaging software's dither-settle criteria (pixels and seconds) match what your mount can actually do — a settle threshold tighter than your typical RMS stalls the sequence; one too loose starts exposures while the mount is still moving.</p>
+<p><strong>If skipped:</strong> long settle events after every dither in the document window's Events card, and elongated first frames after dithers that drag the night's verdict down.</p>
+
+<div class="tip"><strong>Tip:</strong> When something on this list <em>does</em> change — recalibration, rebalance, new cable run — <a href="annotations-and-sub-quality.html">annotate the night</a>. The cross-night engine attributes the change to your note instead of raising an alarm.</div>
+
+<hr>
+<p><strong>Related:</strong> <a href="observations.html">Reading observations</a> · <a href="annotations-and-sub-quality.html">Annotations and rating your nights</a> · <a href="asking-for-help-well.html">When to ask for help and how</a></p>
+</div>
+</body>
+</html>

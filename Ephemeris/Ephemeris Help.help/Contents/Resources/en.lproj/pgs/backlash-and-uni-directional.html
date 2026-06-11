@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Backlash and uni-directional guiding">
+<meta name="description" content="Declination backlash: measuring it, compensating it, and when to guide in one direction only.">
+<meta name="keywords" content="backlash, declination, uni-directional, compensation, worm mesh, reversal, dec guide mode">
+<meta name="robots" content="anchors">
+<title>Backlash and uni-directional guiding</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="backlash-and-uni-directional"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Backlash and uni-directional guiding</p>
+<h1>Backlash and uni-directional guiding</h1>
+<p class="lede">Backlash is the dead zone when a gear train reverses direction. RA never reverses while tracking, so backlash is almost entirely a declination problem.</p>
+
+<h2>What it looks like</h2>
+<p>After a Dec reversal, the mount receives pulses but the star doesn't move &mdash; the motor is taking up gear slack. PHD2 keeps correcting, the slack finally clears, and the accumulated corrections land at once, overshooting the other way. On the chart this reads as Dec hanging on one side of zero, then snapping across; on the scatter plot, a cluster elongated in Dec.</p>
+
+<h2>Measuring it</h2>
+<p>The <a href="guiding-assistant.html">Guiding Assistant</a>'s <strong>Measure Declination Backlash</strong> option drives Dec through reversals and reports the backlash as milliseconds of guide pulse. That number decides the strategy:</p>
+<ul>
+    <li><strong>&lt; 100 ms</strong> &mdash; negligible. Normal guiding handles it; do nothing.</li>
+    <li><strong>100&ndash;3000 ms</strong> &mdash; moderate. PHD2's <strong>backlash compensation</strong> works well here: it adds the measured amount to the first pulse after each reversal, and adjusts the value adaptively if it over- or under-shoots.</li>
+    <li><strong>&gt; 3000 ms</strong> &mdash; severe. Compensation pulses this long are themselves disruptive. Switch to <strong>uni-directional Dec guiding</strong> instead.</li>
+</ul>
+
+<h2>Uni-directional Dec guiding</h2>
+<p>Set the Dec guide mode to <strong>North only</strong> or <strong>South only</strong> (the toolbar Dec-mode control or Advanced Settings &rsaquo; Algorithms). With a slight deliberate polar-alignment offset, Dec then drifts consistently one way, every correction pushes against the drift in the same direction, and the gear train never reverses &mdash; the backlash simply never gets exercised. Choose the direction opposite to your measured Dec drift.</p>
+
+<h2>Fixing the hardware</h2>
+<p>On worm-gear mounts, backlash usually means the <strong>worm mesh</strong> is too loose. Many mounts allow adjustment; a careful re-mesh can bring multi-second backlash down to the negligible range. Too tight causes binding, so adjust in small steps and re-run the GA backlash test to verify.</p>
+
+<div class="note"><strong>Backlash also corrupts calibration:</strong> slack at the start of the North leg shortens it and skews the measured angle &mdash; one common cause of <a href="calibration-orthogonality.html">orthogonality errors</a>. PHD2's calibration clears Dec backlash first for exactly this reason.</div>
+
+<p>Reference: <a href="https://openphdguiding.org/manual/Tools.htm">PHD2 manual &mdash; Tools (Guiding Assistant)</a> and <a href="https://openphdguiding.org/manual/Advanced_settings.htm">Advanced settings</a>.</p>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>When the log contains a GA backlash measurement, Ephemeris surfaces it on a <strong>Dec backlash</strong> observation card using the tiers above &mdash; negligible below 100&nbsp;ms, compensation suggested up to 3000&nbsp;ms, uni-directional guiding suggested beyond. Reversal-overshoot patterns detected in the guide frames link here as well, alongside <a href="max-duration-limits.html">Max RA / Dec duration</a> when reversals are also railing pulses.</p>
+</div>
+</body>
+</html>

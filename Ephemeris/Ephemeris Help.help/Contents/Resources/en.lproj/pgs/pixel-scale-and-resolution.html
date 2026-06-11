@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Pixel scale and imaging resolution">
+<meta name="description" content="The arcsec-per-pixel formula, guide scale vs imaging scale, and judging RMS against the right scale.">
+<meta name="keywords" content="pixel scale, arcsec per pixel, image scale, focal length, binning, reducer, seeing, FWHM, resolution">
+<meta name="robots" content="anchors">
+<title>Pixel scale and imaging resolution</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="pixel-scale-and-resolution"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Pixel scale and imaging resolution</p>
+<h1>Pixel scale and imaging resolution</h1>
+<p class="lede">Every guiding number is meaningless until it's compared against a pixel scale &mdash; and it has to be the <em>right</em> pixel scale.</p>
+
+<h2>The formula</h2>
+<p>Pixel scale is how much sky one camera pixel covers, in arc-seconds per pixel:</p>
+<p><code>arcsec/px = 206.265 &times; pixel_size_&micro;m &times; binning / (focal_length_mm &times; reducer_factor)</code></p>
+<p>The constant 206.265 converts radians to arc-seconds (divided by 1000 for the &micro;m&rarr;mm units). A reducer factor below 1 shortens the effective focal length and makes the scale coarser; a Barlow does the opposite.</p>
+<p>Example &mdash; an Edge HD 11 (2800&nbsp;mm) with a 0.7&times; reducer and a 3.76&nbsp;&micro;m camera at bin 1: <code>206.265 &times; 3.76 / (2800 &times; 0.7) &asymp; 0.40″/px</code>.</p>
+
+<h2>Guide scale vs imaging scale</h2>
+<p>Your rig has <strong>two</strong> pixel scales, and they are usually very different:</p>
+<table class="spec">
+    <tr><td><strong>Guide scale</strong></td><td>The guide camera through the guide optics. PHD2 computes it from the equipment profile and writes it into the log header as <code>Pixel scale = &hellip;</code>. Ephemeris uses it to convert the chart between pixels and arc-seconds.</td></tr>
+    <tr><td><strong>Imaging scale</strong></td><td>The imaging camera through the imaging optics. It never appears in the guide log &mdash; you enter it (or its ingredients) in Ephemeris's rig profile.</td></tr>
+</table>
+<p>A short guide scope often runs at 3&ndash;5″/px while the imaging train runs at well under 1″/px. PHD2 measures the star to a small fraction of a guide pixel, so a coarse guide scale still <em>measures</em> fine &mdash; but a coarse scale can't change what the imaging sensor <em>resolves</em>.</p>
+
+<h2>Judge RMS against the imaging scale</h2>
+<p>Guide RMS is expressed in arc-seconds precisely so it can be compared across cameras &mdash; and the comparison that matters is to the imaging scale. A 0.8″ RMS night is excellent on a 2″/px widefield rig and a problem on a 0.40″/px long-focal-length rig: same guiding, different verdict, because the imaging pixels are a different size. That ratio is the subject of <a href="image-scale-ratio.html">The image-scale ratio and round stars</a>.</p>
+
+<h2>Seeing sets the floor</h2>
+<p>Atmospheric seeing typically smears stars to <strong>2&ndash;4″ FWHM</strong> at most sites, occasionally better at excellent ones. Two consequences:</p>
+<ul>
+    <li>Imaging scales much finer than roughly a third of the seeing FWHM are <em>over-sampled</em> &mdash; extra resolution the sky can't deliver. That isn't harmful, but it makes the guiding target proportionally stricter.</li>
+    <li>No mount can guide out seeing. Sub-0.5″ RMS on a typical night is close to the practical floor; chasing lower numbers usually means <a href="seeing-vs-equipment.html">chasing the atmosphere</a>.</li>
+</ul>
+
+<div class="tip"><strong>Tip:</strong> PHD2's own documentation recommends a guide scale no finer than needed &mdash; see the <a href="https://openphdguiding.org/manual/">PHD2 manual</a> on equipment profiles and the Guiding Assistant's seeing measurement.</div>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>You enter focal length, pixel size, binning, and reducer in the <strong>rig profile editor</strong>; Ephemeris computes the imaging scale with the formula above and uses it everywhere a verdict is shown &mdash; the Library's verdict pill, the session chip, and the predicted star shape. The recommender also raises <strong>"Guide scale far from imaging scale"</strong> when the two scales are badly mismatched, and <strong>"Rig profile and PHD2 disagree about the guide scale"</strong> when your profile's guide-side numbers don't match the <code>Pixel scale</code> PHD2 wrote in the log header.</p>
+</div>
+</body>
+</html>

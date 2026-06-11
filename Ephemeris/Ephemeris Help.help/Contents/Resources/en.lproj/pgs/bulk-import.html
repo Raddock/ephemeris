@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Importing your log archive">
+<meta name="description" content="Bulk-import a folder of PHD2 logs: recursive scan, dedup, auto-created rigs, and folder access.">
+<meta name="keywords" content="import, bulk, folder, archive, dedup, duplicate, hash, progress, sandbox, bookmark">
+<meta name="robots" content="anchors">
+<title>Importing your log archive</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="bulk-import"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Importing your log archive</p>
+<h1>Importing your log archive</h1>
+<p class="lede">If you have months or years of PHD2 logs sitting in a folder, one import builds the whole history — per rig, per night — in a single pass.</p>
+
+<h2>Run an import</h2>
+<ol>
+    <li>Open the Library (<kbd>⇧⌘L</kbd>) and click <strong>Import logs…</strong> in the toolbar — or choose <strong>File &rsaquo; Import Folder of Logs…</strong> (<kbd>⇧⌘I</kbd>).</li>
+    <li>Pick the folder that holds your logs. The scan is <strong>recursive</strong>, so a top-level archive folder with per-year subfolders works fine.</li>
+    <li>A progress window shows each file as it's processed; you can cancel between files.</li>
+</ol>
+<p>Only files matching <code>PHD2_GuideLog_*.txt</code> are considered — debug logs (<code>PHD2_DebugLog_*.txt</code>) are skipped, as are PHD2's empty placeholder logs.</p>
+
+<h2>Safe to re-import</h2>
+<p>Every log is fingerprinted by a hash of its content. Re-importing the same folder later — say, your live <code>~/Documents/PHD2/</code> directory at the end of each month — never duplicates a night. Logs already in the library are matched by hash and their per-session detail and observations are <strong>refreshed</strong> against the current analysis instead, so re-importing after an Ephemeris update is the easy way to re-analyze your whole archive.</p>
+
+<h2>Rigs are created automatically</h2>
+<p>Each log's <code>Equipment Profile = …</code> header line names the PHD2 profile it came from. Logs are matched to existing rigs by that name; when no match exists, a rig is created automatically with its guide-train values pre-filled from the log header. The import summary lists any rigs it created — visit <a href="rig-profiles.html">Rig profiles</a> afterwards to add each one's imaging train so verdicts light up.</p>
+
+<h2>Folder access</h2>
+<p>Ephemeris is sandboxed, so choosing the folder in the import panel is also what grants read access to it. The grant is saved as a security-scoped bookmark, which is how <strong>double-click to open the original log</strong> in the Library keeps working in later launches without asking again. If you move your archive, run one import from the new location to re-establish access.</p>
+
+<div class="warn"><strong>Caveat:</strong> Logs are read-only throughout — importing never modifies or moves your original files. Deleting a night from the library doesn't touch the log on disk either.</div>
+
+<hr>
+<p><strong>Related:</strong> <a href="log-library.html">The Log Library</a> · <a href="rig-profiles.html">Rig profiles</a> · <a href="getting-started.html">Getting started</a></p>
+</div>
+</body>
+</html>

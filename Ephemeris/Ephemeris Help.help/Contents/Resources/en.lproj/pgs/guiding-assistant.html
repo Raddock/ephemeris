@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="The Guiding Assistant">
+<meta name="description" content="What PHD2's Guiding Assistant measures, how to run it, and how Ephemeris uses its results.">
+<meta name="keywords" content="Guiding Assistant, GA, HPF-RMS, seeing, min-move, drift, polar alignment, backlash test, recommendations">
+<meta name="robots" content="anchors">
+<title>The Guiding Assistant</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="guiding-assistant"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; The Guiding Assistant</p>
+<h1>The Guiding Assistant</h1>
+<p class="lede">PHD2's built-in measurement tool. It watches the star with guide corrections disabled, separates seeing from mount behavior, and turns the result into concrete setting recommendations.</p>
+
+<h2>What it measures</h2>
+<ul>
+    <li><strong>High-frequency RMS (HPF-RMS)</strong> &mdash; star motion after a high-pass filter removes slow drift. This is the fast, random motion the mount <em>cannot</em> correct: essentially your seeing, as sampled by your guide setup. It is the floor under any RMS number you will ever achieve.</li>
+    <li><strong>RA peak-to-peak</strong> &mdash; the total excursion in RA, dominated by the mount's periodic error over the sampling window.</li>
+    <li><strong>Drift rates</strong> &mdash; linear drift in RA and Dec, in arc-seconds per minute.</li>
+    <li><strong>Polar alignment estimate</strong> &mdash; derived from the Dec drift rate. Approximate; PHD2's drift-align or polar-drift tools are more accurate.</li>
+    <li><strong>Dec backlash</strong> (optional) &mdash; if you check <strong>Measure Declination Backlash</strong>, GA drives Dec back and forth and reports the backlash in milliseconds of guide pulse. See <a href="backlash-and-uni-directional.html">Backlash and uni-directional guiding</a>.</li>
+</ul>
+
+<h2>How to run it</h2>
+<ol>
+    <li>Connect, start looping, and let PHD2 select a star.</li>
+    <li>Open <strong>Tools &rsaquo; Guiding Assistant</strong> and click <strong>Start</strong>. Guide corrections are suspended while GA samples.</li>
+    <li>Let it run for <strong>at least two minutes</strong> &mdash; longer is better, especially for the RA peak-to-peak number, which needs to see a meaningful slice of the worm period.</li>
+    <li>Click <strong>Stop</strong>, review the recommendations, and click the buttons to apply the ones you accept.</li>
+</ol>
+
+<h2>What to do with the recommendations</h2>
+<ul>
+    <li><strong>Minimum-move (MinMove)</strong> &mdash; GA's most valuable output. It sets RA and Dec min-move just above the measured seeing noise so PHD2 stops chasing turbulence. Accept it unless you have a specific reason not to. Details in <a href="aggressiveness-and-min-move.html">Aggressiveness, min-move, exposure</a>.</li>
+    <li><strong>Exposure / variable delay</strong> &mdash; GA may suggest a guide exposure or, on capable setups, short exposures with a <a href="variable-exposure-delays.html">variable exposure delay</a>.</li>
+    <li><strong>Drift-limiting exposure</strong> &mdash; the longest <em>imaging</em> exposure you could take unguided before drift alone exceeds the seeing blur. A small number here is a hint that polar alignment is the limiting factor, not guiding.</li>
+    <li><strong>Backlash compensation</strong> &mdash; offered when the backlash test measured a correctable amount.</li>
+</ul>
+
+<div class="tip"><strong>Tip:</strong> Re-run the Guiding Assistant after any mechanical change &mdash; re-balancing, a new guide scope, meshing the worm &mdash; and a couple of times per season anyway. Seeing-derived numbers from last winter don't describe tonight's sky.</div>
+
+<p>Full reference: <a href="https://openphdguiding.org/manual/Tools.htm">PHD2 manual &mdash; Tools</a> and <a href="https://openphdguiding.org/phd2-best-practices/">PHD2 Best Practices</a>.</p>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>When a log contains a Guiding Assistant run, Ephemeris surfaces GA's own numbers and recommendations verbatim as a <strong>phd2Measurement</strong> observation card &mdash; the highest-authority tier, since it is PHD2 measuring your mount directly rather than Ephemeris inferring from guide frames. The <strong>hygiene strip</strong> also tracks GA freshness, nudging you when your last run is old enough that its recommendations may no longer match your sky or rig.</p>
+</div>
+</body>
+</html>

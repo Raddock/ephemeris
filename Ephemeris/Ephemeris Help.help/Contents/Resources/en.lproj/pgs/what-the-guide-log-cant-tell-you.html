@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="What the guide log can't tell you">
+<meta name="description" content="The guide log sees the guide camera only — flexure, mirror flop, focus drift, and dew are invisible to it.">
+<meta name="keywords" content="guide log limits, differential flexure, mirror flop, cable drag, focus drift, dew, wind, sub quality, ground truth">
+<meta name="robots" content="anchors">
+<title>What the guide log can't tell you</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="what-the-guide-log-cant-tell-you"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; What the guide log can't tell you</p>
+<h1>What the guide log can't tell you</h1>
+<p class="lede">PHD2 measures one thing: where the guide star is on the <em>guide</em> sensor. Anything that moves the imaging sensor without moving the guide star is invisible to it.</p>
+
+<h2>One camera, one truth</h2>
+<p>Every number in the <a href="reading-the-guide-log.html">guide log</a> &mdash; RMS, drift, peaks, corrections &mdash; describes the guide camera's view. PHD2 then assumes the imaging camera moves in lockstep with it. When that assumption holds, guide RMS predicts star shape. When it breaks, the log can report a flawless night while your subs trail.</p>
+
+<h2>What's invisible to the log</h2>
+<table class="spec">
+    <tr><td><strong>Differential flexure</strong></td><td>The guide scope (or its rings) shifts relative to the imaging OTA as the mount tracks. The guide star stays locked; the imaging field slides. The classic culprit &mdash; see <a href="differential-flexure.html">Differential flexure</a>.</td></tr>
+    <tr><td><strong>Mirror flop</strong></td><td>On SCTs, the moving primary mirror can shift as the gravity vector changes &mdash; the image moves while a separate guide scope sees nothing. An off-axis guider <em>does</em> see it, which is the main argument for one.</td></tr>
+    <tr><td><strong>Cable drag</strong></td><td>A cable that snags partway through the night tugs the imaging train (or the whole saddle) between guide exposures.</td></tr>
+    <tr><td><strong>Focus drift</strong></td><td>Temperature-driven focus changes bloat stars on the imaging camera. The guide star centroid barely cares.</td></tr>
+    <tr><td><strong>Dew</strong></td><td>Dew forming on the imaging corrector or objective kills contrast and bloats stars while the guide optics may stay clear (or vice versa).</td></tr>
+    <tr><td><strong>Wind on the imaging OTA</strong></td><td>Gusts excite the big tube more than the small one. Short guide exposures can average over what a 300-second sub cannot.</td></tr>
+</table>
+
+<h2>The imaging frame is ground truth</h2>
+<p>This is why Ephemeris asks you to <strong>rate your subs</strong> for each night &mdash; round, slightly elongated, trailed, or mixed. The rating is not redundant with the statistics: it is the one measurement the log cannot contain. Ephemeris compares your verdict against what the guiding data <em>predicted</em>, and the disagreements are where the diagnosis lives:</p>
+<ul>
+    <li><strong>Guide log good + subs good</strong> &mdash; nothing to do.</li>
+    <li><strong>Guide log bad + subs bad</strong> &mdash; a guiding problem; the log itself will say which kind (<a href="common-patterns.html">Common patterns</a>).</li>
+    <li><strong>Guide log good + subs trailed</strong> &mdash; the problem is downstream of the guide camera: flexure, flop, drag, or wind. No PHD2 setting will fix it.</li>
+</ul>
+
+<div class="tip"><strong>Tip:</strong> When guiding numbers and star shapes disagree, the PHD2 project's own <a href="https://openphdguiding.org/manual/Trouble_shooting.htm">troubleshooting guidance</a> draws the same line: fix the mechanical path, not the guide parameters.</div>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>The <strong>annotation sheet</strong> is where you record the sub-quality verdict for a night. When a night you rated <em>trailed</em> or <em>mixed</em> had sub-pixel guide RMS, the recommender fires the discrepancy observation <strong>"Trailed subs despite sub-pixel guide RMS"</strong> &mdash; the canonical guide-log-can't-see-it signature &mdash; with <a href="differential-flexure.html">differential flexure</a> at the top of its candidate list. The converse coaching card, <strong>"Elevated RMS &mdash; likely atmospheric, not equipment"</strong>, covers the case where the log looks bad but the cause is the sky (<a href="seeing-vs-equipment.html">Seeing vs equipment</a>).</p>
+</div>
+</body>
+</html>

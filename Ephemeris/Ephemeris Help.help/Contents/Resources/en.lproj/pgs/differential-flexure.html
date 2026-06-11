@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Differential flexure">
+<meta name="description" content="The guide scope flexing relative to the imaging OTA — signature, detection, and fixes.">
+<meta name="keywords" content="differential flexure, guide scope, OAG, off-axis guider, trailed stars, sag, rings, gravity">
+<meta name="robots" content="anchors">
+<title>Differential flexure</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="differential-flexure"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Differential flexure</p>
+<h1>Differential flexure</h1>
+<p class="lede">When the guide scope and the imaging OTA don't point at quite the same place all night, guiding can be perfect and your subs still trail.</p>
+
+<h2>What it is</h2>
+<p>Differential flexure is any slow mechanical shift between the guide camera's optical path and the imaging camera's optical path. As the mount tracks, the gravity vector rotates relative to the equipment; anything slightly compliant &mdash; guide-scope rings, a dovetail clamp, a focuser drawtube, a finder-shoe bracket &mdash; sags by a few microns. PHD2 dutifully keeps the <em>guide</em> star locked, which means the <em>imaging</em> field drifts by exactly the amount of the flex.</p>
+<svg viewBox="0 0 420 130" width="420" height="130" role="img" aria-label="Guide scope sagging relative to the imaging OTA as gravity pulls on it">
+    <rect x="40" y="62" width="240" height="34" rx="6" fill="none" stroke="var(--fg-2)" stroke-width="2"/>
+    <text x="60" y="84" fill="var(--muted)" font-size="11">imaging OTA</text>
+    <line x1="70" y1="50" x2="252" y2="42" stroke="var(--ra)" stroke-width="2"/>
+    <line x1="70" y1="50" x2="250" y2="50" stroke="var(--muted-2)" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="90" y="36" fill="var(--ra)" font-size="11" font-weight="600">guide scope (flexed)</text>
+    <line x1="110" y1="50" x2="110" y2="62" stroke="var(--muted-2)" stroke-width="2"/>
+    <line x1="220" y1="46" x2="220" y2="62" stroke="var(--muted-2)" stroke-width="2"/>
+    <line x1="330" y1="55" x2="330" y2="100" stroke="var(--dec)" stroke-width="2"/>
+    <path d="M 326 92 L 330 102 L 334 92 Z" fill="var(--dec)"/>
+    <text x="340" y="82" fill="var(--dec)" font-size="11" font-weight="600">gravity</text>
+</svg>
+
+<h2>The signature</h2>
+<ul>
+    <li><strong>Excellent guide RMS, consistently elongated subs</strong> &mdash; the defining mismatch. The log says sub-pixel; the stars say otherwise.</li>
+    <li><strong>Worse with longer subs</strong> &mdash; flexure accumulates roughly steadily with time, so a 600&nbsp;s sub trails about twice as far as a 300&nbsp;s sub. Seeing-driven blur doesn't scale like that.</li>
+    <li><strong>One consistent direction per region of sky</strong> &mdash; the trail direction follows the gravity vector, so it changes slowly through the night and flips character after a meridian flip, rather than varying randomly sub to sub.</li>
+</ul>
+
+<h2>Confirming it</h2>
+<ul>
+    <li>Compare sub lengths: shoot a few short subs between your normal ones. If short subs are round and long ones trail at the same RMS, flexure is near-certain.</li>
+    <li>Check the chart in <strong>dx / dy</strong> mode for normality &mdash; flexure usually leaves the guide trace clean, which is the point: the evidence is the <em>absence</em> of guiding evidence.</li>
+    <li>Rate your subs in Ephemeris; the predicted-vs-rated disagreement check below does the bookkeeping for you across nights.</li>
+</ul>
+
+<h2>Fixes, in rough order of effectiveness</h2>
+<ul>
+    <li><strong>Off-axis guider</strong> &mdash; guides through the imaging optics, so guide and imaging paths flex together. Eliminates differential flexure by construction (and sees SCT mirror flop, which a guide scope never will).</li>
+    <li><strong>Stiffen the mechanical path</strong> &mdash; replace ring-and-screw guide-scope mounts with a rigid saddle, lock the guide scope's focuser, tighten finder shoes, lose the flexible vixen-bar stack.</li>
+    <li><strong>Lock moving mirrors</strong> &mdash; on SCTs with mirror locks, focus, lock, and refocus with an external focuser.</li>
+    <li><strong>Manage cables</strong> &mdash; strain-relieve at the saddle so nothing tugs the train as it tracks.</li>
+    <li><strong>Shorter subs</strong> &mdash; a mitigation, not a fix: less time for the flex to accumulate per frame.</li>
+</ul>
+
+<div class="tip"><strong>Tip:</strong> PHD2's documentation discusses flexure as the leading cause of "good guiding, bad images" &mdash; see the <a href="https://openphdguiding.org/manual/Trouble_shooting.htm">PHD2 troubleshooting chapter</a>.</div>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>Flexure is the headline suspect on the <strong>"Trailed subs despite sub-pixel guide RMS"</strong> observation card, which fires when a night you rated <em>trailed</em> or <em>mixed</em> in the annotation sheet guided at or below your rig's baseline &mdash; the exact mismatch described above. The card's evidence row shows the night's guide RMS next to your imaging scale so you can see the gap. Background: <a href="what-the-guide-log-cant-tell-you.html">What the guide log can't tell you</a> and <a href="image-scale-ratio.html">The image-scale ratio and round stars</a>.</p>
+</div>
+</body>
+</html>

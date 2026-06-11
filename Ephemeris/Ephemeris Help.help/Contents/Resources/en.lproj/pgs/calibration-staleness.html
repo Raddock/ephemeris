@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="When to recalibrate">
+<meta name="description" content="What invalidates a PHD2 calibration, what doesn't, and how Ephemeris tracks calibration age.">
+<meta name="keywords" content="recalibrate, calibration age, stale, auto restore, pier side, meridian flip, guide camera rotation">
+<meta name="robots" content="anchors">
+<title>When to recalibrate</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="calibration-staleness"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; When to recalibrate</p>
+<h1>When to recalibrate</h1>
+<p class="lede">A calibration describes the geometry between your guide camera and your mount axes. It stays valid exactly as long as that geometry does &mdash; which is both longer and shorter than people tend to assume.</p>
+
+<h2>What invalidates a calibration</h2>
+<ul>
+    <li><strong>Rotating the guide camera</strong> in its holder, even slightly. The camera-to-axes angle is the heart of the calibration.</li>
+    <li><strong>Changing the guide setup</strong> &mdash; a different guide scope, off-axis guider position, binning, or focal length.</li>
+    <li><strong>Mount re-assembly or transport</strong> &mdash; tearing down a portable rig and rebuilding it rarely reproduces the old geometry exactly.</li>
+</ul>
+
+<h2>What does <em>not</em> require recalibration</h2>
+<ul>
+    <li><strong>A meridian flip</strong> &mdash; if the mount reports its pointing position (an ASCOM/INDI connection that reports pier side), PHD2 flips the calibration automatically.</li>
+    <li><strong>Slewing to a new target</strong> &mdash; with pointing information, PHD2 adjusts the RA rate for declination on its own.</li>
+    <li><strong>A new night on a permanent setup</strong> &mdash; this is what auto-restore is for.</li>
+</ul>
+
+<h2>PHD2's auto-restore</h2>
+<p>With <strong>Auto restore calibration</strong> enabled (Advanced Settings &rsaquo; Guiding tab), PHD2 reloads the last good calibration when the gear connects, so guiding can start without a fresh calibration run. This is the right mode for permanent or pier-mounted rigs &mdash; but it also means a quietly invalidated calibration (a bumped guide camera, say) keeps getting restored night after night. The restored calibration's <em>date</em> is the tell: if the log shows a calibration weeks old, make sure nothing has changed since.</p>
+
+<div class="tip"><strong>Rule of thumb:</strong> permanent setup, untouched &mdash; recalibrate monthly or when results degrade. Portable setup &mdash; recalibrate every assembly. Either way, recalibrate after any hands-on change to the guide camera or its optics.</div>
+
+<p>See also <a href="calibration-troubleshooting.html">Calibration troubleshooting</a> and <a href="calibration-orthogonality.html">Calibration orthogonality</a>. Reference: <a href="https://openphdguiding.org/manual/Advanced_settings.htm">PHD2 manual &mdash; Advanced settings</a>.</p>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>Ephemeris compares each session's calibration timestamp against the session date and raises a <strong>calibration staleness</strong> observation card in two tiers: a <strong>pattern</strong> at <strong>21 days</strong> and an <strong>alert</strong> at <strong>30 days</strong>. A stale-but-working calibration isn't an emergency &mdash; the card is a prompt to confirm the geometry really hasn't changed.</p>
+</div>
+</body>
+</html>

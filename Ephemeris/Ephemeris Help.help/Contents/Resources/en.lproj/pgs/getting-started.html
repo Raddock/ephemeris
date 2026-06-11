@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="AppleTitle" content="Getting started">
-<meta name="description" content="Open a PHD2 log and read the summary view.">
-<meta name="keywords" content="open, log, summary, sessions, PHD2">
+<meta name="description" content="First launch: the Log Library, opening logs, and configuring your rig.">
+<meta name="keywords" content="open, log, library, import, rig, summary, sessions, PHD2">
 <meta name="robots" content="anchors">
 <title>Getting started</title>
 <link rel="stylesheet" href="../shrd/styles.css">
@@ -13,18 +13,23 @@
 <div class="wrap">
 <p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Getting started</p>
 <h1>Getting started</h1>
-<p class="lede">Open a PHD2 <code>.txt</code> log and the app builds an indexed view of every guiding and calibration section it finds.</p>
+<p class="lede">Ephemeris launches into the <strong>Log Library</strong> — the app's home window. Every PHD2 <code>.txt</code> log you open is ingested there, building a per-rig, multi-night history; opening a log drills into an indexed single-night view.</p>
 
-<h2>Open a log</h2>
+<h2>First launch</h2>
+<p>On first launch the Library is empty. Get your logs in either way:</p>
 <ol>
-    <li>Choose <strong>File &rsaquo; Open</strong> (<kbd>⌘O</kbd>) and pick a PHD2 log file.</li>
-    <li>Or drag a <code>.txt</code> log onto the app icon in Finder or the Dock.</li>
-    <li>The window opens with the <strong>Summary</strong> selected in the sidebar.</li>
+    <li><strong>Open a single log</strong> — choose <strong>File &rsaquo; Open</strong> (<kbd>⌘O</kbd>), or drag a <code>.txt</code> log onto the app icon in Finder or the Dock. The log opens in its own document window and is automatically ingested into the library.</li>
+    <li><strong>Import your whole archive</strong> — click <strong>Import logs…</strong> in the Library toolbar (or <strong>File &rsaquo; Import Folder of Logs…</strong>, <kbd>⇧⌘I</kbd>) and pick a folder. Every <code>PHD2_GuideLog_*.txt</code> inside is scanned recursively, and rigs are created automatically from each log's PHD2 profile name. See <a href="bulk-import.html">Importing your log archive</a>.</li>
 </ol>
 <p>Logs are opened read-only. The app never writes to your original file.</p>
 
-<h2>Read the summary</h2>
-<p>The Summary view shows aggregate statistics across the whole log: total guiding time, frame counts, weighted RMS, plus pill-shaped <span class="pill best"><span class="dot"></span>Best</span> and <span class="pill worst"><span class="dot"></span>Worst</span> session shortcuts in the header. The table below lists every guiding section in chronological order.</p>
+<h2>Configure your rig</h2>
+<p>The PHD2 log only describes your guide camera — Ephemeris also needs the <em>imaging</em> side to judge results. Open <strong>Ephemeris &rsaquo; Rig Profiles…</strong> (<kbd>⇧⌘,</kbd>) and enter the imaging focal length, pixel size, binning, and any reducer. That computes your imaging pixel scale, which unlocks night verdicts, the star-shape predictor, and several observations. See <a href="rig-profiles.html">Rig profiles</a>.</p>
+
+<div class="tip"><strong>Tip:</strong> The Library is where trends live — verdict-colored nights, the trend chart, and cross-night observations. See <a href="log-library.html">The Log Library</a> for the full tour. Reopen it any time with <kbd>⇧⌘L</kbd>.</div>
+
+<h2>Read a log's summary</h2>
+<p>Opening a log (or double-clicking a night in the Library) shows the document window with the <strong>Summary</strong> selected in the sidebar. It shows aggregate statistics across the whole log: total guiding time, frame counts, weighted RMS, plus pill-shaped <span class="pill best"><span class="dot"></span>Best</span> and <span class="pill worst"><span class="dot"></span>Worst</span> session shortcuts in the header. The table below lists every guiding section in chronological order.</p>
 <ul>
     <li>Click any row to jump to that session.</li>
     <li>Each row's <strong>Total RMS</strong> column shows a thin quality bar scaled to the worst session in the log — outliers pop visually without having to read numbers across rows.</li>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Annotations and rating your nights">
+<meta name="description" content="Recording equipment and environment events, the rig-mutating flag, and sub-quality verdicts.">
+<meta name="keywords" content="annotation, equipment change, calibration, environment, software, rig-mutating, sub quality, round, elongated, trailed, mixed, flexure">
+<meta name="robots" content="anchors">
+<title>Annotations and rating your nights</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="annotations-and-sub-quality"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Annotations and rating your nights</p>
+<h1>Annotations and rating your nights</h1>
+<p class="lede">The guide log records what the mount did — not what you did, and not what your imaging frames actually look like. Annotations and sub-quality ratings feed both back into the analysis.</p>
+
+<h2>Adding an annotation</h2>
+<p>In the Library's Recent Nights table, click the <strong>Note</strong> (+) button on a row, or right-click and choose <strong>Add annotation…</strong>. The sheet captures:</p>
+<ul>
+    <li><strong>Date</strong> — defaults to the night you clicked; adjustable for events between sessions.</li>
+    <li><strong>Label</strong> — a short headline, e.g. "OAG damaged and replaced".</li>
+    <li><strong>Categories</strong> — multi-select chips: <strong>Equipment</strong>, <strong>Calibration</strong>, <strong>Environment</strong>, <strong>Software</strong>, or <strong>Free text</strong>.</li>
+    <li><strong>Detail</strong> — as much context as you like.</li>
+    <li><strong>This changed my rig</strong> — the rig-mutating flag, below.</li>
+</ul>
+<p>Annotations appear as dashed blue vertical lines on the trend chart, as a badge on the night's row, in forum exports, and in Spotlight search results. Either a label or a detail is enough to save.</p>
+
+<h2>The rig-mutating flag</h2>
+<p>Turn on <strong>This changed my rig</strong> when the event genuinely changed the system — new guide camera, rebuilt imaging train, re-shimmed OAG. It tells the cross-night engine that a new regime starts here: the rig-relative baseline resets from this point forward, so old nights stop dragging on new verdicts.</p>
+<p>Categories matter too: an <strong>Equipment</strong> or <strong>Calibration</strong> annotation near a detected calibration step-change <em>explains</em> it, suppressing the "Calibration orthogonality shifted" alarm within a few nights of the event. Without the annotation, the engine has to assume the shift was silent and unintended — which is exactly when it should alarm.</p>
+
+<h2>Rating your nights: sub-quality verdicts</h2>
+<p>The guide RMS is a proxy; the imaging frame is ground truth. After examining your subs, rate the night with one of four verdicts:</p>
+<table class="spec">
+    <tr><td><strong>Round</strong></td><td>Stars round across the field — the guide RMS reflects reality.</td></tr>
+    <tr><td><strong>Slightly elongated</strong></td><td>Mild egg shape — atmosphere or borderline tracking.</td></tr>
+    <tr><td><strong>Trailed</strong></td><td>Obvious trailing — the guide RMS is lying about the result.</td></tr>
+    <tr><td><strong>Mixed</strong></td><td>Some frames good, some bad — variable conditions.</td></tr>
+</table>
+
+<h2>When your rating contradicts the log</h2>
+<p>This is the most valuable signal you can give Ephemeris. If you rate a night <strong>Trailed</strong> (or <strong>Mixed</strong>) but the guide RMS was sub-pixel, the engine fires the <em>"Trailed subs despite sub-pixel guide RMS"</em> observation — that gap is the classic differential-flexure signature, which the guide log can't see on its own. The card walks through the usual suspects: OAG prism drift, rotator slip, focuser sag, and mirror flop on SCT-style optics.</p>
+
+<div class="tip"><strong>Tip:</strong> Rate nights even when they're good. A run of confirmed <strong>Round</strong> verdicts is what lets the star-shape predictor and baseline statistics be trusted when something later goes wrong.</div>
+
+<hr>
+<p><strong>Related:</strong> <a href="log-library.html">The Log Library</a> · <a href="observations.html">Reading observations</a> · <a href="statistics.html">Statistics and drift</a></p>
+</div>
+</body>
+</html>

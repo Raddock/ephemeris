@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="When to ask for help and how">
+<meta name="description" content="What a good forum post needs, and how Ephemeris's forum export builds it for you.">
+<meta name="keywords" content="forum, help, export, Markdown, BBCode, Cloudy Nights, post, share, question">
+<meta name="robots" content="anchors">
+<title>When to ask for help and how</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="asking-for-help-well"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; When to ask for help and how</p>
+<h1>When to ask for help and how</h1>
+<p class="lede">Forum regulars answer hundreds of "my guiding is bad" posts. The ones that get good answers all contain the same things — and Ephemeris can assemble them for you.</p>
+
+<h2>When to ask</h2>
+<p>Ask once you have a <em>pattern</em>, not a single bad night. One night can be seeing, wind, or a cable; three nights showing the same signature is a question worth other people's time. Work through the alert-severity <a href="observations.html">observations</a> first — if Ephemeris already names the problem and the suggested response, try that before posting.</p>
+
+<h2>What a good post contains</h2>
+<ul>
+    <li><strong>The rig, with numbers</strong> — mount, OTA and effective focal length, both cameras, and crucially both <em>pixel scales</em>. "0.8″ RMS" means nothing until readers know your imaging scale.</li>
+    <li><strong>Guiding Assistant results</strong> — measured min-move, backlash, and polar error. These answer half the diagnostic questions before they're asked.</li>
+    <li><strong>Several nights of numbers</strong>, not adjectives — RMS per night, what changed between them.</li>
+    <li><strong>The actual guide log</strong> — attach the PHD2 <code>.txt</code> file (double-click the night in the Library to find it). Experienced helpers will read it directly.</li>
+    <li><strong>One specific question</strong> — "why does Dec spike after meridian flips?" beats "any ideas?".</li>
+</ul>
+
+<h2>Let Ephemeris write the boilerplate</h2>
+<p>In the <a href="log-library.html">Library</a>, select the rig and click the <strong>Share for help…</strong> button in the header (the share icon). The export sheet builds a post containing:</p>
+<ul>
+    <li><strong>Rig header</strong> — profile, mount class and model, OTA with reducer math, camera pixel sizes, computed imaging and guide scales.</li>
+    <li><strong>Recent nights</strong> — a table of the last seven nights (sessions, integration, median RMS) plus the median/best/worst across the range, expressed against your imaging scale.</li>
+    <li><strong>Active observations</strong> — each with its severity and <em>source-authority label</em> intact, so readers can see which claims come from PHD2's own measurements and which are Ephemeris heuristics.</li>
+    <li><strong>Annotations</strong> — your recorded equipment and calibration events.</li>
+    <li><strong>Your question</strong> — a section for what you actually want to know, with suggested starting points drawn from the data.</li>
+</ul>
+
+<h2>Pick the format for the destination</h2>
+<table class="spec">
+    <tr><td><strong>Markdown</strong></td><td>GitHub, Discord, Slack, or pasting into a Claude chat.</td></tr>
+    <tr><td><strong>BBCode (forums)</strong></td><td>Cloudy Nights and other vBulletin-style forums.</td></tr>
+    <tr><td><strong>Plain text</strong></td><td>Email and mailing lists.</td></tr>
+</table>
+<p>Paste the result, attach the log file, and add anything the data can't show — wind, frost, the cable you bumped.</p>
+
+<div class="tip"><strong>Tip:</strong> If you use Claude, <a href="mcp-claude.html">connecting it over MCP</a> skips the copy-paste entirely — Claude reads the same rigs, nights, and observations directly.</div>
+
+<hr>
+<p><strong>Related:</strong> <a href="log-library.html">The Log Library</a> · <a href="observations.html">Reading observations</a> · <a href="rig-profiles.html">Rig profiles</a></p>
+</div>
+</body>
+</html>

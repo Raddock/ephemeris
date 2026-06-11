@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="AppleTitle" content="The main window">
-<meta name="description" content="Sidebar, chart, inspector, and toolbar layout.">
-<meta name="keywords" content="window, sidebar, inspector, toolbar, layout, cards">
+<meta name="description" content="The Library window, plus the document window's sidebar, chart, inspector, and toolbar layout.">
+<meta name="keywords" content="window, library, sidebar, inspector, toolbar, layout, cards">
 <meta name="robots" content="anchors">
 <title>The main window</title>
 <link rel="stylesheet" href="../shrd/styles.css">
@@ -13,7 +13,13 @@
 <div class="wrap">
 <p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; The main window</p>
 <h1>The main window</h1>
-<p class="lede">A standard three-pane macOS layout: sessions on the left, chart in the middle, session metadata on the right.</p>
+<p class="lede">Ephemeris has two main surfaces: the <strong>Library window</strong> you launch into, and the <strong>document window</strong> you drill into when you open a log.</p>
+
+<h2>The Library window</h2>
+<p>The Library (<kbd>⇧⌘L</kbd>) is the app's home — a per-rig, multi-night view of everything you've opened or imported. Rigs and a time-range filter sit in the left sidebar; the detail pane stacks metric cards (median RMS, integration, sessions), a PHD2-hygiene strip, the trend chart, cross-night observations, and the Recent Nights table. Double-clicking a night there opens its original log in the document window described below. The full tour is in <a href="log-library.html">The Log Library</a>.</p>
+
+<h2>The document window</h2>
+<p>The document window is the drill-in view for a single log, reached from the Library (or <strong>File &rsaquo; Open</strong>). It's a standard three-pane macOS layout: sessions on the left, chart in the middle, session metadata on the right.</p>
 
 <h2>Sidebar (left)</h2>
 <p>Lists the Summary plus every guiding and calibration section in the log. Each row shows the start time, type (guiding crosshair or calibration target), and duration.</p>
@@ -44,6 +50,7 @@
 
 <h2>Toolbar</h2>
 <ul>
+    <li><strong>Log Library</strong> (<kbd>⇧⌘L</kbd>) — jump back to the multi-night <a href="log-library.html">Library</a> to see this log in context.</li>
     <li><strong>Share / Export</strong> (<kbd>⌘E</kbd>) — chart PNG, session CSV, frame CSV, or log-summary CSV via the system share sheet.</li>
     <li><strong>Frequency analysis</strong> (<kbd>⌘F</kbd>) — opens the FFT sheet for the current session.</li>
     <li><strong>Reset zoom</strong> (<kbd>⌘0</kbd>) — clears any drag-to-zoom range.</li>

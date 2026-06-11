@@ -62,8 +62,9 @@ enum HelpTopic: String, Sendable {
 /// Uses `NSHelpManager.openHelpAnchor(_:inBook:)` per the design doc deep-link guidance.
 @MainActor
 enum HelpOpener {
-    /// Book ID matches the Apple Help bundle's CFBundleHelpBookName.
-    private static let bookID = "com.ephemeris.macobservatory.help"
+    /// Book ID — must match CFBundleHelpBookName in the app's Info.plist (and the
+    /// help bundle's CFBundleIdentifier), or every anchor deep-link silently fails.
+    private static let bookID = "com.macobservatory.Ephemeris.help"
 
     static func open(_ topic: HelpTopic) {
         NSHelpManager.shared.openHelpAnchor(topic.rawValue, inBook: bookID)

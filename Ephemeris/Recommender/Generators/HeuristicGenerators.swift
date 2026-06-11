@@ -52,7 +52,7 @@ nonisolated struct DecPolarityBiasObserver: RecommenderGenerator {
                     "Differential flexure pulling the guide camera relative to the imager",
                 ],
                 suggestedResponse: "Run the Guiding Assistant — it measures polar-alignment error directly. If the GA reports >5 arcmin, run Drift Alignment or Static Polar Alignment to correct.",
-                relatedHelpTopicIds: ["polar-alignment-fundamentals"],
+                relatedHelpTopicIds: [HelpTopic.polarAlignmentFundamentals.rawValue],
                 relatedPHD2Tools: [.guidingAssistant, .driftAlignment, .staticPolarAlignment],
                 confidence: .medium,
                 sourceAuthority: .ephemerisHeuristic
@@ -125,7 +125,7 @@ nonisolated struct AtmosphericConditionsProxy: RecommenderGenerator {
                     "Thin cirrus or partial transparency changes during the session",
                 ],
                 suggestedResponse: "No equipment action is recommended on the basis of this single session. If you have eyes-on at the site, an atmospheric annotation (haze, scintillation visible by eye) helps the recommender contextualize this night. PHD2's Guiding Assistant reports its own seeing measurement; running it on a clearer night gives a reference baseline.",
-                relatedHelpTopicIds: ["seeing-vs-equipment", "what-the-guide-log-cant-tell-you"],
+                relatedHelpTopicIds: [HelpTopic.seeingVsEquipment.rawValue, HelpTopic.whatTheGuideLogCantTellYou.rawValue],
                 relatedPHD2Tools: [.guidingAssistant],
                 confidence: .medium,
                 sourceAuthority: .ephemerisHeuristic

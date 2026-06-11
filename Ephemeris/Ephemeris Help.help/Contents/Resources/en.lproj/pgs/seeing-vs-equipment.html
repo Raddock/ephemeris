@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Seeing vs equipment — telling them apart">
+<meta name="description" content="How to tell atmospheric seeing from mount and equipment problems in guiding data.">
+<meta name="keywords" content="seeing, atmosphere, scintillation, equipment, periodic error, worm, aggression, HPF RMS, Guiding Assistant">
+<meta name="robots" content="anchors">
+<title>Seeing vs equipment — telling them apart</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="seeing-vs-equipment"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Seeing vs equipment &mdash; telling them apart</p>
+<h1>Seeing vs equipment &mdash; telling them apart</h1>
+<p class="lede">Elevated RMS has two very different causes with two very different fixes. The shape of the noise tells you which one you have.</p>
+
+<h2>The seeing signature</h2>
+<p>Atmospheric seeing is turbulence shifting the star's apparent position many times per second. In the guide data it looks like:</p>
+<ul>
+    <li><strong>Fast, random, frame-to-frame motion</strong> &mdash; each exposure lands somewhere new with no memory of the last one.</li>
+    <li><strong>No axis preference</strong> &mdash; the atmosphere doesn't know where your RA axis points. <span class="tag-ra">RA</span> and <span class="tag-dec">Dec</span> raw distances are similarly noisy, and the scatter-cluster overlay stays round.</li>
+    <li><strong>No structure</strong> &mdash; no period, no direction, no trend. Worse at low altitude (longer air path) and often accompanied by star-mass / SNR flicker.</li>
+</ul>
+<p>PHD2's Guiding Assistant measures exactly this: its <strong>high-frequency RMS</strong> (the residual after high-pass filtering out everything the mount could plausibly correct) is its seeing estimate, and it derives its min-move recommendations from it. See the <a href="https://openphdguiding.org/manual/Tools.htm">Guiding Assistant in the PHD2 manual</a>.</p>
+
+<h2>The equipment signature</h2>
+<p>Mount and mechanical problems are the opposite of random &mdash; they have structure:</p>
+<ul>
+    <li><strong>Axis-asymmetric</strong> &mdash; one axis distinctly worse than the other. The atmosphere can't do that; gears, balance, and backlash can.</li>
+    <li><strong>Periodic</strong> &mdash; RA error repeating on the worm period is the classic mechanical fingerprint. The <a href="frequency-analysis.html">FFT periodogram</a> turns a suspicion into a measurement: a spike at the worm period (or a harmonic) is the worm; no spikes plus a broad noise floor is the sky.</li>
+    <li><strong>Directional</strong> &mdash; steady one-way drift (polar alignment, flexure) or stepwise sticking after reversals (Dec backlash).</li>
+</ul>
+
+<h2>Why chasing seeing makes it worse</h2>
+<p>Seeing motion is gone before any correction can arrive &mdash; the star has already moved somewhere else by the next frame. Turning aggression up (or min-move down) to "fix" it makes PHD2 issue corrections for displacements that no longer exist; each pulse becomes a new error the next frame has to undo, and the mount oscillates on top of the seeing. The cure runs the other way: longer guide exposures (2&ndash;4&nbsp;s) to average the atmosphere out, a min-move at or above the seeing noise, and moderate aggression. PHD2's <a href="https://openphdguiding.org/manual/Guide_algorithms.htm">guide-algorithm documentation</a> makes the same point.</p>
+
+<div class="tip"><strong>Quick test:</strong> compare two nights of the same target in the Library. Equipment problems reproduce night after night with the same axis and the same period; seeing varies with the weather and the target's altitude.</div>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>The recommender's coaching card <strong>"Elevated RMS &mdash; likely atmospheric, not equipment"</strong> fires when high RMS coincides with seeing markers &mdash; star-flux variability and/or low target altitude &mdash; and deliberately recommends <em>no</em> equipment action. Structured problems surface instead as <strong>"Periodic residual detected"</strong> (from the periodogram), <strong>"Dec corrections heavily one-directional"</strong>, or <strong>"Recent RMS above rig baseline"</strong> when nights stop matching your rig's own history. The <span class="tag-mass">Star mass</span> / <span class="tag-snr">SNR</span> sub-charts and the scatter-cluster overlay in the document window are the places to eyeball the difference yourself. Related: <a href="common-patterns.html">Common patterns</a> and <a href="what-the-guide-log-cant-tell-you.html">What the guide log can't tell you</a>.</p>
+</div>
+</body>
+</html>

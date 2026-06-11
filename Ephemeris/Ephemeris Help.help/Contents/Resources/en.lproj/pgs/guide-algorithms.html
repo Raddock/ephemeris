@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Guide algorithms — when defaults are right">
+<meta name="description" content="Hysteresis, ResistSwitch, Lowpass2, ZFilter, and Predictive PEC — what they do and when to change them.">
+<meta name="keywords" content="guide algorithm, hysteresis, resist switch, lowpass2, zfilter, PPEC, predictive PEC, periodic error">
+<meta name="robots" content="anchors">
+<title>Guide algorithms — when defaults are right</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="guide-algorithms"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Guide algorithms</p>
+<h1>Guide algorithms &mdash; when defaults are right</h1>
+<p class="lede">The algorithm turns each measured deviation into a correction pulse. PHD2 ships sensible defaults per axis, and for most mounts the right move is to leave them alone.</p>
+
+<h2>The algorithms</h2>
+<ul>
+    <li><strong>Hysteresis</strong> (<span class="tag-ra">RA</span> default) &mdash; blends the current deviation with recent history, damping reaction to seeing while following real trends. Tunable via aggressiveness and hysteresis percentages.</li>
+    <li><strong>ResistSwitch</strong> (<span class="tag-dec">Dec</span> default) &mdash; resists changing direction until several consecutive frames agree, which is exactly what a backlash-prone Dec axis needs. Corrects steadily in one direction, reverses reluctantly.</li>
+    <li><strong>Lowpass2</strong> &mdash; fits a slope to recent history and corrects toward it, ignoring frame-to-frame noise almost entirely. Suited to mounts that track so well that only slow drift needs correcting.</li>
+    <li><strong>ZFilter</strong> &mdash; a digital low-pass filter that lets you use short exposures while responding as if they were longer, smoothing seeing without adding correction lag.</li>
+    <li><strong>Predictive PEC (PPEC)</strong> &mdash; models the mount's periodic error in real time (a Gaussian-process model) and corrects it <em>predictively</em>, before it appears, instead of reacting after. RA only in practice; needs a few worm cycles to train at the start of a session.</li>
+</ul>
+
+<h2>When the defaults are right</h2>
+<p>Almost always. Hysteresis-RA + ResistSwitch-Dec is the configuration the PHD2 developers tune for and the one virtually all troubleshooting advice assumes. Changing the algorithm to fix bad guiding usually treats a symptom whose real cause is polar alignment, balance, backlash, or seeing &mdash; check those first.</p>
+
+<h2>When to consider a change</h2>
+<ul>
+    <li><strong>PPEC</strong> &mdash; if RA is dominated by smooth, repeating periodic error from a worm-gear mount, PPEC can cut RA RMS substantially. The <a href="frequency-analysis.html">frequency analysis</a> view shows whether a worm-period peak dominates your RA spectrum.</li>
+    <li><strong>Lowpass2</strong> &mdash; on premium mounts with absolute encoders (which have essentially no periodic error), where the only thing left to correct is slow drift.</li>
+</ul>
+
+<div class="warn"><strong>Change one thing at a time:</strong> switching algorithms resets its parameters to defaults. Make the change, guide a full session, compare the numbers, then decide.</div>
+
+<p>Reference: <a href="https://openphdguiding.org/manual/Guide_algorithms.htm">PHD2 manual &mdash; Guide algorithms</a> and <a href="https://openphdguiding.org/phd2-best-practices/">PHD2 Best Practices</a>.</p>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>Ephemeris reads the RA and Dec algorithm names and their parameter values from each guide-log header and shows them with the session. Algorithm-related observation cards &mdash; for example a suggestion to evaluate PPEC when a strong periodic-error signature is present &mdash; link here, and the related tuning knobs are covered in <a href="aggressiveness-and-min-move.html">Aggressiveness, min-move, exposure</a>.</p>
+</div>
+</body>
+</html>

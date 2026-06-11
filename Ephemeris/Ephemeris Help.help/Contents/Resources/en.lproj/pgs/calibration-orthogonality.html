@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Calibration orthogonality">
+<meta name="description" content="Why RA and Dec calibration legs should be perpendicular, and what an orthogonality error means.">
+<meta name="keywords" content="orthogonality, calibration, 90 degrees, west, north, dec compensation, axis angle">
+<meta name="robots" content="anchors">
+<title>Calibration orthogonality</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="calibration-orthogonality"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Calibration orthogonality</p>
+<h1>Calibration orthogonality</h1>
+<p class="lede">An equatorial mount's RA and Dec axes are mechanically perpendicular, so the calibration legs PHD2 measures should be too. When they aren't, every guide correction is computed against a skewed coordinate frame.</p>
+
+<h2>Why 90&deg; matters</h2>
+<p>During calibration PHD2 pulses the mount <span class="tag-ra">West</span> and <span class="tag-dec">North</span> and measures the star's track for each leg. The angle between those two tracks defines the camera-to-mount transform used for every subsequent correction. If the measured legs are not ~90&deg; apart, PHD2 is sending part of each RA correction into Dec and vice versa &mdash; corrections fight each other and RMS suffers on both axes.</p>
+
+<h2>Reading the error</h2>
+<ul>
+    <li><strong>&lt; 5&deg;</strong> &mdash; normal. Seeing alone produces a few degrees of scatter in the measured angle.</li>
+    <li><strong>5&ndash;10&deg;</strong> &mdash; suspect. Often a calibration done in poor seeing, too close to the pole, or with declination compensation applied incorrectly (for example, the mount reported a wrong pointing position, so PHD2's <code>cos(δ)</code> adjustment skewed the RA rate).</li>
+    <li><strong>&gt; 10&deg;</strong> &mdash; something is wrong. Likely causes: severe Dec backlash eating the first North steps, cable drag or mirror shift during a leg, flexure between guide scope and mount, or calibration performed at high declination where RA steps barely move the star.</li>
+</ul>
+
+<h2>Fixing it</h2>
+<ul>
+    <li>Recalibrate <strong>near the celestial equator (Dec ~0&deg;) and near the meridian</strong>, where both axes move the star by comparable, well-measured amounts. PHD2's Calibration Assistant slews there for you.</li>
+    <li>If Dec backlash is large, clear it first or run the <a href="guiding-assistant.html">Guiding Assistant</a> backlash test &mdash; see <a href="backlash-and-uni-directional.html">Backlash and uni-directional guiding</a>.</li>
+    <li>If the error persists across calibrations, look for mechanical play; see <a href="calibration-troubleshooting.html">Calibration troubleshooting</a>.</li>
+</ul>
+
+<div class="warn"><strong>Don't ignore a repeatable error:</strong> one bad calibration is noise; the same 8&deg; skew three sessions in a row is a measurement of your setup.</div>
+
+<p>Background: <a href="https://openphdguiding.org/manual/Basic_use.htm">PHD2 manual &mdash; Basic use (calibration)</a> and <a href="https://openphdguiding.org/manual/Trouble_shooting.htm">Trouble-shooting</a>.</p>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>Ephemeris computes the orthogonality error from each calibration in the log as <code>|Δ(west,&nbsp;north)| &minus; 90&deg;</code> and raises a <strong>calibration orthogonality</strong> observation card when it exceeds the 5&deg; threshold. The same number appears as <strong>Ortho error</strong> in the <a href="calibration.html">Calibration view</a> header.</p>
+</div>
+</body>
+</html>

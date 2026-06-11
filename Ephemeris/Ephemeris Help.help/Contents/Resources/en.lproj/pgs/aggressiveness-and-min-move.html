@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Aggressiveness, min-move, exposure">
+<meta name="description" content="The three settings that shape every correction: aggression, minimum move, and guide exposure.">
+<meta name="keywords" content="aggressiveness, aggression, min move, minimum move, exposure, chasing seeing, SNR, cadence">
+<meta name="robots" content="anchors">
+<title>Aggressiveness, min-move, exposure</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="aggressiveness-and-min-move"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Aggressiveness, min-move, exposure</p>
+<h1>Aggressiveness, min-move, exposure</h1>
+<p class="lede">Three knobs decide how PHD2 responds to what it sees: how much of each deviation to correct, which deviations to ignore, and how often it looks.</p>
+
+<h2>Minimum move &mdash; the seeing filter</h2>
+<p>Deviations smaller than <strong>MinMove</strong> (in pixels, per axis) produce no correction at all. That is the point: a sub-MinMove deviation is more likely seeing than mount error, and correcting it just injects the atmosphere into your mount. Too low and PHD2 chases seeing; too high and real drift accumulates between corrections.</p>
+<p>Don't guess this value &mdash; the <a href="guiding-assistant.html">Guiding Assistant</a> measures your actual seeing noise and recommends MinMove directly. Accept its recommendation and revisit when conditions change markedly.</p>
+
+<h2>Aggressiveness &mdash; the correction fraction</h2>
+<p>Aggression is the percentage of the computed deviation that PHD2 actually corrects. At 70%, a 1.0″ error gets a 0.7″ correction. Correcting less than 100% is deliberate: part of any single measurement is seeing, and a full-strength correction overshoots, then overshoots back &mdash; visible as oscillation. Raise aggression if errors decay too slowly over several frames; lower it if the axes oscillate around zero.</p>
+
+<h2>Exposure &mdash; the cadence / SNR tradeoff</h2>
+<p>Guide exposure sets both how well each measurement averages out seeing and how often corrections can happen. <strong>2&ndash;4 seconds</strong> suits most setups:</p>
+<ul>
+    <li><strong>Shorter</strong> &mdash; faster corrections, but each centroid is noisier (lower SNR, less seeing averaged out), so PHD2 reacts more to turbulence. Pair short exposures with a <a href="variable-exposure-delays.html">variable exposure delay</a> if you want short-exposure star detection without machine-gun corrections.</li>
+    <li><strong>Longer</strong> &mdash; smoother, higher-SNR measurements, but the mount can wander further between corrections.</li>
+</ul>
+
+<div class="warn"><strong>Chasing seeing:</strong> the classic symptom is RA and Dec corrections every frame, alternating direction, with RMS no better &mdash; often worse &mdash; than with corrections disabled. The cure is some combination of higher MinMove, longer exposure, and lower aggression, in that order.</div>
+
+<p>Reference: <a href="https://openphdguiding.org/manual/Advanced_settings.htm">PHD2 manual &mdash; Advanced settings</a> and <a href="https://openphdguiding.org/phd2-best-practices/">PHD2 Best Practices</a>. The per-algorithm meaning of these knobs is in <a href="guide-algorithms.html">Guide algorithms</a>.</p>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>Ephemeris reads MinMove, aggression, and exposure from the log header and shows them with each session. Observation cards for <strong>seeing-chasing patterns</strong> and <strong>min-move recommendations</strong> link here &mdash; and when a Guiding Assistant run is present in the log, its measured recommendation is surfaced as the authoritative value (see <a href="guiding-assistant.html">The Guiding Assistant</a>).</p>
+</div>
+</body>
+</html>

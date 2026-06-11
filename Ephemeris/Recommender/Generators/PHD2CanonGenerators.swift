@@ -58,7 +58,7 @@ nonisolated struct GuidingAssistantRecommendationObserver: RecommenderGenerator 
             evidence: evidence,
             candidateContributors: [],
             suggestedResponse: "Apply the suggested min-move RA / Dec values in Brain → Algorithms. The Guiding Assistant has already accounted for your current seeing.",
-            relatedHelpTopicIds: ["guiding-assistant"],
+            relatedHelpTopicIds: [HelpTopic.guidingAssistant.rawValue],
             relatedPHD2Tools: [.guidingAssistant],
             confidence: .high,
             sourceAuthority: .phd2Measurement
@@ -120,7 +120,7 @@ nonisolated struct CalibrationSanityAlertObserver: RecommenderGenerator {
             ],
             candidateContributors: [],
             suggestedResponse: "Open Calibration Review & Modification in PHD2 to inspect the calibration. If the alert recurs, the Calibration Assistant will run a fresh calibration with all sanity checks.",
-            relatedHelpTopicIds: ["calibration-troubleshooting"],
+            relatedHelpTopicIds: [HelpTopic.calibrationTroubleshooting.rawValue],
             relatedPHD2Tools: [.calibrationReviewModification, .calibrationAssistant],
             confidence: .high,
             sourceAuthority: .phd2BehaviorDocumented
@@ -189,7 +189,7 @@ nonisolated struct MaxDurationLimitObserver: RecommenderGenerator {
                     "Mechanical issue causing the mount to fall behind tracking (cable drag, balance, stiction)",
                 ],
                 suggestedResponse: "Inspect Brain → Algorithms → Max \(axis) Duration. PHD2's documented behavior is to clip pulses at this value; raising it lets the algorithm reach its intended correction. If the rail rate persists at higher caps, investigate mechanical causes.",
-                relatedHelpTopicIds: ["max-duration-limits"],
+                relatedHelpTopicIds: [HelpTopic.maxDurationLimits.rawValue],
                 relatedPHD2Tools: [.guidingAssistant],
                 confidence: .high,
                 sourceAuthority: .phd2BehaviorDocumented
@@ -236,7 +236,7 @@ nonisolated struct CalibrationStalenessObserver: RecommenderGenerator {
             ],
             candidateContributors: [],
             suggestedResponse: "Run the Calibration Assistant on your next session. It slews to the optimum sky position, pre-clears Dec backlash, and reports cal quality automatically.",
-            relatedHelpTopicIds: ["calibration-staleness"],
+            relatedHelpTopicIds: [HelpTopic.calibrationStaleness.rawValue],
             relatedPHD2Tools: [.calibrationAssistant],
             confidence: .high,
             sourceAuthority: .phd2Manual
@@ -280,7 +280,7 @@ nonisolated struct CalibrationOrthogonalityObserver: RecommenderGenerator {
                 "Dec backlash not cleared before the calibration started",
             ],
             suggestedResponse: "Run the Calibration Assistant on your next session — it slews to the optimum sky position and pre-clears Dec backlash, which directly addresses the two most common orthogonality causes. The Star Cross Tool can confirm the mount responds correctly on both axes if the alert persists.",
-            relatedHelpTopicIds: ["calibration-orthogonality"],
+            relatedHelpTopicIds: [HelpTopic.calibrationOrthogonality.rawValue],
             relatedPHD2Tools: [.calibrationAssistant, .starCross, .calibrationReviewModification],
             confidence: .high,
             sourceAuthority: .phd2Manual
@@ -321,7 +321,7 @@ nonisolated struct VariableExposureDelaysObserver: RecommenderGenerator {
             ],
             candidateContributors: [],
             suggestedResponse: "Configure in PHD2: Brain → Camera tab → ☑ \"Use Variable Exposure Delays\" + Short delay (sec) + Long delay (sec). PHD2's manual: *\"Very precise/encoder-equipped mounts often benefit from conservative auto-guiding. This can include use of medium-long exposure times (4+ seconds) and an additional delay between guide camera exposures.\"*",
-            relatedHelpTopicIds: ["variable-exposure-delays"],
+            relatedHelpTopicIds: [HelpTopic.variableExposureDelays.rawValue],
             relatedPHD2Tools: [],
             confidence: .medium,
             sourceAuthority: .phd2Manual
@@ -355,7 +355,7 @@ nonisolated struct MultiStarGuidingObserver: RecommenderGenerator {
             ],
             candidateContributors: [],
             suggestedResponse: "Enable in PHD2: Brain → Guiding tab → ☑ \"Use multiple stars\". Then click Auto-Select Stars to populate the centroid pool — the manual notes \"the auto-select function will nearly always do a better job than you can by just looking.\"",
-            relatedHelpTopicIds: ["multi-star-guiding"],
+            relatedHelpTopicIds: [HelpTopic.multiStarGuiding.rawValue],
             relatedPHD2Tools: [.autoSelectStars],
             confidence: .medium,
             sourceAuthority: .phd2Manual
@@ -426,7 +426,7 @@ nonisolated struct AlgorithmMismatchObserver: RecommenderGenerator {
             ],
             candidateContributors: [],
             suggestedResponse: "Switch in PHD2: Brain → Algorithms → \(axis) Algorithm. \(recommendationContext(recommended))",
-            relatedHelpTopicIds: ["guide-algorithms"],
+            relatedHelpTopicIds: [HelpTopic.guideAlgorithms.rawValue],
             relatedPHD2Tools: [],
             confidence: .medium,
             sourceAuthority: authority

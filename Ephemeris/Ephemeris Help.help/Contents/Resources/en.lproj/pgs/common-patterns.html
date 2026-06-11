@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Common patterns (oscillation, drift, settling)">
+<meta name="description" content="Recognizing oscillation, Dec drift, RA periodic error, settling failures, and star-lost cascades in guide data.">
+<meta name="keywords" content="oscillation, overcorrection, drift, periodic error, worm, PPEC, settling, dither, star lost, backlash">
+<meta name="robots" content="anchors">
+<title>Common patterns (oscillation, drift, settling)</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="common-patterns"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Common patterns</p>
+<h1>Common patterns (oscillation, drift, settling)</h1>
+<p class="lede">Most bad guide charts are one of five shapes. Learn the five and the chart starts reading like a diagnosis.</p>
+
+<h2>Oscillation &mdash; the zig-zag</h2>
+<p>The trace crosses zero nearly every frame, and the Corrections overlay shows pulses alternating direction: push, overshoot, push back. PHD2 is correcting displacements that were mostly seeing, then correcting its own corrections.</p>
+<ul>
+    <li><strong>Causes:</strong> aggression too high, min-move too low, or guide exposures too short for the conditions.</li>
+    <li><strong>Fixes:</strong> lower aggressiveness, raise min-move toward the seeing noise, lengthen the exposure to 2&ndash;4&nbsp;s. PHD2's Guiding Assistant will recommend min-move values from a measurement &mdash; see <a href="seeing-vs-equipment.html">Seeing vs equipment</a>.</li>
+</ul>
+
+<h2>Steady Dec drift</h2>
+<p>The <span class="tag-dec">Dec</span> line rides a slope, and the Dec corrections are overwhelmingly one direction. The mount's axis isn't pointed at the pole, so targets slide in Dec all night.</p>
+<ul>
+    <li><strong>Causes:</strong> polar-alignment error (the drift rate encodes its size); occasionally flexure or refraction.</li>
+    <li><strong>Fixes:</strong> re-align. The math and the three PHD2 tools are in <a href="polar-alignment-fundamentals.html">Polar-alignment fundamentals</a>.</li>
+</ul>
+
+<h2>RA periodic error</h2>
+<p>The <span class="tag-ra">RA</span> line breathes in a slow wave that repeats on a fixed interval &mdash; the worm period (commonly several minutes per cycle, depending on the mount). Dec doesn't share it; only RA has a worm driving the tracking.</p>
+<ul>
+    <li><strong>Confirming:</strong> the <a href="frequency-analysis.html">FFT periodogram</a> shows it as a spike at the worm period (and possibly harmonics).</li>
+    <li><strong>Fixes:</strong> PHD2's <strong>PredictivePEC</strong> RA algorithm learns the periodic component and corrects it ahead of time; mounts with built-in PEC training help too. See <a href="https://openphdguiding.org/manual/Guide_algorithms.htm">PHD2's guide algorithms</a>.</li>
+</ul>
+
+<h2>Settling failures after dither</h2>
+<p>Each dither is followed by a long orange settling band, or settling that times out entirely, eating imaging time between subs.</p>
+<ul>
+    <li><strong>Causes:</strong> Dec backlash (the mount takes seconds to actually reverse), settle tolerance stricter than the night's seeing, dithers larger than needed, or aggressive corrections re-exciting the star.</li>
+    <li><strong>Fixes:</strong> dither in RA only (or smaller), loosen the settle threshold to match conditions, and address backlash &mdash; PHD2's Guiding Assistant measures it directly.</li>
+</ul>
+
+<h2>Star-lost cascades</h2>
+<p>Runs of excluded frames, often with <span class="tag-mass">Star mass</span> and <span class="tag-snr">SNR</span> collapsing first. The events list fills with star-lost messages.</p>
+<ul>
+    <li><strong>Causes:</strong> clouds (gradual SNR fade, then loss, then recovery), focus drift or dew on the guide optics (slow star-mass decline all night), or a mount jump / cable snag (instant loss with a position jump on recovery).</li>
+    <li><strong>Fixes:</strong> match the cause &mdash; weather needs patience, optics need the checks in <a href="optical-train-health.html">Optical-train health</a>, jumps need a mechanical inspection.</li>
+</ul>
+
+<div class="tip"><strong>Tip:</strong> shape first, numbers second. RMS tells you <em>how much</em>; the pattern tells you <em>why</em>. Two nights with identical RMS can need opposite fixes.</div>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>The chart and its overlays are the pattern viewer: the Corrections overlay exposes oscillation and one-sided Dec pulses, settling bands mark dither recovery (orange = failed), and the diagnostics sub-charts catch star-lost cascades before they happen. The recommender turns the patterns into cards: <strong>"Dec corrections heavily one-directional"</strong> (drift), <strong>"Periodic residual detected &hellip; try PredictivePEC"</strong> (worm), <strong>"Star lost on N% of frames"</strong> (cascades), and the gap-analysis observations that classify a night's dominant residual. Each card links back to the relevant topic on this page.</p>
+</div>
+</body>
+</html>

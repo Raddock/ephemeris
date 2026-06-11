@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Calibration troubleshooting">
+<meta name="description" content="PHD2's calibration sanity alerts, step sizing, the Calibration Assistant, and reviewing calibration data.">
+<meta name="keywords" content="calibration alert, sanity check, too few steps, questionable rates, inconsistent, step size, Calibration Assistant">
+<meta name="robots" content="anchors">
+<title>Calibration troubleshooting</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="calibration-troubleshooting"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Calibration troubleshooting</p>
+<h1>Calibration troubleshooting</h1>
+<p class="lede">PHD2 sanity-checks every calibration and warns when the result looks unreliable. Each alert points at a different physical cause.</p>
+
+<h2>The four sanity alerts</h2>
+<ul>
+    <li><strong>Too few steps</strong> &mdash; the star covered the calibration distance in only a handful of pulses, so each leg's angle and rate rest on too few measurements. Cause: calibration step-size too large for your image scale and guide speed. Fix: let the Calibration Assistant (or the Advanced Settings <em>Calculate</em> helper) size the step so each leg takes roughly 8&ndash;14 steps.</li>
+    <li><strong>Orthogonality error</strong> &mdash; the RA and Dec legs are not close enough to perpendicular. See <a href="calibration-orthogonality.html">Calibration orthogonality</a> for causes and fixes.</li>
+    <li><strong>Questionable rates</strong> &mdash; the measured guide rates don't match what PHD2 expects from your mount's reported guide speed and your image scale. Causes: wrong focal length or pixel size in the profile, a guide-speed setting that differs between mount and profile, or a leg corrupted by backlash or wind.</li>
+    <li><strong>Inconsistent results</strong> &mdash; this calibration differs substantially from your last one with the same setup. Either something changed (camera rotated, different guide speed) or one of the two calibrations is bad. If nothing changed on purpose, recalibrate and see which result repeats.</li>
+</ul>
+
+<div class="note"><strong>Alerts are advisory:</strong> PHD2 still accepts the calibration. But an alert that repeats across sessions is telling you about your hardware, not about bad luck.</div>
+
+<h2>Step size and the Calibration Assistant</h2>
+<p>The calibration step-size (ms per pulse) determines how many steps each leg takes. Recent PHD2 2.6.x releases include a <strong>Calibration Assistant</strong> (Tools menu) that slews near the meridian and celestial equator, clears Dec backlash, computes a sensible step size, and runs the calibration &mdash; the easiest way to get a clean result.</p>
+
+<h2>Reviewing and modifying calibration</h2>
+<p>Under the brain's Guiding tab and the Tools menu, PHD2 offers <strong>Review Calibration Data</strong>, which shows the same leg plot Ephemeris draws plus the computed angles and rates, and a calibration editor for restoring a previous calibration or flipping it manually. Use review to decide whether a suspect calibration is worth keeping; prefer recalibrating over hand-editing.</p>
+
+<p>Reference: <a href="https://openphdguiding.org/manual/Trouble_shooting.htm">PHD2 manual &mdash; Trouble-shooting</a> and <a href="https://openphdguiding.org/manual/Tools.htm">Tools</a>.</p>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>Calibration problems Ephemeris detects in the log &mdash; orthogonality error, suspect rates, and stale calibrations &mdash; appear as <strong>calibration</strong> observation cards (see <a href="calibration-orthogonality.html">orthogonality</a> and <a href="calibration-staleness.html">when to recalibrate</a>), and every calibration in the log can be inspected step-by-step in the <a href="calibration.html">Calibration view</a>.</p>
+</div>
+</body>
+</html>

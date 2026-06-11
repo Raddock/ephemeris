@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="AppleTitle" content="Multi-star guiding">
+<meta name="description" content="Why guiding on multiple stars beats a single star, and why it should be on.">
+<meta name="keywords" content="multi-star, multiple stars, single star, SNR, saturation, lost star, guide star selection">
+<meta name="robots" content="anchors">
+<title>Multi-star guiding</title>
+<link rel="stylesheet" href="../shrd/styles.css">
+</head>
+<body>
+<a name="multi-star-guiding"></a>
+<div class="wrap">
+<p class="crumb"><a href="../Ephemeris Help.html">Help</a> &rsaquo; Multi-star guiding</p>
+<h1>Multi-star guiding</h1>
+<p class="lede">Instead of pinning everything on one star, PHD2 can track the primary star plus a set of secondary stars and combine their displacements into one measurement.</p>
+
+<h2>Why multiple stars win</h2>
+<ul>
+    <li><strong>Noise averaging</strong> &mdash; each star's centroid carries its own measurement noise. Combining several stars averages it down, improving the effective SNR of every guide frame &mdash; typically a visible reduction in reported RMS, especially with faint stars or short exposures.</li>
+    <li><strong>Robustness</strong> &mdash; a single star can saturate as conditions change, sit on a hot pixel, fade into a cloud edge, or be a close double whose centroid wanders. With multiple stars, one misbehaving star is outvoted instead of steering the mount.</li>
+    <li><strong>Fewer lost-star events</strong> &mdash; guiding survives one star dropping out entirely.</li>
+</ul>
+
+<h2>Using it</h2>
+<p>Enable <strong>Use multiple stars</strong> in Advanced Settings &rsaquo; Guiding tab (on by default in current PHD2 2.6.x profiles). PHD2 auto-selects the secondary stars; there is nothing to tune. It quietly falls back to single-star behavior when the field doesn't offer enough usable stars, so there is essentially no downside &mdash; this is the modern default and should stay on.</p>
+
+<div class="note"><strong>Seeing still applies:</strong> multiple stars average out <em>measurement</em> noise, not atmospheric motion &mdash; stars across the field move together under seeing. Expect better, not magical, numbers; the seeing floor measured by the <a href="guiding-assistant.html">Guiding Assistant</a> still stands.</div>
+
+<p>Reference: <a href="https://openphdguiding.org/manual/Advanced_settings.htm">PHD2 manual &mdash; Advanced settings (Guiding tab)</a>.</p>
+
+<h2>Where this shows up in Ephemeris</h2>
+<p>Ephemeris reads the multi-star setting from each log header and flags <strong>single-star sessions</strong> with an observation card suggesting you enable it &mdash; an easy, risk-free improvement. Session statistics (see <a href="statistics.html">Statistics and drift</a>) are comparable either way, but expect the multi-star sessions in a side-by-side comparison to show modestly lower RMS under the same sky.</p>
+</div>
+</body>
+</html>

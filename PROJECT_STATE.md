@@ -25,7 +25,7 @@ It remains a reimplementation lineage of `agalasso/phdlogview` (GPLv3); see `COD
 - **Math:** Accelerate (vDSP real FFT) for the periodogram; straight Swift elsewhere.
 - **Networking:** Network.framework (`NWListener`) for the embedded MCP HTTP server, loopback-only.
 - **Other Apple frameworks:** TipKit (library-discovery tip), App Intents, Core Spotlight (night-record indexing), UniformTypeIdentifiers.
-- **Third-party packages:** none in the app. The stdio MCP helper under `tools/ephemeris-mcp/` is a separate SPM executable package bundled into `Ephemeris.app/Contents/Helpers/`.
+- **Third-party packages:** Sparkle 2.x (SPM) for auto-update — the only external dependency. The stdio MCP helper under `tools/ephemeris-mcp/` is a separate SPM executable package bundled into `Ephemeris.app/Contents/Helpers/` (built universal + timestamp-signed by the bundling phase).
 - **Sandbox / entitlements:** app-sandboxed; `files.user-selected.read-write` plus `network.server` (for the loopback MCP listener). Security-scoped folder bookmarks (`SourceFolderBookmarks`) persist access to log folders.
 - **Build system:** Xcode 26.x project, `objectVersion = 77`, file-system-synchronized groups.
 - **License:** GPLv3 (`LICENSE.txt`, `CODE_PROVENANCE.md`).
@@ -123,16 +123,34 @@ Unchanged from v1 (five-state machine, quote-aware 18/19-column tokenizer, signe
 
 ## 10. Known limitations and rough edges
 
-- **`MARKETING_VERSION` is still 1.0** — needs a bump before a v2 release is cut.
-- **No auto-update mechanism.** Phase 0 named distribution/auto-update as the foundation; no Sparkle (or other) integration is present in the project. Distribution remains a bare zip on GitHub.
-- **No cached per-render analysis** in the document window (v1 carryover) — stats recompute on every render; fine at typical log sizes.
-- **UI tests are minimal** (launch smoke test only). The library/import/MCP windows have no UI-level coverage; unit coverage is strong (see §11).
-- **`hourAngleHours` / `pierSide`** are now used for pier-side bias analysis, but calibration-side values still surface only in the inspector.
-- **Settings ↔ separate windows split** — rig editing and MCP install intentionally live in their own windows, not Settings; revisit if Settings grows tabs.
-- **Embedded server has no auth token** — it relies on loopback binding plus origin/method hardening; any local process can read library summaries while the app runs.
-- **Help topics** referenced by observations (`HelpTopic`) exist as IDs and stubs; the full v2 topic catalog from design §8.3 is not fully written.
-- **100 MB "may take a while" confirmation** still deferred (only the 500 MB refusal shipped).
-- **Legacy `.appiconset` + `.icon` package dual-maintenance** and the post-CodeSign icon copy phase (v1 carryovers).
+*(The June 2026 pre-release hardening pass fixed the earlier list: dead recommender
+paths matched against invented log formats, the sourceFilePath clobber, rig-profile
+dual-store drift on edit/delete, sandbox-broken "open original log", concurrent
+bulk imports, MCP transport divergence (reducer factor, field shapes), contradictory
+verdict tiers, midnight-split trend nights, the help book's missing pages and wrong
+book ID, MARKETING_VERSION, and the helper's single-arch/no-timestamp signing.)*
+
+- **Sparkle is integrated but not yet shippable** — `SUPublicEDKey` is a placeholder
+  until the EdDSA keypair is generated, and each release needs an `appcast.xml`
+  asset (see the release checklist). Automatic checks stay off until then.
+- **Embedded MCP server has no auth token** — now opt-in (off by default, choice
+  persisted), loopback-only, read-only; but while running, any local process can
+  read library summaries. A per-session token would close that.
+- **No cached per-render analysis** in the document window (v1 carryover) — stats
+  recompute on every render; fine at typical log sizes.
+- **UI tests are minimal** (launch smoke test only). The library/import/MCP windows
+  have no UI-level coverage; unit coverage is strong (see §11).
+- **Predictive PEC (GP) algorithm settings** span multiple header lines, so its
+  aggression/min-move aren't attributable to an axis by the header parser.
+- **`hourAngleHours` / `pierSide`** calibration-side values still surface only in
+  the inspector.
+- **100 MB "may take a while" confirmation** still deferred (only the 500 MB
+  refusal shipped).
+- **Legacy `.appiconset` + `.icon` package dual-maintenance** and the post-CodeSign
+  icon copy phase (v1 carryovers).
+- **Re-imports re-run the full analysis on dedup hits** — by design (threshold
+  changes propagate without re-import), but it means re-importing a big unchanged
+  folder pays full parse cost. An analysis-fingerprint skip is the future fix.
 
 ## 11. Build, run, test
 
