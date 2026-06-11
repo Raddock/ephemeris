@@ -140,6 +140,11 @@ final class NightRecordEntity {
     var bestSessionRMSArcsec: Double = 0
     var worstSessionRMSArcsec: Double = 0
 
+    /// Median calibration orthogonality error (degrees, unsigned) for this night —
+    /// from calibrations performed in the log, falling back to the session header's
+    /// "ortho.err." figure. Feeds the cross-night CalibrationAngleShiftObserver.
+    var calibrationOrthogonalityDeg: Double? = nil
+
     /// JSON-encoded `[PersistedSessionStats]`. Phase 3 will define the inner shape.
     var sessionStatsData: Data = Data()
     /// JSON-encoded `PersistedCalibration?`. Phase 3 will define the inner shape.

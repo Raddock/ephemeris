@@ -23,6 +23,17 @@ nonisolated enum GAResultParser {
         var raMaxRateOfChangeArcsecPerSec: Double?
         var highFreqStarMotionArcsecRMS: Double?
         var rawText: String = ""
+
+        /// True when the run produced actionable guidance (min-move, polar alignment,
+        /// backlash, or drift-limiting exposure) as opposed to measurements alone.
+        /// Gates the GuidingAssistantRecommendationObserver's observation card.
+        var hasRecommendations: Bool {
+            recommendedRAMinMovePx != nil ||
+            recommendedDecMinMovePx != nil ||
+            polarAlignErrorArcmin != nil ||
+            decBacklashMs != nil ||
+            recommendedExposureSec != nil
+        }
     }
 
     /// Walk a session and return zero or more `Parsed` GA results. A session can host
@@ -65,6 +76,17 @@ nonisolated enum GAResultParser {
             if let v = firstParenValue(text, after: "Max RA Drift Rate") {
                 result.raMaxRateOfChangeArcsecPerSec = v
             }
+            // Drift-limiting exposure: "… Drift-Limiting Exp=  25.6 s" — the longest
+            // exposure before RA drift dominates; PHD2's effective exposure guidance.
+            if let v = extractDouble(text, after: "Drift-Limiting Exp=") {
+                result.recommendedExposureSec = v
+            }
+            // Backlash measurement: "… Backlash= 320  +/-  40 ms (1.5  +/-  0.2 arc-sec)".
+            // PHD2 prefixes the value with ">=" when the measurement saturated
+            // (>= 5000 ms or too few north points): "Backlash=>= 5000  +/-  ms (…)".
+            if let v = extractBacklashMs(text) {
+                result.decBacklashMs = v
+            }
         }
 
         guard result.hasAnyMeasurement else { return [] }
@@ -88,6 +110,17 @@ nonisolated enum GAResultParser {
         let scanner = Scanner(string: String(tail))
         scanner.charactersToBeSkipped = CharacterSet(charactersIn: " =:\t")
         return scanner.scanInt()
+    }
+
+    /// Pull the backlash milliseconds from a "Backlash=" GA line, tolerating the
+    /// ">=" saturation preamble PHD2 emits for impaired/clipped measurements.
+    private static func extractBacklashMs(_ text: String) -> Double? {
+        guard let range = text.range(of: "Backlash=") else { return nil }
+        var tail = text[range.upperBound...].drop { $0 == " " }
+        if tail.hasPrefix(">=") { tail = tail.dropFirst(2) }
+        let scanner = Scanner(string: String(tail))
+        scanner.charactersToBeSkipped = .whitespaces
+        return scanner.scanDouble()
     }
 
     /// Pulls the first number inside the parentheses that follow `prefix`. PHD2

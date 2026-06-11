@@ -50,7 +50,7 @@ nonisolated struct NightSummary: Sendable, Identifiable {
         self.medianRMSArcsec = entity.medianRMSArcsec
         self.bestSessionRMSArcsec = entity.bestSessionRMSArcsec
         self.worstSessionRMSArcsec = entity.worstSessionRMSArcsec
-        self.calibrationOrthogonalityDeg = nil  // Phase 7+ will extract from calibrationData
+        self.calibrationOrthogonalityDeg = entity.calibrationOrthogonalityDeg
         self.guidingAssistantRan = (entity.gaResults?.isEmpty == false)
         self.subQuality = entity.subQualityRaw.flatMap { SubQualityVerdict(rawValue: $0) }
     }

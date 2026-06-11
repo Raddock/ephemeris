@@ -118,19 +118,23 @@ nonisolated struct SessionHeaderProperties: Sendable {
                                                        options: .regularExpression)
                 guidePixelSize = Double(m[1])
             }
-            // "X guide algorithm = Lowpass2, Aggressiveness = 40.000, Minimum move = 0.400"
-            // PHD2 emits one line per axis; X maps to RA after a normal calibration,
-            // Y to Dec. (Some algorithms inject extra middle params like Hysteresis = 0.10
-            // before Aggressiveness — the regex tolerates intervening fields.)
-            if let m = Self.match(line, pattern: #"X guide algorithm = (\w+),.*Aggressiveness = ([\d.]+),.*Minimum move = ([\d.]+)"#) {
-                xAlgo = m[0]
-                xAggro = Double(m[1])
-                xMinMove = Double(m[2])
+            // "X guide algorithm = <name>, <settings summary>" — one line per axis;
+            // X maps to RA after a normal calibration, Y to Dec. The summary format
+            // differs per algorithm (verified against PHD2 upstream GetSettingsSummary):
+            //   Hysteresis:   "Hysteresis = 0.100, Aggression = 0.700, Minimum move = 0.200"
+            //   ResistSwitch: "Minimum move = 0.150 Aggression = 100% FastSwitch = enabled"
+            //   Lowpass2:     "Aggressiveness = 80.000, Minimum move = 0.150"
+            //   Lowpass:      "Slope weight = 5.000, Minimum move = 0.200"
+            //   ZFilter:      "Type=Bessel-4, Exp-factor=2.0, Minimum move = 0.150"
+            // (Predictive PEC writes its summary on follow-on lines, so its
+            // aggression/min-move are not attributable to an axis here.)
+            if let m = Self.match(line, pattern: #"^X guide algorithm = ([^,]+), (.*)$"#) {
+                xAlgo = m[0].trimmingCharacters(in: .whitespaces)
+                (xAggro, xMinMove) = Self.parseAlgorithmParams(m[1])
             }
-            if let m = Self.match(line, pattern: #"Y guide algorithm = (\w+),.*Aggressiveness = ([\d.]+),.*Minimum move = ([\d.]+)"#) {
-                yAlgo = m[0]
-                yAggro = Double(m[1])
-                yMinMove = Double(m[2])
+            if let m = Self.match(line, pattern: #"^Y guide algorithm = ([^,]+), (.*)$"#) {
+                yAlgo = m[0].trimmingCharacters(in: .whitespaces)
+                (yAggro, yMinMove) = Self.parseAlgorithmParams(m[1])
             }
         }
 
@@ -166,6 +170,23 @@ nonisolated struct SessionHeaderProperties: Sendable {
     /// Convenience derived from min-move and observed pulse stats. Not parsed directly.
     var hasPointingFix: Bool {
         raHours != nil && decDegrees != nil
+    }
+
+    /// Parse aggressiveness (normalized to percent) and minimum move from an
+    /// algorithm settings summary, tolerating the per-algorithm formats above.
+    /// Hysteresis logs aggression as a 0–2 fraction; ResistSwitch as "NN%";
+    /// Lowpass2 as a 0–100 "Aggressiveness" value. All normalize to percent.
+    private static func parseAlgorithmParams(_ summary: String) -> (aggressivenessPercent: Double?, minMovePixels: Double?) {
+        var aggro: Double?
+        if let m = match(summary, pattern: #"Aggressiveness = ([\d.]+)"#) {
+            aggro = Double(m[0])
+        } else if let m = match(summary, pattern: #"Aggression = ([\d.]+)%"#) {
+            aggro = Double(m[0])
+        } else if let m = match(summary, pattern: #"Aggression = ([\d.]+)"#) {
+            aggro = Double(m[0]).map { $0 * 100.0 }
+        }
+        let minMove = match(summary, pattern: #"Minimum move = ([\d.]+)"#).flatMap { Double($0[0]) }
+        return (aggro, minMove)
     }
 
     /// Match a regex pattern against a line; return the capture groups as strings.

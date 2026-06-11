@@ -64,6 +64,10 @@ final class CorpusValidationTests: XCTestCase {
         var byGenerator: [String: Int] = [:]
         var orthoAlerts = 0
         var stalenessAlerts = 0
+        var gaRecommendationLogs = 0
+        var gaObservationLogs = 0
+        var algoHeaderSessions = 0
+        var algoParsedSessions = 0
 
         for url in urls {
             guard let text = try? String(contentsOf: url, encoding: .utf8) else { continue }
@@ -77,7 +81,36 @@ final class CorpusValidationTests: XCTestCase {
                 if obs.title.contains("orthogonality") && obs.severity == .alert { orthoAlerts += 1 }
                 if obs.title.contains("Calibration is") && obs.severity == .alert { stalenessAlerts += 1 }
             }
+
+            // Real-format regression guards. These paths shipped dead once because
+            // unit fixtures used invented line formats — assert against the real
+            // corpus so a format mismatch can never pass silently again.
+            if text.contains("GA Result - Recommendation") {
+                gaRecommendationLogs += 1
+                if observations.contains(where: { $0.title.contains("Guiding Assistant") }) {
+                    gaObservationLogs += 1
+                }
+            }
+            for session in log.guideSessions
+            where session.rawHeader.contains(where: { $0.hasPrefix("X guide algorithm =") }) {
+                algoHeaderSessions += 1
+                if session.headerProperties.raGuideAlgorithm != nil,
+                   session.headerProperties.raMinMovePixels != nil {
+                    algoParsedSessions += 1
+                }
+            }
         }
+
+        if gaRecommendationLogs > 0 {
+            XCTAssertEqual(gaObservationLogs, gaRecommendationLogs,
+                           "Logs with GA recommendations must produce a Guiding Assistant observation")
+        }
+        if algoHeaderSessions > 0 {
+            XCTAssertEqual(algoParsedSessions, algoHeaderSessions,
+                           "Sessions with algorithm header lines must parse algorithm + min-move")
+        }
+        print("[Corpus] GA logs: \(gaRecommendationLogs), GA observations fired: \(gaObservationLogs)")
+        print("[Corpus] Algo header sessions: \(algoHeaderSessions), parsed: \(algoParsedSessions)")
 
         print("[Corpus] Total observations: \(totalObservations) across \(urls.count) logs")
         print("[Corpus] Per-title breakdown:")

@@ -10,65 +10,35 @@ nonisolated struct GuidingAssistantRecommendationObserver: RecommenderGenerator 
     init() {}
 
     func observe(context: SingleNightContext) -> [RecommenderObservation] {
+        // GAResultParser owns the real "INFO: GA Result - …" line format — the same
+        // parse the ingestor persists, so the observation and the GAResultEntity can
+        // never disagree about what PHD2 measured.
         var observations: [RecommenderObservation] = []
         for session in context.sessions {
-            let gaInfos = session.infos.filter { $0.text.localizedCaseInsensitiveContains("Guiding Assistant:") }
-            guard !gaInfos.isEmpty else { continue }
-            let result = parseGuidingAssistantResult(gaInfos)
-            guard let observation = buildObservation(result: result,
-                                                     session: session,
-                                                     rigProfileId: context.profile.id) else { continue }
-            observations.append(observation)
+            for parsed in GAResultParser.parse(session: session) {
+                guard let observation = buildObservation(result: parsed,
+                                                         rigProfileId: context.profile.id) else { continue }
+                observations.append(observation)
+            }
         }
         return observations
     }
 
-    private func parseGuidingAssistantResult(_ infos: [InfoEntry]) -> GuidingAssistantParsed {
-        var result = GuidingAssistantParsed()
-        for info in infos {
-            let text = info.text
-            if let value = extractNumber(text, after: "Total RMS =") {
-                result.totalRmsArcsec = value
-            }
-            if let value = extractNumber(text, after: "Peak-to-Peak RA =") {
-                result.peakToPeakRaArcsec = value
-            }
-            if let value = extractNumber(text, after: "Suggested RA min-move =") {
-                result.suggestedRaMinMovePx = value
-            }
-            if let value = extractNumber(text, after: "Suggested Dec min-move =") {
-                result.suggestedDecMinMovePx = value
-            }
-            if let value = extractNumber(text, after: "Polar alignment error =") {
-                result.polarAlignmentErrorArcmin = value
-            }
-            if let value = extractNumber(text, after: "Dec backlash =") {
-                result.decBacklashMs = value
-            }
-            result.rawLines.append(text)
-        }
-        return result
-    }
-
-    private func extractNumber(_ text: String, after prefix: String) -> Double? {
-        guard let range = text.range(of: prefix) else { return nil }
-        let tail = text[range.upperBound...]
-        let scanner = Scanner(string: String(tail))
-        scanner.charactersToBeSkipped = .whitespaces
-        return scanner.scanDouble()
-    }
-
-    private func buildObservation(result: GuidingAssistantParsed,
-                                  session: GuideSession,
+    private func buildObservation(result: GAResultParser.Parsed,
                                   rigProfileId: UUID) -> RecommenderObservation? {
         guard result.hasRecommendations else { return nil }
 
         var evidence: [EvidenceItem] = []
-        if let v = result.totalRmsArcsec        { evidence.append(.init(label: "Total RMS", value: String(format: "%.2f″", v))) }
-        if let v = result.peakToPeakRaArcsec    { evidence.append(.init(label: "Peak-to-Peak RA", value: String(format: "%.2f″", v))) }
-        if let v = result.suggestedRaMinMovePx  { evidence.append(.init(label: "Suggested RA min-move", value: String(format: "%.2f px", v))) }
-        if let v = result.suggestedDecMinMovePx { evidence.append(.init(label: "Suggested Dec min-move", value: String(format: "%.2f px", v))) }
-        if let v = result.polarAlignmentErrorArcmin { evidence.append(.init(label: "Polar alignment error", value: String(format: "%.1f′", v))) }
+        if let v = result.highFreqStarMotionArcsecRMS {
+            evidence.append(.init(label: "High-frequency star motion (HPF-RMS)", value: String(format: "%.2f″", v),
+                                  detail: "Seeing-driven motion guiding can't correct — the floor for min-move"))
+        }
+        if let v = result.raPeakToPeakArcsec    { evidence.append(.init(label: "RA peak-to-peak", value: String(format: "%.2f″", v))) }
+        if let v = result.raMaxRateOfChangeArcsecPerSec { evidence.append(.init(label: "Max RA drift rate", value: String(format: "%.2f″/s", v))) }
+        if let v = result.recommendedRAMinMovePx  { evidence.append(.init(label: "Suggested RA min-move", value: String(format: "%.2f px", v))) }
+        if let v = result.recommendedDecMinMovePx { evidence.append(.init(label: "Suggested Dec min-move", value: String(format: "%.2f px", v))) }
+        if let v = result.recommendedExposureSec  { evidence.append(.init(label: "Drift-limiting exposure", value: String(format: "%.1f s", v))) }
+        if let v = result.polarAlignErrorArcmin   { evidence.append(.init(label: "Polar alignment error", value: String(format: "%.1f′", v))) }
         if let v = result.decBacklashMs {
             let assessment: String
             if v < 100 { assessment = "negligible (no compensation needed)" }
@@ -95,22 +65,6 @@ nonisolated struct GuidingAssistantRecommendationObserver: RecommenderGenerator 
         )
     }
 
-    private nonisolated struct GuidingAssistantParsed {
-        var totalRmsArcsec: Double?
-        var peakToPeakRaArcsec: Double?
-        var suggestedRaMinMovePx: Double?
-        var suggestedDecMinMovePx: Double?
-        var polarAlignmentErrorArcmin: Double?
-        var decBacklashMs: Double?
-        var rawLines: [String] = []
-
-        var hasRecommendations: Bool {
-            suggestedRaMinMovePx != nil ||
-            suggestedDecMinMovePx != nil ||
-            polarAlignmentErrorArcmin != nil ||
-            decBacklashMs != nil
-        }
-    }
 }
 
 // MARK: - CalibrationSanityAlertObserver

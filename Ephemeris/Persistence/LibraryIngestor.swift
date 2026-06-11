@@ -90,6 +90,18 @@ actor LibraryIngestor {
             }
         }
 
+        // Calibration orthogonality for cross-night step-change detection. Prefer
+        // calibrations performed in this log; fall back to the session header's
+        // "ortho.err." (the state of the active calibration when guiding began).
+        // Both sources are unsigned degrees-from-orthogonal.
+        var orthoValues = log.calibrations.compactMap { $0.details.orthogonalityErrorDeg }
+        if orthoValues.isEmpty {
+            orthoValues = log.guideSessions.compactMap { $0.headerProperties.calibrationOrthogonalityErrorDeg }
+        }
+        record.calibrationOrthogonalityDeg = orthoValues.isEmpty
+            ? nil
+            : orthoValues.sorted()[orthoValues.count / 2]
+
         try removeExistingObservations(for: record)
         try removeExistingGAResults(for: record)
         try removeExistingSessionRecords(for: record)
