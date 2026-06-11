@@ -8,5 +8,20 @@
     <string>com.macobservatory.Ephemeris.help</string>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2026 Andrew Burwell. Licensed under GPLv3.</string>
+    <!-- Sparkle 2 auto-update. The appcast is uploaded as an asset on each GitHub
+         release; the /latest/download/ URL always resolves to the newest one. -->
+    <key>SUFeedURL</key>
+    <string>https://github.com/Raddock/ephemeris/releases/latest/download/appcast.xml</string>
+    <!-- EdDSA public key for update signatures. Generate the pair with Sparkle's
+         generate_keys tool and paste the public key here before shipping — Sparkle
+         refuses updates while this placeholder is present. -->
+    <key>SUPublicEDKey</key>
+    <string>REPLACE-WITH-GENERATED-ED25519-PUBLIC-KEY</string>
+    <!-- Required for sandboxed apps: route installs through Sparkle's XPC service. -->
+    <key>SUEnableInstallerLauncherService</key>
+    <true/>
+    <!-- Don't phone home until the user has consented in the first-run prompt. -->
+    <key>SUEnableAutomaticChecks</key>
+    <false/>
 </dict>
 </plist>

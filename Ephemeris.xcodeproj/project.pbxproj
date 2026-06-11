@@ -47,11 +47,16 @@
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
+/* Begin PBXBuildFile section */
+		5FAB00000000000000000A01 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 5FAB00000000000000000A02 /* Sparkle */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		5F9BE2AA2F9C5F1D00DD97D8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5FAB00000000000000000A01 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -114,6 +119,7 @@
 			);
 			name = Ephemeris;
 			packageProductDependencies = (
+				5FAB00000000000000000A02 /* Sparkle */,
 			);
 			productName = Ephemeris;
 			productReference = 5F9BE2AD2F9C5F1D00DD97D8 /* Ephemeris.app */;
@@ -189,6 +195,9 @@
 				};
 			};
 			buildConfigurationList = 5F9BE2A82F9C5F1D00DD97D8 /* Build configuration list for PBXProject "Ephemeris" */;
+			packageReferences = (
+				5FAB00000000000000000A03 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -629,6 +638,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		5FAB00000000000000000A03 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		5FAB00000000000000000A02 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5FAB00000000000000000A03 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 5F9BE2A52F9C5F1D00DD97D8 /* Project object */;
 }

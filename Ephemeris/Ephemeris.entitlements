@@ -11,5 +11,8 @@
 	     no incoming connections from the network. -->
 	<key>com.apple.security.network.server</key>
 	<true/>
+	<!-- Sparkle 2: fetch the appcast and update archive from GitHub. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
 </dict>
 </plist>

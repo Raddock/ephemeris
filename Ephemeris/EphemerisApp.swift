@@ -19,6 +19,7 @@
 //
 
 import SwiftUI
+import Sparkle
 
 @main
 struct EphemerisApp: App {
@@ -45,6 +46,15 @@ struct EphemerisApp: App {
     // sets `coordinator.active` and opens the import-progress window; that window
     // reads the active importer back out via @Environment.
     @State private var importCoordinator = ImportCoordinator()
+
+    // Sparkle 2 auto-update. Starts the updater machinery; no network contact
+    // happens until the user's first explicit check (SUEnableAutomaticChecks is
+    // off, and Sparkle asks for consent before enabling scheduled checks).
+    private let updaterController = SPUStandardUpdaterController(
+        startingUpdater: true,
+        updaterDelegate: nil,
+        userDriverDelegate: nil
+    )
 
     init() {
         // Initialize TipKit at launch so the library-discovery tip is ready when the
@@ -92,6 +102,7 @@ struct EphemerisApp: App {
                 Button("About Ephemeris") {
                     openWindow(id: "about")
                 }
+                CheckForUpdatesView(updater: updaterController.updater)
             }
             CommandGroup(after: .appSettings) {
                 Button("Rig Profiles…") {
