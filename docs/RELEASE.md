@@ -9,8 +9,10 @@
    The private key lands in your login Keychain ("Private key for signing Sparkle updates").
    Keep it safe — anyone with it can push updates to your users.
 2. **Paste the printed public key** into `Ephemeris/Info.plist` → `SUPublicEDKey`
-   (replacing `REPLACE-WITH-GENERATED-ED25519-PUBLIC-KEY`). Sparkle refuses updates
-   while the placeholder is present, so "Check for Updates…" is inert until this is done.
+   (replacing `REPLACE-WITH-GENERATED-ED25519-PUBLIC-KEY`). While the placeholder is
+   present the app never starts Sparkle's updater at all — "Check for Updates…"
+   shows disabled, and no appcast contact or log noise happens. The updater also
+   stays off inside test hosts regardless of the key.
 
 ## Every release
 

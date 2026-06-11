@@ -47,16 +47,28 @@ struct EphemerisApp: App {
     // reads the active importer back out via @Environment.
     @State private var importCoordinator = ImportCoordinator()
 
-    // Sparkle 2 auto-update. Starts the updater machinery; no network contact
-    // happens until the user's first explicit check (SUEnableAutomaticChecks is
-    // off, and Sparkle asks for consent before enabling scheduled checks).
-    private let updaterController = SPUStandardUpdaterController(
-        startingUpdater: true,
-        updaterDelegate: nil,
-        userDriverDelegate: nil
-    )
+    // Sparkle 2 auto-update. The updater machinery only starts when this build is
+    // actually updatable: never inside a test host (XCUITest launches would emit
+    // updater log noise and can pop dialogs), and not while SUPublicEDKey is still
+    // the placeholder (nothing to verify against until the real key ships — see
+    // docs/RELEASE.md). The "Check for Updates…" menu item stays disabled until
+    // the updater is started.
+    private let updaterController: SPUStandardUpdaterController
+
+    private static var sparkleShouldStart: Bool {
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+            return false
+        }
+        let publicKey = Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") as? String ?? ""
+        return !publicKey.isEmpty && !publicKey.hasPrefix("REPLACE-")
+    }
 
     init() {
+        updaterController = SPUStandardUpdaterController(
+            startingUpdater: Self.sparkleShouldStart,
+            updaterDelegate: nil,
+            userDriverDelegate: nil
+        )
         // Initialize TipKit at launch so the library-discovery tip is ready when the
         // third NightRecord lands.
         LibraryDiscoveryTipBootstrap.configure()
