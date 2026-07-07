@@ -14,6 +14,12 @@ import SwiftData
 /// loopback name and emit no CORS headers, so browser-origin requests can neither
 /// be routed here under a foreign hostname nor read any response cross-origin.
 final class MCPConnectionHandler: @unchecked Sendable {
+    /// Upper bound on a whole request (request line + headers + body). JSON-RPC tool
+    /// calls are a few hundred bytes; anything near this size is not a legitimate
+    /// client. The cap is what stops a hostile local process from growing the
+    /// receive buffer without bound via a huge (or absent) Content-Length.
+    static let maxRequestBytes = 1_048_576
+
     let library: EphemerisLibrary
     init(library: EphemerisLibrary) {
         self.library = library
@@ -37,12 +43,19 @@ final class MCPConnectionHandler: @unchecked Sendable {
                 current.append(data)
             }
 
-            if let request = HTTPRequest.parse(current) {
+            switch HTTPRequest.parse(current, maxBytes: Self.maxRequestBytes) {
+            case .request(let request):
                 self.respond(to: request, on: connection)
-            } else if isComplete {
-                connection.cancel()
-            } else {
-                self.receive(connection: connection, buffer: current)
+            case .invalid:
+                self.send(connection: connection, statusCode: 400, body: Data("bad request\n".utf8), contentType: "text/plain")
+            case .incomplete where current.count > Self.maxRequestBytes:
+                self.send(connection: connection, statusCode: 413, body: Data("request too large\n".utf8), contentType: "text/plain")
+            case .incomplete:
+                if isComplete {
+                    connection.cancel()
+                } else {
+                    self.receive(connection: connection, buffer: current)
+                }
             }
         }
     }
@@ -52,7 +65,7 @@ final class MCPConnectionHandler: @unchecked Sendable {
         // request reached us via DNS rebinding from a browser — reject it before
         // touching the library. Legitimate MCP clients connect straight to
         // 127.0.0.1 / localhost and send a matching Host.
-        guard isLoopbackHost(request.headers["host"]) else {
+        guard Self.isLoopbackHost(request.headers["host"]) else {
             send(connection: connection, statusCode: 403, body: Data("forbidden\n".utf8), contentType: "text/plain")
             return
         }
@@ -68,8 +81,8 @@ final class MCPConnectionHandler: @unchecked Sendable {
 
     /// True when the HTTP `Host` header names a loopback address. Strips the port
     /// and any IPv6 brackets. A missing Host is treated as untrusted — HTTP/1.1
-    /// clients are required to send one.
-    private func isLoopbackHost(_ hostHeader: String?) -> Bool {
+    /// clients are required to send one. Static so tests can exercise it directly.
+    static func isLoopbackHost(_ hostHeader: String?) -> Bool {
         guard let hostHeader, !hostHeader.isEmpty else { return false }
         let host: String
         if hostHeader.hasPrefix("[") {
@@ -117,6 +130,7 @@ final class MCPConnectionHandler: @unchecked Sendable {
         case 204: return "No Content"
         case 400: return "Bad Request"
         case 404: return "Not Found"
+        case 413: return "Content Too Large"
         case 500: return "Internal Server Error"
         default:  return "OK"
         }
@@ -131,20 +145,30 @@ struct HTTPRequest {
     let headers: [String: String]
     let body: Data
 
-    static func parse(_ data: Data) -> HTTPRequest? {
+    /// Three-way outcome so the connection loop can tell "keep reading" apart from
+    /// "reject and close". A plain optional conflated the two, which meant a
+    /// malformed Content-Length kept the connection buffering forever (or, for a
+    /// negative value, crashed on an inverted range).
+    enum ParseOutcome {
+        case incomplete
+        case invalid
+        case request(HTTPRequest)
+    }
+
+    static func parse(_ data: Data, maxBytes: Int) -> ParseOutcome {
         // Find the \r\n\r\n boundary between headers and body
         guard let separatorRange = data.range(of: Data("\r\n\r\n".utf8)) else {
-            return nil   // headers not complete yet
+            return .incomplete   // headers not complete yet
         }
         let headerData = data.subdata(in: 0..<separatorRange.lowerBound)
         let bodyStart = separatorRange.upperBound
 
-        guard let headerString = String(data: headerData, encoding: .utf8) else { return nil }
+        guard let headerString = String(data: headerData, encoding: .utf8) else { return .invalid }
         let lines = headerString.components(separatedBy: "\r\n")
-        guard let requestLine = lines.first else { return nil }
+        guard let requestLine = lines.first else { return .invalid }
 
         let parts = requestLine.split(separator: " ").map { String($0) }
-        guard parts.count >= 2 else { return nil }
+        guard parts.count >= 2 else { return .invalid }
 
         var headers: [String: String] = [:]
         for line in lines.dropFirst() where !line.isEmpty {
@@ -155,13 +179,22 @@ struct HTTPRequest {
             }
         }
 
-        // Body: require full body before returning the parsed request
-        let contentLength = Int(headers["content-length"] ?? "0") ?? 0
+        // Content-Length must be a nonnegative integer within the request cap.
+        // Anything else is a hostile or broken client, not an incomplete read.
+        let contentLength: Int
+        if let rawLength = headers["content-length"] {
+            guard let parsed = Int(rawLength), parsed >= 0 else { return .invalid }
+            contentLength = parsed
+        } else {
+            contentLength = 0
+        }
+        guard bodyStart + contentLength <= maxBytes else { return .invalid }
+
         let availableBody = data.count - bodyStart
-        guard availableBody >= contentLength else { return nil }
+        guard availableBody >= contentLength else { return .incomplete }
         let bodyEnd = bodyStart + contentLength
         let body = data.subdata(in: bodyStart..<bodyEnd)
 
-        return HTTPRequest(method: parts[0], path: parts[1], headers: headers, body: body)
+        return .request(HTTPRequest(method: parts[0], path: parts[1], headers: headers, body: body))
     }
 }
