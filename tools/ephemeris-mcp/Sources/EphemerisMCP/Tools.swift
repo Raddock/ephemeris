@@ -13,12 +13,14 @@ struct Tool: Sendable {
 }
 
 enum Tools {
-    /// All registered tools. The write tool `add_annotation` is included only when
-    /// the `EPHEMERIS_MCP_ALLOW_WRITES=1` environment variable is set — per design §8,
-    /// writes are opt-in. The user toggles this from the MCP Server settings tab
-    /// (which re-renders the `claude_desktop_config.json` entry with the env block).
+    /// All registered tools. The catalog is strictly read-only: this helper reads
+    /// the app's SwiftData SQLite store out-of-process, and an external writer on
+    /// a live Core Data store is coherence Apple does not guarantee. Annotations
+    /// are written in the app (or a future app-mediated channel), never here.
+    /// The former opt-in `add_annotation` tool and its EPHEMERIS_MCP_ALLOW_WRITES
+    /// gate were removed 2026-07-07.
     static var all: [Tool] {
-        var tools: [Tool] = [
+        [
             listRigs,
             getRig,
             listNights,
@@ -33,10 +35,6 @@ enum Tools {
             getAggregateStats,
             getCorpusSummary,
         ]
-        if ProcessInfo.processInfo.environment["EPHEMERIS_MCP_ALLOW_WRITES"] == "1" {
-            tools.append(addAnnotation)
-        }
-        return tools
     }
 
     // MARK: - list_rigs
@@ -497,110 +495,6 @@ enum Tools {
                 "id": .string(topic.id),
                 "title": .string(topic.title),
                 "summary": .string(topic.summary),
-            ])
-        }
-    )
-
-    // MARK: - add_annotation (opt-in write)
-
-    static let addAnnotation = Tool(
-        name: "add_annotation",
-        description: """
-        Record an annotation — equipment change, calibration event, software update,
-        environment note — that the cross-night recommender uses to attribute step-changes.
-        Either `night_id` or no `night_id` (a rig-level annotation, attached to no specific night)
-        is valid. `categories` accepts: equipment, calibration, environment, software, freeText.
-        Set `is_rig_mutating: true` for events that change the rig's identity (e.g. a guide-train
-        swap) so the engine knows to bin pre/post separately. Annotations appear in the app
-        on next launch / library refresh.
-        """,
-        inputSchema: .object([
-            "type": "object",
-            "properties": .object([
-                "rig_id":         .object(["type": "string", "description": "Rig UUID (required)"]),
-                "night_id":       .object(["type": "string", "description": "Night UUID (optional — omit for rig-level annotation)"]),
-                "event_date":     .object(["type": "string", "description": "ISO8601 timestamp of the event (defaults to now if omitted)"]),
-                "label":          .object(["type": "string", "description": "Short title for the event"]),
-                "detail":         .object(["type": "string", "description": "Longer explanation"]),
-                "categories":     .object(["type": "array", "description": "One or more of: equipment, calibration, environment, software, freeText"]),
-                "is_rig_mutating": .object(["type": "boolean", "description": "True when this event changes rig identity"]),
-            ]),
-            "required": .array(["rig_id", "label"]),
-        ]),
-        invoke: { args, store in
-            guard let rigID = args["rig_id"]?.stringValue, !rigID.isEmpty else {
-                throw JSONRPCError(code: -32602, message: "missing rig_id", data: nil)
-            }
-            let label = args["label"]?.stringValue ?? ""
-            guard !label.isEmpty else {
-                throw JSONRPCError(code: -32602, message: "missing label", data: nil)
-            }
-            let nightID = args["night_id"]?.stringValue
-            let detail = args["detail"]?.stringValue ?? ""
-            let isMutating = args["is_rig_mutating"]?.boolValue ?? false
-
-            // Validate categories against the app's AnnotationCategory raw values —
-            // an unknown string must reject the call, not be silently stored where
-            // the app would drop it on decode.
-            let allowedCategories = ["equipment", "calibration", "environment", "software", "freeText"]
-            var categories: [String] = []
-            switch args["categories"] {
-            case nil, .some(.null):
-                break  // omitted — no categories
-            case .some(.array(let arr)):
-                for entry in arr {
-                    guard let s = entry.stringValue, allowedCategories.contains(s) else {
-                        let got = entry.stringValue ?? JSONFormatter.toPrettyString(entry)
-                        throw JSONRPCError(
-                            code: -32602,
-                            message: "unknown annotation category \"\(got)\"; allowed values: \(allowedCategories.joined(separator: ", "))",
-                            data: nil
-                        )
-                    }
-                    categories.append(s)
-                }
-            case .some:
-                throw JSONRPCError(
-                    code: -32602,
-                    message: "categories must be an array of strings; allowed values: \(allowedCategories.joined(separator: ", "))",
-                    data: nil
-                )
-            }
-
-            // The rig must exist — an annotation against a phantom rig UUID would be
-            // invisible in the app forever.
-            guard store.rig(uuid: rigID) != nil else {
-                throw JSONRPCError(code: -32602, message: "rig not found: \(rigID)", data: nil)
-            }
-            // A supplied night_id must resolve; only an *omitted* night_id means
-            // "rig-level annotation". Don't silently degrade.
-            if let nightID {
-                guard store.night(uuid: nightID) != nil else {
-                    throw JSONRPCError(code: -32602, message: "night not found: \(nightID)", data: nil)
-                }
-            }
-
-            let eventDate: Date
-            if let s = args["event_date"]?.stringValue, let d = ISO8601DateFormatter().date(from: s) {
-                eventDate = d
-            } else {
-                eventDate = Date()
-            }
-            guard let newID = store.addAnnotation(
-                rigProfileId: rigID,
-                nightUUID: nightID,
-                eventDate: eventDate,
-                label: label,
-                detail: detail,
-                categories: categories,
-                isRigMutating: isMutating
-            ) else {
-                throw JSONRPCError(code: -32603, message: "insert failed", data: nil)
-            }
-            return .object([
-                "id": .string(newID),
-                "ok": .bool(true),
-                "note": .string("Annotation written. Restart Ephemeris.app (or open the Library window) to see it in the UI."),
             ])
         }
     )

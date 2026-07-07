@@ -138,6 +138,10 @@ struct MCPProtocolHandlerTests {
         #expect(serverInfo["name"] as? String == "ephemeris")
     }
 
+    /// Parity tripwire: the standalone helper pins this same five-tool subset in
+    /// tools/ephemeris-mcp (CatalogTests.catalogContainsTheEmbeddedServerSubset).
+    /// Changing either catalog without the other fails one of the two tests,
+    /// forcing a deliberate parity decision.
     @Test func toolsListReturnsFullCatalog() throws {
         let handler = try makeHandler()
         let response = try #require(try call(handler, #"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#))
@@ -146,6 +150,19 @@ struct MCPProtocolHandlerTests {
         let names = Set(tools.compactMap { $0["name"] as? String })
         #expect(names == ["list_rigs", "list_nights", "list_observations",
                           "get_aggregate_stats", "get_corpus_summary"])
+    }
+
+    /// The embedded catalog is read-only by design; see the helper-side
+    /// CatalogTests for the same invariant on the stdio server.
+    @Test func embeddedCatalogIsStrictlyReadOnly() {
+        #expect(!MCPTools.all.contains { $0.name == "add_annotation" })
+        let writeVerbs = ["add", "create", "write", "update", "delete", "remove", "set_"]
+        for tool in MCPTools.all {
+            for verb in writeVerbs {
+                #expect(!tool.name.hasPrefix(verb),
+                        "tool \(tool.name) looks like a write tool in a read-only catalog")
+            }
+        }
     }
 
     @Test func unknownMethodReturnsMethodNotFound() throws {

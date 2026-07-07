@@ -22,8 +22,9 @@ let package = Package(
                 .linkedLibrary("sqlite3"),
             ]
         ),
-        // Test target removed for the initial Phase 8 ship — tests would require
-        // refactoring main into a library target. The MCP protocol is exercised
-        // end-to-end via the smoke-test script in this package's README.
+        .testTarget(
+            name: "EphemerisMCPTests",
+            dependencies: ["EphemerisMCP"]
+        ),
     ]
 )

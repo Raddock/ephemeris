@@ -103,7 +103,7 @@ struct MCPServer: Sendable {
         do {
             resultValue = try tool.invoke(arguments, store)
         } catch let rpcError as JSONRPCError {
-            // Validation failures (e.g. add_annotation with an unknown category)
+            // Validation failures (e.g. an unknown UUID or malformed argument)
             // reject the call at the JSON-RPC level rather than returning a result.
             return .failure(rpcError)
         } catch {

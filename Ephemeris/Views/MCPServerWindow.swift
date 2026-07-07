@@ -15,7 +15,6 @@ struct MCPServerWindow: View {
     @State private var installInProgress: ClaudeConfigInstaller.Target?
     @State private var installResult: ClaudeConfigInstaller.InstallResult?
     @State private var installError: String?
-    @AppStorage("mcp.allowAnnotationWrites") private var allowWrites: Bool = false
 
     private var bundledBinary: URL? {
         ClaudeConfigInstaller.bundledHelperBinary()
@@ -155,18 +154,11 @@ struct MCPServerWindow: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Toggle(isOn: $allowWrites) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Allow Claude to add annotations")
-                        .font(.callout)
-                    Text("Enables the `add_annotation` write tool so Claude can record equipment changes / calibration events / notes on your behalf. Off by default. Changing this only affects subsequent installs — re-run Connect to update your existing connector.")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .toggleStyle(.switch)
-            .padding(.top, 4)
+            Text("The connector is read-only: Claude can browse your library and stats but never writes to it. Add annotations in the Log Library window.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 4)
         }
     }
 
@@ -221,7 +213,7 @@ struct MCPServerWindow: View {
         installInProgress = target
         Task { @MainActor in
             do {
-                let result = try await ClaudeConfigInstaller.install(target, allowWrites: allowWrites)
+                let result = try await ClaudeConfigInstaller.install(target)
                 installResult = result
             } catch let err as ClaudeConfigInstaller.InstallError {
                 if case .userCancelled = err {} else if case .noFolderSelected = err {} else {

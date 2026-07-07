@@ -25,7 +25,7 @@
     <tr><td><code>list_observations</code></td><td>Recommender output, including severity and source authority.</td></tr>
     <tr><td><code>get_aggregate_stats</code></td><td>Median / p75 / p90 RMS across a rig's nights.</td></tr>
 </table>
-<p>Every observation carries its <code>source_authority</code>, so Claude can tell PHD2-canon advice apart from Ephemeris heuristics. An optional toggle, <strong>Allow Claude to add annotations</strong>, enables one write tool (<code>add_annotation</code>) so Claude can record equipment changes or notes on your behalf — it's off by default, and changing it only affects connectors you install afterwards (re-run Connect to update an existing one).</p>
+<p>Every observation carries its <code>source_authority</code>, so Claude can tell PHD2-canon advice apart from Ephemeris heuristics. All tools are strictly read-only: Claude can browse your library and statistics but never writes to it. To record equipment changes or notes, add annotations in the Log Library window.</p>
 
 <h2>Opt-in, and it stays that way</h2>
 <p>The server is <strong>off by default</strong> and nothing is exposed until you turn it on. Open <strong>Ephemeris &rsaquo; MCP Server…</strong> and use <strong>Start server</strong> under Advanced. Your choice persists: once started, the server comes up automatically on later launches; once stopped, it stays off across launches until you start it again.</p>
