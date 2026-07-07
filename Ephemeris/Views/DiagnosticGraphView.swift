@@ -83,12 +83,13 @@ struct DiagnosticGraphView: View {
         }
         .task(id: seriesKey) {
             let kind = kind
-            seriesCache = DiagnosticChartData(session: session, key: seriesKey) { entry in
+            let data = DiagnosticChartData(session: session, key: seriesKey) { entry in
                 switch kind {
                 case .starMass: return Double(entry.starMass)
                 case .snr:      return entry.snr
                 }
             }
+            if !Task.isCancelled { seriesCache = data }
         }
         .chartXScale(domain: visibleDomain)
         .chartXAxis(.hidden)

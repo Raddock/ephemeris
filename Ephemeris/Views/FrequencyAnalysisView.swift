@@ -51,7 +51,8 @@ struct FrequencyAnalysisView: View {
             footer
         }
         .task(id: spectrumKey) {
-            spectrum = FrequencyAnalyzer.analyze(session: session, axis: axis, driftCorrect: driftCorrect)
+            let result = FrequencyAnalyzer.analyze(session: session, axis: axis, driftCorrect: driftCorrect)
+            if !Task.isCancelled { spectrum = result }
         }
         .frame(minWidth: 640, idealWidth: 760, minHeight: 420, idealHeight: 480)
     }

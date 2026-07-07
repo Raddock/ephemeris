@@ -65,7 +65,10 @@ struct GuideGraphView: View {
             }
         }
         .task(id: chartKey) {
-            chartCache = GuideChartData(session: session, key: chartKey)
+            let data = GuideChartData(session: session, key: chartKey)
+            // A superseded task must not clobber the newer model (main-actor
+            // ordering makes this near-impossible, but the guard is free).
+            if !Task.isCancelled { chartCache = data }
         }
     }
 

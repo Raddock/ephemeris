@@ -113,7 +113,8 @@ struct ScatterInsetView: View {
             }
         }
         .task(id: cloudKey) {
-            cloudCache = ScatterCloud(session: session, key: cloudKey)
+            let cloud = ScatterCloud(session: session, key: cloudKey)
+            if !Task.isCancelled { cloudCache = cloud }
         }
         .chartXScale(domain: domain)
         .chartYScale(domain: domain)

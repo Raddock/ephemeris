@@ -237,8 +237,16 @@ enum GuideLogParser {
         var decDur = coerceInt(f[11])
         if f[12] == "S" { decDur = -decDur }
 
-        let xStep = Int(f[13])
-        let yStep = Int(f[14])
+        // AO step fields stay nil when empty (the normal non-AO case) or when
+        // garbage — but garbage counts as malformed like every other field.
+        func coerceOptionalInt(_ s: String) -> Int? {
+            if s.isEmpty { return nil }
+            if let v = Int(s) { return v }
+            malformedFields += 1
+            return nil
+        }
+        let xStep = coerceOptionalInt(f[13])
+        let yStep = coerceOptionalInt(f[14])
         if let xs = xStep { raDur = xs }
         if let ys = yStep { decDur = ys }
 

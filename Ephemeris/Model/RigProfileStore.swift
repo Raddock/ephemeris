@@ -132,7 +132,16 @@ final class RigProfileStore {
                     context.insert(RigProfileEntity(from: profile))
                 }
             }
-            try? context.save()
+            do {
+                try context.save()
+            } catch {
+                // The import didn't persist — leave the JSON folder in place so
+                // the (idempotent) migration retries on next launch instead of
+                // stranding profiles in a backup folder the app never reads.
+                NSLog("[RigProfiles] Legacy JSON migration save failed; will retry next launch: %@",
+                      error.localizedDescription)
+                return
+            }
         }
 
         // Park the folder even when it held no decodable profiles — an empty

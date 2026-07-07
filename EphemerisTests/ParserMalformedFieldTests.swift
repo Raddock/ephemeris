@@ -84,3 +84,18 @@ struct ParserMalformedFieldTests {
         #expect(merged.malformedFieldCount == 5)
     }
 }
+
+extension ParserMalformedFieldTests {
+    @Test func garbageAOStepFieldsAreCounted() {
+        let log = GuideLogParser.parse(header + """
+
+        1,1.0,"AO",0.1,0.2,0.15,0.25,0.1,0.2,20,W,10,S,BAD,7,1200,25.0,0
+        """)
+        let session = log.guideSessions.first
+        // xStep "BAD" is present but unreadable: counted, and stays nil so the
+        // duration fields keep their values. yStep 7 applies normally.
+        #expect(session?.malformedFieldCount == 1)
+        #expect(session?.entries.first?.xStep == nil)
+        #expect(session?.entries.first?.yStep == 7)
+    }
+}
