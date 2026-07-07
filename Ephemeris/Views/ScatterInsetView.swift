@@ -32,6 +32,24 @@ struct ScatterInsetView: View {
     let visibleDomain: ClosedRange<Double>?
     let manualExclusions: [ClosedRange<Double>]
 
+    @State private var cloudCache: ScatterCloud?
+
+    private var cloudKey: ScatterCloud.Key {
+        ScatterCloud.Key(sessionID: session.id,
+                         axisMode: chartState.axisMode,
+                         units: chartState.units,
+                         domainLo: visibleDomain?.lowerBound,
+                         domainHi: visibleDomain?.upperBound,
+                         exclusions: manualExclusions)
+    }
+
+    /// Cached point cloud. Hover only moves the highlighted point, so the cloud
+    /// itself is rebuilt on session/axis/zoom/exclusion changes, never per
+    /// mouse-move tick (the old code re-filtered every entry on each hover).
+    private var currentCloud: ScatterCloud? {
+        cloudCache?.key == cloudKey ? cloudCache : nil
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
@@ -71,16 +89,30 @@ struct ScatterInsetView: View {
                 .foregroundStyle(.secondary.opacity(0.35))
                 .lineStyle(StrokeStyle(lineWidth: 0.5))
 
-            ForEach(points) { p in
-                PointMark(
-                    x: .value("X", p.x),
-                    y: .value("Y", p.y)
-                )
-                .symbol(.circle)
-                .symbolSize(p.active ? 40 : 14)
-                .foregroundStyle(p.active ? Color(nsColor: .systemGreen)
-                                          : Color(nsColor: .systemYellow).opacity(0.55))
+            if let cloud = currentCloud {
+                ForEach(cloud.points) { p in
+                    PointMark(
+                        x: .value("X", p.x),
+                        y: .value("Y", p.y)
+                    )
+                    .symbol(.circle)
+                    .symbolSize(14)
+                    .foregroundStyle(Color(nsColor: .systemYellow).opacity(0.55))
+                }
+
+                if let active = activePoint(in: cloud) {
+                    PointMark(
+                        x: .value("X", active.x),
+                        y: .value("Y", active.y)
+                    )
+                    .symbol(.circle)
+                    .symbolSize(40)
+                    .foregroundStyle(Color(nsColor: .systemGreen))
+                }
             }
+        }
+        .task(id: cloudKey) {
+            cloudCache = ScatterCloud(session: session, key: cloudKey)
         }
         .chartXScale(domain: domain)
         .chartYScale(domain: domain)
@@ -128,46 +160,13 @@ struct ScatterInsetView: View {
 
     // MARK: - Data
 
-    private struct ScatterPoint: Identifiable {
-        let id: Int
-        let x: Double
-        let y: Double
-        let active: Bool
-    }
-
-    private var points: [ScatterPoint] {
-        let scale = chartState.units == .arcsec ? session.pixelScale : 1.0
-        let active = activeTime
-        return session.entries.compactMap { e -> ScatterPoint? in
-            guard e.included else { return nil }
-            if let dom = visibleDomain, !dom.contains(e.time) { return nil }
-            if manualExclusions.contains(where: { $0.contains(e.time) }) { return nil }
-
-            let xRaw: Double
-            let yRaw: Double
-            switch chartState.axisMode {
-            case .raDec:
-                xRaw = e.raRawDistance
-                yRaw = e.decRawDistance
-            case .dxDy:
-                xRaw = e.dx
-                yRaw = e.dy
-            }
-            let isActive: Bool
-            if let t = active {
-                isActive = abs(e.time - t) < 0.5
-            } else {
-                isActive = false
-            }
-            return ScatterPoint(id: e.frame, x: xRaw * scale, y: yRaw * scale, active: isActive)
-        }
+    private func activePoint(in cloud: ScatterCloud) -> (x: Double, y: Double)? {
+        guard let t = activeTime else { return nil }
+        return cloud.point(near: t)
     }
 
     private var domain: ClosedRange<Double> {
-        var maxMag = 0.0
-        for p in points {
-            maxMag = max(maxMag, abs(p.x), abs(p.y))
-        }
+        var maxMag = currentCloud?.maxMagnitude ?? 0
         if maxMag == 0 { maxMag = 1 }
         let padded = maxMag * 1.1
         return -padded...padded
@@ -224,5 +223,101 @@ struct ScatterInsetView: View {
             ctx.draw(label, at: CGPoint(x: center.x + pixelRadius - 2, y: center.y - 7), anchor: .trailing)
             r += 0.5
         }
+    }
+}
+
+// MARK: - Cached point cloud
+
+/// Precomputed scatter cloud. Filtering, unit scaling, and the point-count cap
+/// happen once per (session, axis, zoom, exclusions) change; hover lookups are
+/// a binary search. `maxMagnitude` is computed over every qualifying entry, not
+/// just the sampled ones, so the plot domain doesn't shift with the sampling.
+nonisolated struct ScatterCloud {
+    struct Key: Equatable, Sendable {
+        let sessionID: UUID
+        let axisMode: ChartViewState.AxisMode
+        let units: ChartViewState.Units
+        let domainLo: Double?
+        let domainHi: Double?
+        let exclusions: [ClosedRange<Double>]
+    }
+
+    struct CloudPoint: Identifiable, Sendable {
+        let id: Int
+        let x: Double
+        let y: Double
+    }
+
+    /// PointMark budget. A wander cloud reads identically at a few thousand
+    /// points; uniform stride sampling preserves its shape and density.
+    static let maxPoints = 2000
+
+    let key: Key
+    let points: [CloudPoint]
+    let maxMagnitude: Double
+
+    private let times: [Double]
+    private let xs: [Double]
+    private let ys: [Double]
+
+    init(session: GuideSession, key: Key) {
+        self.key = key
+        let scale = key.units == .arcsec ? session.pixelScale : 1.0
+        let raDec = (key.axisMode == .raDec)
+        let domain: ClosedRange<Double>?
+        if let lo = key.domainLo, let hi = key.domainHi, lo < hi {
+            domain = lo...hi
+        } else {
+            domain = nil
+        }
+
+        var times: [Double] = []
+        var xs: [Double] = []
+        var ys: [Double] = []
+        var maxMag = 0.0
+        for e in session.entries {
+            guard e.included else { continue }
+            if let domain, !domain.contains(e.time) { continue }
+            if key.exclusions.contains(where: { $0.contains(e.time) }) { continue }
+            let x = (raDec ? e.raRawDistance : e.dx) * scale
+            let y = (raDec ? e.decRawDistance : e.dy) * scale
+            guard !x.isNaN, !y.isNaN else { continue }
+            times.append(e.time)
+            xs.append(x)
+            ys.append(y)
+            maxMag = max(maxMag, abs(x), abs(y))
+        }
+        self.times = times
+        self.xs = xs
+        self.ys = ys
+        self.maxMagnitude = maxMag
+
+        let stride = max(1, Int((Double(times.count) / Double(Self.maxPoints)).rounded(.up)))
+        var sampled: [CloudPoint] = []
+        sampled.reserveCapacity(times.count / stride + 1)
+        var i = 0
+        while i < times.count {
+            sampled.append(CloudPoint(id: i, x: xs[i], y: ys[i]))
+            i += stride
+        }
+        self.points = sampled
+    }
+
+    /// The qualifying point nearest to `t`, if within half a second — matching
+    /// the old per-render "active" highlight semantics.
+    func point(near t: Double) -> (x: Double, y: Double)? {
+        guard !times.isEmpty else { return nil }
+        var lo = 0
+        var hi = times.count - 1
+        while lo < hi {
+            let mid = (lo + hi) / 2
+            if times[mid] < t { lo = mid + 1 } else { hi = mid }
+        }
+        var best = lo
+        if lo > 0, abs(times[lo - 1] - t) <= abs(times[lo] - t) {
+            best = lo - 1
+        }
+        guard abs(times[best] - t) < 0.5 else { return nil }
+        return (xs[best], ys[best])
     }
 }

@@ -46,28 +46,48 @@ struct DiagnosticGraphView: View {
     let activeTime: Double?
     let visibleDomain: ClosedRange<Double>
 
-    /// Skip boundary sentinels from `GuideSessionMerger`. Their `starMass`
-    /// and `snr` are zero (not NaN), so without filtering the line drops to
-    /// zero and back at every session boundary, producing a sharp V-dip.
-    private var realEntries: [GuideEntry] {
-        session.entries.filter { !$0.raRawDistance.isNaN }
+    @State private var seriesCache: DiagnosticChartData?
+
+    private var seriesKey: DiagnosticChartData.Key {
+        DiagnosticChartData.Key(sessionID: session.id,
+                                kind: kind.label,
+                                domainLo: visibleDomain.lowerBound,
+                                domainHi: visibleDomain.upperBound)
+    }
+
+    /// Decimated series (sentinel entries dropped inside the model, so the line
+    /// doesn't V-dip to zero at session boundaries). Rebuilt only when the
+    /// session or zoom changes, never per hover tick.
+    private var currentData: DiagnosticChartData? {
+        seriesCache?.key == seriesKey ? seriesCache : nil
     }
 
     var body: some View {
         Chart {
-            ForEach(realEntries) { entry in
-                LineMark(
-                    x: .value("Time", entry.time),
-                    y: .value(kind.label, value(for: entry))
-                )
-                .foregroundStyle(kind.color)
-                .lineStyle(StrokeStyle(lineWidth: 1.6))
+            if let data = currentData {
+                ForEach(data.points) { point in
+                    LineMark(
+                        x: .value("Time", point.time),
+                        y: .value(kind.label, point.valuePx)
+                    )
+                    .foregroundStyle(kind.color)
+                    .lineStyle(StrokeStyle(lineWidth: 1.6))
+                }
             }
 
             if let t = activeTime {
                 RuleMark(x: .value("Active", t))
                     .foregroundStyle(.primary.opacity(0.4))
                     .lineStyle(StrokeStyle(lineWidth: 1.5))
+            }
+        }
+        .task(id: seriesKey) {
+            let kind = kind
+            seriesCache = DiagnosticChartData(session: session, key: seriesKey) { entry in
+                switch kind {
+                case .starMass: return Double(entry.starMass)
+                case .snr:      return entry.snr
+                }
             }
         }
         .chartXScale(domain: visibleDomain)
@@ -100,22 +120,10 @@ struct DiagnosticGraphView: View {
     }
 
     private var label: String {
-        if let entry = activeEntry {
-            return "\(kind.label): \(formattedValue(value(for: entry)))"
+        if let t = activeTime, let hit = currentData?.nearestValue(to: t) {
+            return "\(kind.label): \(formattedValue(hit.value))"
         }
         return kind.label
-    }
-
-    private var activeEntry: GuideEntry? {
-        guard let t = activeTime, !realEntries.isEmpty else { return nil }
-        return realEntries.min { abs($0.time - t) < abs($1.time - t) }
-    }
-
-    private func value(for entry: GuideEntry) -> Double {
-        switch kind {
-        case .starMass: return Double(entry.starMass)
-        case .snr:      return entry.snr
-        }
     }
 
     private func yLabel(_ v: Double) -> String {

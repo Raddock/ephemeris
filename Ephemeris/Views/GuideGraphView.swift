@@ -32,6 +32,7 @@ struct GuideGraphView: View {
 
     @State private var dragRange: ClosedRange<Double>?
     @State private var lastDragRange: ClosedRange<Double>?
+    @State private var chartCache: GuideChartData?
 
     private var raColor: Color { Color(nsColor: .systemRed) }
     private var decColor: Color { Color(nsColor: .systemBlue) }
@@ -40,10 +41,38 @@ struct GuideGraphView: View {
     private var activeTime: Double? { hoverTime ?? selectedTime }
     private var isPinned: Bool { hoverTime == nil && selectedTime != nil }
 
+    private var chartKey: GuideChartData.Key {
+        GuideChartData.Key(sessionID: session.id,
+                           axisMode: chartState.axisMode,
+                           domainLo: visibleDomain?.lowerBound,
+                           domainHi: visibleDomain?.upperBound)
+    }
+
+    /// The cached model, only if it matches the current key — a stale model from
+    /// another session or zoom level renders nothing rather than wrong data.
+    private var currentData: GuideChartData? {
+        chartCache?.key == chartKey ? chartCache : nil
+    }
+
     var body: some View {
+        Group {
+            if let data = currentData {
+                chart(data)
+            } else {
+                Color.clear
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+            }
+        }
+        .task(id: chartKey) {
+            chartCache = GuideChartData(session: session, key: chartKey)
+        }
+    }
+
+    private func chart(_ data: GuideChartData) -> some View {
         Chart {
             if chartState.showEvents {
-                settlingBandMarks
+                settlingBandMarks(data)
             }
 
             manualExclusionMarks
@@ -51,21 +80,21 @@ struct GuideGraphView: View {
             zeroBaseline
 
             if chartState.showCorrections, chartState.axisMode == .raDec {
-                correctionBars
+                correctionBars(data)
             }
 
             if chartState.showRA {
-                raLine
+                seriesLine(data.raPoints, name: "RA", color: raColor)
             }
             if chartState.showDec {
-                decLine
+                seriesLine(data.decPoints, name: "Dec", color: decColor)
             }
 
             if chartState.showEvents {
-                eventRules
+                eventRules(data)
             }
 
-            if let entry = activeEntry {
+            if let entry = activeEntry(in: data) {
                 hoverMark(entry, pinned: isPinned)
             }
 
@@ -78,7 +107,7 @@ struct GuideGraphView: View {
             }
         }
         .chartXScale(domain: visibleDomain ?? fullDomain)
-        .chartYScale(domain: yDomain)
+        .chartYScale(domain: yDomain(data))
         .chartXAxis {
             AxisMarks(values: .automatic(desiredCount: 6)) { value in
                 if chartState.showGrid {
@@ -108,7 +137,7 @@ struct GuideGraphView: View {
         .chartLegend(.hidden)
         .chartPlotStyle { $0.clipped() }
         .overlay(alignment: .topLeading) {
-            if chartState.showHoverCard, let entry = activeEntry {
+            if chartState.showHoverCard, let entry = activeEntry(in: data) {
                 HoverCard(entry: entry, session: session, chartState: chartState)
                     .padding(.leading, 56) // clear the leading Y-axis labels
                     .padding(.top, 12)
@@ -145,59 +174,44 @@ struct GuideGraphView: View {
             .lineStyle(StrokeStyle(lineWidth: 0.5))
     }
 
-    private var raLine: some ChartContent {
-        ForEach(session.entries) { entry in
+    private func seriesLine(_ points: [GuideChartData.SeriesPoint],
+                            name: String, color: Color) -> some ChartContent {
+        ForEach(points) { point in
             LineMark(
-                x: .value("Time", entry.time),
-                y: .value("RA", display(rawX(entry))),
-                series: .value("Series", "RA")
+                x: .value("Time", point.time),
+                y: .value(name, display(point.valuePx)),
+                series: .value("Series", name)
             )
-            .foregroundStyle(raColor)
+            .foregroundStyle(color)
             .interpolationMethod(.linear)
             .lineStyle(StrokeStyle(lineWidth: 2.0))
         }
     }
 
-    private var decLine: some ChartContent {
-        ForEach(session.entries) { entry in
-            LineMark(
-                x: .value("Time", entry.time),
-                y: .value("Dec", display(rawY(entry))),
-                series: .value("Series", "Dec")
+    @ChartContentBuilder
+    private func correctionBars(_ data: GuideChartData) -> some ChartContent {
+        ForEach(data.raCorrections) { point in
+            BarMark(
+                x: .value("Time", point.time),
+                yStart: .value("Zero", 0),
+                yEnd: .value("RA correction", display(point.valuePx))
             )
-            .foregroundStyle(decColor)
-            .interpolationMethod(.linear)
-            .lineStyle(StrokeStyle(lineWidth: 2.0))
+            .foregroundStyle(raColor.opacity(0.32))
+        }
+        ForEach(data.decCorrections) { point in
+            BarMark(
+                x: .value("Time", point.time),
+                yStart: .value("Zero", 0),
+                yEnd: .value("Dec correction", display(point.valuePx))
+            )
+            .foregroundStyle(decColor.opacity(0.32))
         }
     }
 
-    private var correctionBars: some ChartContent {
-        ForEach(session.entries) { entry in
-            if entry.included {
-                if entry.raDuration != 0 {
-                    BarMark(
-                        x: .value("Time", entry.time),
-                        yStart: .value("Zero", 0),
-                        yEnd: .value("RA correction", display(correctionRApx(entry)))
-                    )
-                    .foregroundStyle(raColor.opacity(0.32))
-                }
-                if entry.decDuration != 0 {
-                    BarMark(
-                        x: .value("Time", entry.time),
-                        yStart: .value("Zero", 0),
-                        yEnd: .value("Dec correction", display(correctionDecPx(entry)))
-                    )
-                    .foregroundStyle(decColor.opacity(0.32))
-                }
-            }
-        }
-    }
-
-    private var eventRules: some ChartContent {
-        ForEach(eventMarkers) { marker in
+    private func eventRules(_ data: GuideChartData) -> some ChartContent {
+        ForEach(data.eventMarkers) { marker in
             RuleMark(x: .value("Time", marker.time))
-                .foregroundStyle(marker.color)
+                .foregroundStyle(color(for: marker.kind))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
         }
     }
@@ -219,8 +233,8 @@ struct GuideGraphView: View {
         }
     }
 
-    private var settlingBandMarks: some ChartContent {
-        ForEach(settlingBands) { band in
+    private func settlingBandMarks(_ data: GuideChartData) -> some ChartContent {
+        ForEach(data.settlingBands) { band in
             RectangleMark(
                 xStart: .value("Start", band.startTime),
                 xEnd: .value("End", band.endTime)
@@ -262,16 +276,12 @@ struct GuideGraphView: View {
 
     // MARK: - Hover/selection lookup
 
-    private var activeEntry: GuideEntry? {
-        guard let t = activeTime, !session.entries.isEmpty else { return nil }
-        // Skip only the NaN-valued boundary sentinels inserted by
-        // `GuideSessionMerger`. Filtering on `\.included` would also drop
-        // parser-flagged frames (errorCode > 1, e.g. star lost), which the
-        // hover card explicitly wants to surface via the orange "Excluded"
-        // badge.
-        return session.entries.lazy
-            .filter { !$0.raRawDistance.isNaN }
-            .min { abs($0.time - t) < abs($1.time - t) }
+    /// Nearest real entry to the hover/selection time. Sentinel entries are
+    /// excluded (they're NaN), but parser-flagged frames stay findable — the
+    /// hover card surfaces those via the orange "Excluded" badge.
+    private func activeEntry(in data: GuideChartData) -> GuideEntry? {
+        guard let t = activeTime else { return nil }
+        return data.nearestRealEntry(to: t)
     }
 
     // MARK: - Data conversion
@@ -284,23 +294,6 @@ struct GuideGraphView: View {
         chartState.axisMode == .raDec ? e.decRawDistance : e.dy
     }
 
-    /// Convert mount correction duration (ms) to pixels via `xRate` (px/sec).
-    /// AO entries store steps in the duration field — same formula gives a
-    /// reasonable visual proxy until we model AO step→pixel separately.
-    private func correctionRApx(_ e: GuideEntry) -> Double {
-        Double(e.raDuration) / 1000.0 * device(for: e).xRate
-    }
-    private func correctionDecPx(_ e: GuideEntry) -> Double {
-        Double(e.decDuration) / 1000.0 * device(for: e).yRate
-    }
-
-    private func device(for e: GuideEntry) -> GuideDevice {
-        switch e.deviceKind {
-        case .mount: return session.mount
-        case .ao: return session.ao ?? session.mount
-        }
-    }
-
     /// Convert a pixel value to the user-selected display units.
     fileprivate func display(_ valuePx: Double) -> Double {
         SessionStats.display(valuePx, as: chartState.units, pixelScale: session.pixelScale)
@@ -309,8 +302,10 @@ struct GuideGraphView: View {
     // MARK: - Domain
 
     /// Symmetric Y domain around zero. `.fixedArcsec` overrides; `.auto` pads 10%
-    /// beyond the largest data magnitude inside the visible X domain.
-    private var yDomain: ClosedRange<Double> {
+    /// beyond the largest data magnitude inside the visible X domain. The
+    /// magnitudes come precomputed from the chart model, so this is O(1) per
+    /// render instead of a full-session scan.
+    private func yDomain(_ data: GuideChartData) -> ClosedRange<Double> {
         if case .fixedArcsec(let arcsec) = chartState.yScale {
             // The domain values are always in the currently selected display units.
             let v: Double
@@ -322,85 +317,17 @@ struct GuideGraphView: View {
             }
             return -v...v
         }
-        let domain = visibleDomain ?? fullDomain
-        var maxMag = 0.0
-        for e in session.entries where e.included {
-            guard domain.contains(e.time) else { continue }
-            maxMag = max(maxMag, abs(display(rawX(e))))
-            maxMag = max(maxMag, abs(display(rawY(e))))
-            if chartState.showCorrections, chartState.axisMode == .raDec {
-                maxMag = max(maxMag, abs(display(correctionRApx(e))))
-                maxMag = max(maxMag, abs(display(correctionDecPx(e))))
-            }
+        var maxMagPx = data.maxSeriesMagnitudePx
+        if chartState.showCorrections, chartState.axisMode == .raDec {
+            maxMagPx = max(maxMagPx, data.maxCorrectionMagnitudePx)
         }
+        var maxMag = abs(display(maxMagPx))
         if maxMag == 0 { maxMag = 1 }
         let padded = maxMag * 1.1
         return -padded...padded
     }
 
     // MARK: - Events
-
-    private struct EventMarker: Identifiable {
-        let id: Int
-        let time: Double
-        let color: Color
-    }
-
-    private struct SettlingBand: Identifiable {
-        let id: Int
-        let startTime: Double
-        let endTime: Double
-        let succeeded: Bool
-    }
-
-    /// Vertical-rule markers — info events that aren't already represented as
-    /// background bands (settling). Dither and other point-in-time events stay.
-    private var eventMarkers: [EventMarker] {
-        var markers: [EventMarker] = []
-        var seenFrames = Set<Int>()
-        for info in session.infos {
-            switch info.kind {
-            case .settlingStarted, .settlingComplete, .settlingFailed:
-                continue   // rendered as a band
-            default:
-                break
-            }
-            guard !seenFrames.contains(info.frame) else { continue }
-            seenFrames.insert(info.frame)
-            guard let t = entryTime(forFrame: info.frame) else { continue }
-            markers.append(EventMarker(id: info.frame, time: t, color: color(for: info.kind)))
-        }
-        return markers
-    }
-
-    /// Pair settling-started with the next settling-complete/failed in the same session.
-    private var settlingBands: [SettlingBand] {
-        var bands: [SettlingBand] = []
-        var pendingStartFrame: Int?
-        var bandID = 0
-        for info in session.infos {
-            switch info.kind {
-            case .settlingStarted:
-                pendingStartFrame = info.frame
-            case .settlingComplete, .settlingFailed:
-                if let startFrame = pendingStartFrame,
-                   let start = entryTime(forFrame: startFrame),
-                   let end = entryTime(forFrame: info.frame) {
-                    bands.append(SettlingBand(
-                        id: bandID,
-                        startTime: start,
-                        endTime: max(end, start + 0.001),   // ensure non-zero width
-                        succeeded: info.kind == .settlingComplete
-                    ))
-                    bandID += 1
-                    pendingStartFrame = nil
-                }
-            default:
-                break
-            }
-        }
-        return bands
-    }
 
     private func color(for kind: InfoKind) -> Color {
         switch kind {
@@ -410,18 +337,6 @@ struct GuideGraphView: View {
         case .mountGeometryChange: return Color(nsColor: .systemTeal).opacity(0.55)
         default: return .secondary.opacity(0.35)
         }
-    }
-
-    private func entryTime(forFrame frame: Int) -> Double? {
-        // Sentinel-safe lookup: skip NaN entries so settling bands and
-        // event rules anchor to real frames, never to the inter-session gap.
-        let realEntries = session.entries.filter { !$0.raRawDistance.isNaN }
-        guard !realEntries.isEmpty else { return nil }
-        if frame <= 0 { return realEntries.first?.time }
-        if let entry = realEntries.first(where: { $0.frame >= frame }) {
-            return entry.time
-        }
-        return realEntries.last?.time
     }
 
     // MARK: - Formatters
