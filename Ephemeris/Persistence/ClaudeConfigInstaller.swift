@@ -103,12 +103,16 @@ enum ClaudeConfigInstaller {
             }
             search = search.deletingLastPathComponent()
         }
-        // Last-ditch: a hardcoded path useful only during this development session.
+        #if DEBUG
+        // Last-ditch dev convenience, compiled out of release builds so a
+        // mis-bundled ship build can never install a connector pointing at a
+        // developer's personal checkout.
         let devHardcoded = URL(fileURLWithPath:
             "/Users/andrewburwell/Developer/MacObservatory/PHD2-Log-Viewer/tools/ephemeris-mcp/.build/release/ephemeris-mcp")
         if FileManager.default.fileExists(atPath: devHardcoded.path) {
             return devHardcoded
         }
+        #endif
         return nil
     }
 
@@ -182,7 +186,10 @@ enum ClaudeConfigInstaller {
         mcpServers[target.serverEntryKey] = entry
         rootDict["mcpServers"] = mcpServers
 
-        // Write back atomically, pretty-printed
+        // Write back atomically, pretty-printed. This file isn't ours (for
+        // Claude Code it's ~/.claude.json, which holds unrelated state), so keep
+        // a .bak of the pre-install contents — the atomic write prevents torn
+        // files, the backup covers everything else.
         do {
             let outData = try JSONSerialization.data(
                 withJSONObject: rootDict,
@@ -193,6 +200,11 @@ enum ClaudeConfigInstaller {
                 at: folderURL,
                 withIntermediateDirectories: true
             )
+            if !wasFirstInstall {
+                let backupURL = configURL.appendingPathExtension("bak")
+                try? FileManager.default.removeItem(at: backupURL)
+                try? FileManager.default.copyItem(at: configURL, to: backupURL)
+            }
             try outData.write(to: configURL, options: .atomic)
         } catch {
             throw InstallError.writeFailed(underlying: "\(error)")
