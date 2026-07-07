@@ -160,6 +160,9 @@ enum GuideSessionMerger {
             merged.ao = first.ao
             merged.rawHeader = first.rawHeader
         }
+        // Suspect-data counts survive merging: a corrupt member session must
+        // keep its warning visible on the merged night.
+        merged.malformedFieldCount = sorted.reduce(0) { $0 + $1.malformedFieldCount }
         return merged
     }
 }

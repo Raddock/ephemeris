@@ -30,6 +30,10 @@ struct GuideSession: Sendable, Identifiable {
     var declination: Double = 0
     var entries: [GuideEntry] = []
     var infos: [InfoEntry] = []
+    /// Count of guide-row fields that were present but unparseable and coerced
+    /// to 0 during parsing. Zero for a healthy log; nonzero means the file is
+    /// damaged and computed stats may be skewed — the UI surfaces a warning.
+    var malformedFieldCount: Int = 0
 
     nonisolated var duration: Double { entries.last?.time ?? 0 }
     /// Count of real frames only — boundary sentinels inserted by

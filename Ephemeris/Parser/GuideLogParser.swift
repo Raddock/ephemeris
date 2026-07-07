@@ -81,12 +81,15 @@ enum GuideLogParser {
                     continue
                 }
                 if let first = line.first, first.isNumber, var sess = pendingGuide {
-                    if let entry = parseGuideRow(line, mountEnabled: sess.mount.guidingEnabled) {
+                    var malformed = 0
+                    if let entry = parseGuideRow(line, mountEnabled: sess.mount.guidingEnabled,
+                                                 malformedFields: &malformed) {
                         sess.entries.append(entry)
                         if let info = entry.info, !info.isEmpty {
                             sess.infos.append(InfoEntry(frame: entry.frame, text: info))
                         }
                     }
+                    sess.malformedFieldCount += malformed
                     pendingGuide = sess
                     continue
                 }
@@ -192,22 +195,46 @@ enum GuideLogParser {
 
     // MARK: - Guide row
 
-    static func parseGuideRow(_ line: String, mountEnabled: Bool) -> GuideEntry? {
+    /// Parse one guide row. Fields that are present but unparseable are coerced
+    /// to 0 (matching the original phdlogview tolerance) AND counted through
+    /// `malformedFields` — a corrupt log must not silently read as perfect
+    /// guiding. Empty fields are legitimately zero (PHD2 omits values, e.g. no
+    /// correction issued) and are not counted. Rows with fewer than 18 fields
+    /// (a truncated final line is normal when PHD2 dies mid-write) are skipped
+    /// without counting.
+    static func parseGuideRow(_ line: String, mountEnabled: Bool,
+                              malformedFields: inout Int) -> GuideEntry? {
         let f = CSVTokenizer.split(line)
         guard f.count >= 18 else { return nil }
-        guard let frame = Int(f[0]), let time = Double(f[1]) else { return nil }
+        guard let frame = Int(f[0]), let time = Double(f[1]) else {
+            malformedFields += 1
+            return nil
+        }
+
+        func coerceDouble(_ s: String) -> Double {
+            if s.isEmpty { return 0 }
+            if let v = Double(s) { return v }
+            malformedFields += 1
+            return 0
+        }
+        func coerceInt(_ s: String) -> Int {
+            if s.isEmpty { return 0 }
+            if let v = Int(s) { return v }
+            malformedFields += 1
+            return 0
+        }
 
         let deviceKind: GuideDevice.Kind = (f[2] == "AO") ? .ao : .mount
-        let dx = Double(f[3]) ?? 0
-        let dy = Double(f[4]) ?? 0
-        let raRaw = Double(f[5]) ?? 0
-        let decRaw = Double(f[6]) ?? 0
-        let raGuide = Double(f[7]) ?? 0
-        let decGuide = Double(f[8]) ?? 0
+        let dx = coerceDouble(f[3])
+        let dy = coerceDouble(f[4])
+        let raRaw = coerceDouble(f[5])
+        let decRaw = coerceDouble(f[6])
+        let raGuide = coerceDouble(f[7])
+        let decGuide = coerceDouble(f[8])
 
-        var raDur = Int(f[9]) ?? 0
+        var raDur = coerceInt(f[9])
         if f[10] == "W" { raDur = -raDur }
-        var decDur = Int(f[11]) ?? 0
+        var decDur = coerceInt(f[11])
         if f[12] == "S" { decDur = -decDur }
 
         let xStep = Int(f[13])
@@ -215,9 +242,9 @@ enum GuideLogParser {
         if let xs = xStep { raDur = xs }
         if let ys = yStep { decDur = ys }
 
-        let mass = Int(f[15]) ?? 0
-        let snr = Double(f[16]) ?? 0
-        let err = Int(f[17]) ?? 0
+        let mass = coerceInt(f[15])
+        let snr = coerceDouble(f[16])
+        let err = coerceInt(f[17])
         let included = (err == 0 || err == 1)
         var info: String? = (f.count > 18) ? f[18] : nil
         if !included, (info?.isEmpty ?? true) { info = "Frame dropped" }

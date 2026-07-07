@@ -69,6 +69,9 @@ struct SessionInspectorView: View {
                 case .summary:
                     EmptyView()
                 case .guide(let i):
+                    if log.guideSessions[i].malformedFieldCount > 0 {
+                        suspectDataBanner(count: log.guideSessions[i].malformedFieldCount)
+                    }
                     guideContent(log.guideSessions[i])
                 case .calibration(let i):
                     calibrationContent(log.calibrations[i])
@@ -97,6 +100,20 @@ struct SessionInspectorView: View {
             binning: props.guideBinning ?? 1,
             cameraName: props.guideCameraName
         )
+    }
+
+    /// Shown when the parser had to coerce unreadable values to zero. Without
+    /// this, a damaged log can read as suspiciously perfect guiding.
+    @ViewBuilder
+    private func suspectDataBanner(count: Int) -> some View {
+        InspectorCard("Damaged data in this log", systemImage: "exclamationmark.triangle") {
+            Text("\(count) value\(count == 1 ? "" : "s") in this session couldn't be read and \(count == 1 ? "was" : "were") treated as zero. The statistics below may understate the real guiding error.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("This usually means the log file was truncated or corrupted on disk. If you have the original, re-copy it and reopen.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
     }
 
     @ViewBuilder
