@@ -103,10 +103,9 @@ struct LibraryWindow: View {
             presenting: rigToDelete
         ) { profile in
             Button("Delete \"\(profile.effectiveName)\"", role: .destructive) {
+                // The store deletes the entity directly; its cascade rules remove
+                // nights and observations, as this dialog's message promises.
                 try? rigStore.delete(profile)
-                // Cascade the SwiftData side too — entity, nights, observations —
-                // as this dialog's message promises.
-                library?.deleteRigProfile(id: profile.id)
                 if selectedRigID == profile.id {
                     selectedRigID = rigStore.profiles.first?.id
                 }

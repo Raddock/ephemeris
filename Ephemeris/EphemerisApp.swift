@@ -25,10 +25,11 @@ import Sparkle
 struct EphemerisApp: App {
     @Environment(\.openWindow) private var openWindow
 
-    // v2.0 Phase 1: app-wide RigProfileStore. JSON-sidecar persistence until Phase 3
-    // promotes it to SwiftData. Injected into the environment so any document-window
-    // view can read profile data.
-    @State private var rigProfileStore = RigProfileStore()
+    // App-wide RigProfileStore backed by the library's SwiftData container
+    // (single owner — the Phase 1 JSON sidecar is imported once and retired).
+    // Injected into the environment so any document-window view can read
+    // profile data. Constructed in init, after the library opens.
+    @State private var rigProfileStore: RigProfileStore
 
     // v2.0 Phase 3: SwiftData library backing the multi-night surface (Phase 6+).
     // Auto-ingest of opened documents happens in ContentView when both the rig
@@ -87,6 +88,7 @@ struct EphemerisApp: App {
             NSLog("[Library] Store failed to open: %@", error.localizedDescription)
         }
         _library = State(initialValue: library)
+        _rigProfileStore = State(initialValue: RigProfileStore(container: library?.container))
         if let library {
             let server = MCPEmbeddedServer(library: library)
             // Opt-in: a local listening socket only opens when the user has

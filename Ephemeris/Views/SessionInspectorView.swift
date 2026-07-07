@@ -122,7 +122,6 @@ struct SessionInspectorView: View {
                 guideTrainHint: guideTrainHint
             ) { newProfile in
                 try? rigStore.save(newProfile)
-                library?.syncRigProfile(newProfile)
             }
         }
     }

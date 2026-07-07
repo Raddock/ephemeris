@@ -115,8 +115,10 @@ struct RigProfilesWindow: View {
             presenting: profileToDelete
         ) { profile in
             Button("Delete \"\(profile.effectiveName)\"", role: .destructive) {
+                // Deleting through the store cascades the entity's night records,
+                // observations, annotations, and GA results — the single-owner
+                // store means no separate mirror to clean up.
                 try? store.delete(profile)
-                library?.deleteRigProfile(id: profile.id)
                 if selectedID == profile.id {
                     selectedID = store.profiles.first?.id
                     draft = selectedID.flatMap { id in store.profiles.first(where: { $0.id == id }) }
@@ -174,17 +176,15 @@ struct RigProfilesWindow: View {
               let profile = store.profiles.first(where: { $0.id == id })
         else { return }
         try? store.delete(profile)
-        library?.deleteRigProfile(id: profile.id)
         selectedID = store.profiles.first?.id
         draft = selectedID.flatMap { id in store.profiles.first(where: { $0.id == id }) }
     }
 
     private func saveDraft(currentlySelected id: RigProfile.ID) {
         guard let d = draft else { return }
+        // The store writes RigProfileEntity directly, so MCP tools, Spotlight,
+        // and library relationships see the edit immediately — no mirror sync.
         try? store.save(d)
-        // Keep the SwiftData mirror (MCP tools, Spotlight, library relationships)
-        // in step — ingest only re-syncs when a log for this rig is re-imported.
-        library?.syncRigProfile(d)
         // Refresh from store so the saved-state comparison shows clean
         draft = store.profiles.first(where: { $0.id == id })
     }

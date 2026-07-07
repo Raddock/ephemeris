@@ -1,64 +1,75 @@
 import Foundation
 import Observation
+import SwiftData
 
-/// JSON-sidecar persistence for rig profiles. v2.0 Phase 1 storage.
-/// Phase 3 migrates this to SwiftData; this layer disappears at that point.
+/// Rig-profile store backed by the library's SwiftData container. SwiftData is
+/// the single owner: the editor, the ingest pipeline, MCP, and Spotlight all
+/// read and write `RigProfileEntity` through one store, so there is no mirror
+/// to drift out of sync (the v2.0 Phase 1 JSON sidecar did exactly that).
 ///
-/// Files live in `~/Library/Application Support/Ephemeris/Profiles/`, one JSON file
-/// per profile. Filename = `{uuid}.json`. The directory is created on first write.
+/// Legacy JSON profiles in `~/Library/Application Support/Ephemeris/Profiles/`
+/// are imported once on first launch and the folder is parked as a backup.
 @Observable
 @MainActor
 final class RigProfileStore {
     private(set) var profiles: [RigProfile] = []
 
-    private let directory: URL
-    private let encoder: JSONEncoder
-    private let decoder: JSONDecoder
+    private let container: ModelContainer?
+    private let legacyJSONDirectory: URL
 
-    init(directory: URL? = nil) {
-        self.directory = directory ?? Self.defaultDirectory()
-        let enc = JSONEncoder()
-        enc.outputFormatting = [.prettyPrinted, .sortedKeys]
-        enc.dateEncodingStrategy = .iso8601
-        self.encoder = enc
-        let dec = JSONDecoder()
-        dec.dateDecodingStrategy = .iso8601
-        self.decoder = dec
+    enum StoreError: LocalizedError {
+        case libraryUnavailable
+        var errorDescription: String? {
+            "The library store isn't available, so rig profiles can't be saved. Quit and reopen Ephemeris; if this keeps happening the library may be damaged."
+        }
+    }
+
+    init(container: ModelContainer?, legacyJSONDirectory: URL? = nil) {
+        self.container = container
+        self.legacyJSONDirectory = legacyJSONDirectory ?? Self.defaultLegacyDirectory()
+        migrateLegacyJSONIfNeeded()
         load()
     }
 
-    static func defaultDirectory() -> URL {
+    static func defaultLegacyDirectory() -> URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return appSupport
             .appendingPathComponent("Ephemeris", isDirectory: true)
             .appendingPathComponent("Profiles", isDirectory: true)
     }
 
-    /// Reload all profiles from disk. Called automatically on init.
+    /// Refresh the in-memory list from the container. Also picks up upserts made
+    /// by the ingest ModelActor on its own context.
     func load() {
-        ensureDirectoryExists()
-        let fm = FileManager.default
-        guard let urls = try? fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) else {
+        guard let container else {
             profiles = []
             return
         }
-        var loaded: [RigProfile] = []
-        for url in urls where url.pathExtension == "json" {
-            guard let data = try? Data(contentsOf: url),
-                  let profile = try? decoder.decode(RigProfile.self, from: data)
-            else { continue }
-            loaded.append(profile)
-        }
-        profiles = loaded.sorted { $0.currentName.localizedCompare($1.currentName) == .orderedAscending }
+        let fetch = FetchDescriptor<RigProfileEntity>(
+            sortBy: [SortDescriptor(\.currentName)]
+        )
+        let entities = (try? container.mainContext.fetch(fetch)) ?? []
+        profiles = entities.map(\.asValue)
+            .sorted { $0.currentName.localizedCompare($1.currentName) == .orderedAscending }
     }
 
     /// Insert or update a profile. The `modifiedAt` timestamp is bumped to now.
     func save(_ profile: RigProfile) throws {
-        ensureDirectoryExists()
+        guard let container else { throw StoreError.libraryUnavailable }
         var p = profile
         p.modifiedAt = .now
-        let data = try encoder.encode(p)
-        try data.write(to: fileURL(for: p), options: .atomic)
+        let context = container.mainContext
+        let pid = p.id
+        let fetch = FetchDescriptor<RigProfileEntity>(
+            predicate: #Predicate { $0.id == pid }
+        )
+        if let existing = try context.fetch(fetch).first {
+            existing.update(from: p)
+        } else {
+            context.insert(RigProfileEntity(from: p))
+        }
+        try context.save()
+
         if let idx = profiles.firstIndex(where: { $0.id == p.id }) {
             profiles[idx] = p
         } else {
@@ -67,10 +78,19 @@ final class RigProfileStore {
         profiles.sort { $0.currentName.localizedCompare($1.currentName) == .orderedAscending }
     }
 
+    /// Delete a profile. The entity's cascade rules remove its night records,
+    /// and each night cascades its observations, annotations, GA results, and
+    /// session records — keeping the delete-rig confirmation dialog's promise.
     func delete(_ profile: RigProfile) throws {
-        let url = fileURL(for: profile)
-        if FileManager.default.fileExists(atPath: url.path) {
-            try FileManager.default.removeItem(at: url)
+        guard let container else { throw StoreError.libraryUnavailable }
+        let context = container.mainContext
+        let pid = profile.id
+        let fetch = FetchDescriptor<RigProfileEntity>(
+            predicate: #Predicate { $0.id == pid }
+        )
+        if let entity = try context.fetch(fetch).first {
+            context.delete(entity)
+            try context.save()
         }
         profiles.removeAll { $0.id == profile.id }
     }
@@ -81,14 +101,48 @@ final class RigProfileStore {
         profiles.first { $0.matches(profileName: name) }
     }
 
-    private func fileURL(for profile: RigProfile) -> URL {
-        directory.appendingPathComponent("\(profile.id.uuidString).json")
-    }
+    // MARK: - Legacy JSON migration
 
-    private func ensureDirectoryExists() {
+    /// One-time import of the v2.0 Phase 1 JSON sidecar. JSON was the canonical
+    /// store until this migration, so JSON wins over any mirrored entity. The
+    /// folder is then moved aside as a backup so the import never re-runs (a
+    /// re-run would overwrite newer SwiftData edits with stale JSON).
+    private func migrateLegacyJSONIfNeeded() {
+        guard let container else { return }
         let fm = FileManager.default
-        if !fm.fileExists(atPath: directory.path) {
-            try? fm.createDirectory(at: directory, withIntermediateDirectories: true)
+        guard fm.fileExists(atPath: legacyJSONDirectory.path) else { return }
+        let urls = (try? fm.contentsOfDirectory(at: legacyJSONDirectory, includingPropertiesForKeys: nil)) ?? []
+        let jsonURLs = urls.filter { $0.pathExtension == "json" }
+
+        if !jsonURLs.isEmpty {
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let context = container.mainContext
+            for url in jsonURLs {
+                guard let data = try? Data(contentsOf: url),
+                      let profile = try? decoder.decode(RigProfile.self, from: data)
+                else { continue }
+                let pid = profile.id
+                let fetch = FetchDescriptor<RigProfileEntity>(
+                    predicate: #Predicate { $0.id == pid }
+                )
+                if let existing = try? context.fetch(fetch).first {
+                    existing.update(from: profile)
+                } else {
+                    context.insert(RigProfileEntity(from: profile))
+                }
+            }
+            try? context.save()
         }
+
+        // Park the folder even when it held no decodable profiles — an empty
+        // Profiles/ directory left behind would re-trigger this check forever.
+        var backup = legacyJSONDirectory.deletingLastPathComponent()
+            .appendingPathComponent("Profiles.migrated-backup", isDirectory: true)
+        if fm.fileExists(atPath: backup.path) {
+            backup = legacyJSONDirectory.deletingLastPathComponent()
+                .appendingPathComponent("Profiles.migrated-backup-\(UUID().uuidString)", isDirectory: true)
+        }
+        try? fm.moveItem(at: legacyJSONDirectory, to: backup)
     }
 }

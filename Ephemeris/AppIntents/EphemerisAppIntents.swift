@@ -47,7 +47,7 @@ struct EphemerisRigEntity: AppEntity {
 struct EphemerisRigQuery: EntityQuery {
     @MainActor
     func entities(for identifiers: [UUID]) async throws -> [EphemerisRigEntity] {
-        let store = RigProfileStore()
+        let store = RigProfileStore(container: (try? EphemerisLibrary())?.container)
         return store.profiles
             .filter { identifiers.contains($0.id) }
             .map { EphemerisRigEntity(id: $0.id, currentName: $0.effectiveName) }
@@ -55,7 +55,7 @@ struct EphemerisRigQuery: EntityQuery {
 
     @MainActor
     func suggestedEntities() async throws -> [EphemerisRigEntity] {
-        let store = RigProfileStore()
+        let store = RigProfileStore(container: (try? EphemerisLibrary())?.container)
         return store.profiles.map {
             EphemerisRigEntity(id: $0.id, currentName: $0.effectiveName)
         }

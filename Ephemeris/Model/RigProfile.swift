@@ -2,10 +2,10 @@ import Foundation
 
 /// Per-PHD2-profile equipment metadata. Stable identifier across rename and reconfiguration.
 ///
-/// v2.0 ships this as a pure value type with JSON-sidecar persistence (Phase 1).
-/// Phase 3 promotes it to a SwiftData `@Model` with the same field shape. The CloudKit-clean
-/// rules from design doc §4 (defaults everywhere, optional relationships, ordered-array-as-Data)
-/// already apply here so the Phase 3 migration is mechanical.
+/// Pure value type used as the working currency by views, the parser pipeline, and
+/// the recommender. Persistence lives in SwiftData (`RigProfileEntity`, via
+/// `RigProfileStore`); `Codable` remains for the one-time import of the retired
+/// v2.0 Phase 1 JSON sidecar.
 struct RigProfile: Codable, Hashable, Identifiable, Sendable {
     var id: UUID
     /// **Immutable identity** — the PHD2 `Equipment Profile = X` value from the log.

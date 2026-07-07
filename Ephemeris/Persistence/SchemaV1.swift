@@ -72,9 +72,9 @@ final class RigProfileEntity {
 
     init() {}
 
-    /// Refresh every mutable field from the value-type profile. Called on first
-    /// ingest and on every later ingest, so the SwiftData copy never drifts from
-    /// the JSON-sidecar `RigProfile` after the user edits a rig.
+    /// Refresh every mutable field from the value-type profile. Called by the
+    /// rig-profile store on save and by ingest, both against this same entity —
+    /// SwiftData is the single owner of rig-profile persistence.
     func update(from value: RigProfile) {
         currentName = value.currentName
         displayName = value.displayName
