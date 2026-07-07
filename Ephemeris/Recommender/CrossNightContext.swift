@@ -8,7 +8,7 @@ nonisolated struct NightSummary: Sendable, Identifiable {
     let nightDate: Date
     let sessionsCount: Int
     let totalIntegrationMinutes: Double
-    let medianRMSArcsec: Double
+    let nightRMSArcsec: Double
     let bestSessionRMSArcsec: Double
     let worstSessionRMSArcsec: Double
     /// Median orthogonality error across the calibrations on this night, if present.
@@ -23,7 +23,7 @@ nonisolated struct NightSummary: Sendable, Identifiable {
          nightDate: Date,
          sessionsCount: Int = 0,
          totalIntegrationMinutes: Double = 0,
-         medianRMSArcsec: Double = 0,
+         nightRMSArcsec: Double = 0,
          bestSessionRMSArcsec: Double = 0,
          worstSessionRMSArcsec: Double = 0,
          calibrationOrthogonalityDeg: Double? = nil,
@@ -33,7 +33,7 @@ nonisolated struct NightSummary: Sendable, Identifiable {
         self.nightDate = nightDate
         self.sessionsCount = sessionsCount
         self.totalIntegrationMinutes = totalIntegrationMinutes
-        self.medianRMSArcsec = medianRMSArcsec
+        self.nightRMSArcsec = nightRMSArcsec
         self.bestSessionRMSArcsec = bestSessionRMSArcsec
         self.worstSessionRMSArcsec = worstSessionRMSArcsec
         self.calibrationOrthogonalityDeg = calibrationOrthogonalityDeg
@@ -47,7 +47,7 @@ nonisolated struct NightSummary: Sendable, Identifiable {
         self.nightDate = entity.nightDate
         self.sessionsCount = entity.sessionsCount
         self.totalIntegrationMinutes = entity.totalIntegrationMinutes
-        self.medianRMSArcsec = entity.medianRMSArcsec
+        self.nightRMSArcsec = entity.medianRMSArcsec
         self.bestSessionRMSArcsec = entity.bestSessionRMSArcsec
         self.worstSessionRMSArcsec = entity.worstSessionRMSArcsec
         self.calibrationOrthogonalityDeg = entity.calibrationOrthogonalityDeg
@@ -66,21 +66,21 @@ nonisolated struct CrossNightContext: Sendable {
 
     /// Median RMS across the corpus — used by `rigBaselineRMSArcsec` for tier computation.
     var rigBaselineMedianRMS: Double? {
-        let vals = nights.map { $0.medianRMSArcsec }.filter { $0 > 0 }.sorted()
+        let vals = nights.map { $0.nightRMSArcsec }.filter { $0 > 0 }.sorted()
         guard !vals.isEmpty else { return nil }
         return vals[vals.count / 2]
     }
 
     /// p75 RMS across the corpus.
     var rigP75RMS: Double? {
-        let vals = nights.map { $0.medianRMSArcsec }.filter { $0 > 0 }.sorted()
+        let vals = nights.map { $0.nightRMSArcsec }.filter { $0 > 0 }.sorted()
         guard vals.count >= 4 else { return nil }
         return vals[Int(Double(vals.count) * 0.75)]
     }
 
     /// p90 RMS across the corpus.
     var rigP90RMS: Double? {
-        let vals = nights.map { $0.medianRMSArcsec }.filter { $0 > 0 }.sorted()
+        let vals = nights.map { $0.nightRMSArcsec }.filter { $0 > 0 }.sorted()
         guard vals.count >= 5 else { return nil }
         return vals[Int(Double(vals.count) * 0.90)]
     }

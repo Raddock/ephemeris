@@ -11,7 +11,7 @@ import Foundation
 ///   2. Create a new cluster centered on that night.
 /// After assignment we recompute each cluster's center as the frame-count-weighted
 /// median pointing of its members, refresh its catalog match against the Messier
-/// catalog (within 0.5°), and roll up session count / integration / median RMS.
+/// catalog (within 0.5°), and roll up session count / integration / median night RMS.
 ///
 /// `defaultClusterRadiusDeg = 0.5` matches the Messier-match tolerance —
 /// distinct catalog objects at that radius are a deliberate split, not a clustering
@@ -25,7 +25,7 @@ nonisolated enum TargetClustering {
         let raHours: Double
         let decDegrees: Double
         let totalIntegrationMinutes: Double
-        let medianRMSArcsec: Double
+        let nightRMSArcsec: Double
     }
 
     /// Pure-value cluster description that the SwiftData layer materializes into
@@ -123,9 +123,9 @@ nonisolated enum TargetClustering {
                 $0 + $1.totalIntegrationMinutes
             }
             // Frame-count-weighted RMS would be more accurate, but at the night-
-            // rollup layer we only have per-night medians; a plain median across
+            // rollup layer we only have per-night RMS rollups; a plain median across
             // member nights is the right granularity here.
-            let rmsValues = members.map { $0.medianRMSArcsec }.filter { $0 > 0 }.sorted()
+            let rmsValues = members.map { $0.nightRMSArcsec }.filter { $0 > 0 }.sorted()
             clusters[index].medianRMSArcsec = rmsValues.isEmpty ? 0 : rmsValues[rmsValues.count / 2]
         }
 

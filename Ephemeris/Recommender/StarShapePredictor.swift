@@ -98,7 +98,7 @@ nonisolated enum StarShapePredictor {
 
     struct Input: Sendable {
         let imagingPixelScale: Double  // arcsec/px (0 = not configured)
-        let medianRMSArcsec: Double    // night-level rollup
+        let nightRMSArcsec: Double    // night-level rollup
         let bestSessionRMSArcsec: Double
         let worstSessionRMSArcsec: Double
         /// Per-session axis RMS / drift. May be empty if session records aren't
@@ -134,7 +134,7 @@ nonisolated enum StarShapePredictor {
     static let trailedMajorityFraction: Double = 0.5
 
     static func predict(_ input: Input) -> PredictedStarShape {
-        guard input.imagingPixelScale > 0, input.medianRMSArcsec > 0 else {
+        guard input.imagingPixelScale > 0, input.nightRMSArcsec > 0 else {
             return .unknown
         }
 
@@ -143,7 +143,7 @@ nonisolated enum StarShapePredictor {
         // shape difference — the stars simply read as round and sharp. The
         // elongated / trailed / mixed checks below only apply once RMS exceeds
         // the pixel scale.
-        guard input.medianRMSArcsec > input.imagingPixelScale else {
+        guard input.nightRMSArcsec > input.imagingPixelScale else {
             return .round(bloated: false)
         }
 
@@ -189,7 +189,7 @@ nonisolated enum StarShapePredictor {
         //    the imaging scale enough that stars look soft. Harmonic mounts on long-
         //    FL OTAs are the canonical example: 0.65″ RMS at 0.40″/px = 1.6× scale
         //    → round but bloated.
-        let scaleRatio = input.medianRMSArcsec / input.imagingPixelScale
+        let scaleRatio = input.nightRMSArcsec / input.imagingPixelScale
         return .round(bloated: scaleRatio >= bloatedScaleMultiplier)
     }
 
@@ -225,7 +225,7 @@ extension StarShapePredictor {
         }
         return predict(Input(
             imagingPixelScale: imagingPixelScale,
-            medianRMSArcsec: night.medianRMSArcsec,
+            nightRMSArcsec: night.medianRMSArcsec,
             bestSessionRMSArcsec: night.bestSessionRMSArcsec,
             worstSessionRMSArcsec: night.worstSessionRMSArcsec,
             sessions: digests

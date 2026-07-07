@@ -90,15 +90,15 @@ enum ForumPostExporter {
         guard !i.summaries.isEmpty else { return "" }
         let visible = i.summaries.suffix(7).reversed()
         var out = "## Recent nights (last \(visible.count))\n\n"
-        out += "| Date | Sessions | Integration | Median RMS |\n"
+        out += "| Date | Sessions | Integration | Night RMS |\n"
         out += "|---|---|---|---|\n"
         for night in visible {
             let date = night.nightDate.formatted(date: .abbreviated, time: .omitted)
-            let rms = String(format: "%.2f\"", night.medianRMSArcsec)
+            let rms = String(format: "%.2f\"", night.nightRMSArcsec)
             let mins = String(format: "%.0f min", night.totalIntegrationMinutes)
             out += "| \(date) | \(night.sessionsCount) | \(mins) | \(rms) |\n"
         }
-        let rmsValues = i.summaries.map { $0.medianRMSArcsec }.filter { $0 > 0 }.sorted()
+        let rmsValues = i.summaries.map { $0.nightRMSArcsec }.filter { $0 > 0 }.sorted()
         if !rmsValues.isEmpty {
             let median = rmsValues[rmsValues.count / 2]
             let best = rmsValues.first ?? 0

@@ -47,7 +47,7 @@ nonisolated struct StarShapePredictionObserver: RecommenderGenerator {
         }
         let prediction = StarShapePredictor.predict(StarShapePredictor.Input(
             imagingPixelScale: scale,
-            medianRMSArcsec: weightedRMS,
+            nightRMSArcsec: weightedRMS,
             bestSessionRMSArcsec: bestRMS,
             worstSessionRMSArcsec: worstRMS,
             sessions: digests
@@ -118,7 +118,7 @@ nonisolated struct StarShapePredictionObserver: RecommenderGenerator {
             summary: summary,
             evidence: [
                 .init(label: "Predicted shape", value: prediction.displayName),
-                .init(label: "Median RMS", value: formatArcsec(weightedRMS)),
+                .init(label: "Weighted RMS", value: formatArcsec(weightedRMS)),
                 .init(label: "Imaging scale", value: formatArcsec(scale)),
                 .init(label: "Scale ratio", value: String(format: "%.2f×", scaleRatio)),
             ],

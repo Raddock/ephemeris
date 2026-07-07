@@ -19,7 +19,7 @@ final class CrossNightEngineTests: XCTestCase {
                 nightDate: start.addingTimeInterval(Double(idx * daysApart) * 86400),
                 sessionsCount: 5,
                 totalIntegrationMinutes: 60,
-                medianRMSArcsec: 0.5,
+                nightRMSArcsec: 0.5,
                 bestSessionRMSArcsec: 0.3,
                 worstSessionRMSArcsec: 0.9,
                 calibrationOrthogonalityDeg: ortho,
@@ -113,13 +113,13 @@ final class CrossNightEngineTests: XCTestCase {
         for i in 0..<10 {
             rolls.append(NightSummary(
                 nightDate: start.addingTimeInterval(Double(i) * 86400),
-                medianRMSArcsec: 0.4
+                nightRMSArcsec: 0.4
             ))
         }
         for i in 10..<13 {
             rolls.append(NightSummary(
                 nightDate: start.addingTimeInterval(Double(i) * 86400),
-                medianRMSArcsec: 1.5
+                nightRMSArcsec: 1.5
             ))
         }
         let ctx = CrossNightContext(profile: profile(), nights: rolls, annotations: [])
@@ -133,7 +133,7 @@ final class CrossNightEngineTests: XCTestCase {
         for i in 0..<12 {
             rolls.append(NightSummary(
                 nightDate: start.addingTimeInterval(Double(i) * 86400),
-                medianRMSArcsec: 0.4
+                nightRMSArcsec: 0.4
             ))
         }
         let ctx = CrossNightContext(profile: profile(), nights: rolls, annotations: [])
@@ -147,10 +147,10 @@ final class CrossNightEngineTests: XCTestCase {
         for i in 0..<5 {
             rolls.append(NightSummary(
                 nightDate: start.addingTimeInterval(Double(i) * 86400),
-                medianRMSArcsec: 0.4
+                nightRMSArcsec: 0.4
             ))
         }
-        rolls.append(NightSummary(nightDate: start.addingTimeInterval(6 * 86400), medianRMSArcsec: 2.0))
+        rolls.append(NightSummary(nightDate: start.addingTimeInterval(6 * 86400), nightRMSArcsec: 2.0))
         let ctx = CrossNightContext(profile: profile(), nights: rolls, annotations: [])
         let obs = CrossNightEngine.default.analyze(context: ctx)
         // Should NOT fire — insufficient baseline data
@@ -162,7 +162,7 @@ final class CrossNightEngineTests: XCTestCase {
     func test_rigBaselineMedianRMS_matchesExpected() {
         let n = (1...11).map { i in
             NightSummary(nightDate: Date(timeIntervalSince1970: Double(i)),
-                         medianRMSArcsec: Double(i) * 0.1)
+                         nightRMSArcsec: Double(i) * 0.1)
         }
         let ctx = CrossNightContext(profile: profile(), nights: n, annotations: [])
         XCTAssertEqual(ctx.rigBaselineMedianRMS ?? 0, 0.6, accuracy: 0.01)

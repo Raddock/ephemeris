@@ -4,7 +4,7 @@ import Charts
 /// Multi-night trend chart per design doc §7.3.
 ///
 /// - X-axis: per-night data points
-/// - Y-axis: median RMS in arcseconds
+/// - Y-axis: per-night RMS in arcseconds (frame-weighted across the night)
 /// - Imaging-scale reference line (the rig's imaging pixel scale) when configured
 /// - Annotation markers as vertical dashed RuleMarks
 /// - Three-tier verdict colors per point (sub-pixel / at-resolution / over-resolution)
@@ -18,7 +18,7 @@ struct TrendChartView: View {
     let annotations: [AnnotationMarker]
 
     private var rmsDistribution: [Double] {
-        nights.map { $0.medianRMSArcsec }
+        nights.map { $0.nightRMSArcsec }
     }
 
     /// One point per *observing* night. Multi-log nights (PHD2 splits a single
@@ -39,10 +39,10 @@ struct TrendChartView: View {
             let weightedRMS: Double
             if totalMin > 0 {
                 weightedRMS = group.reduce(0.0) {
-                    $0 + $1.medianRMSArcsec * $1.totalIntegrationMinutes
+                    $0 + $1.nightRMSArcsec * $1.totalIntegrationMinutes
                 } / totalMin
             } else {
-                let vals = group.map { $0.medianRMSArcsec }.sorted()
+                let vals = group.map { $0.nightRMSArcsec }.sorted()
                 weightedRMS = vals[vals.count / 2]
             }
             let best = group.map { $0.bestSessionRMSArcsec }.filter { $0 > 0 }.min() ?? 0
@@ -52,7 +52,7 @@ struct TrendChartView: View {
                 nightDate: day,
                 sessionsCount: group.reduce(0) { $0 + $1.sessionsCount },
                 totalIntegrationMinutes: totalMin,
-                medianRMSArcsec: weightedRMS,
+                nightRMSArcsec: weightedRMS,
                 bestSessionRMSArcsec: best,
                 worstSessionRMSArcsec: worst,
                 calibrationOrthogonalityDeg: nil,
@@ -100,7 +100,7 @@ struct TrendChartView: View {
             ForEach(chartPoints) { night in
                 AreaMark(
                     x: .value("Night", night.nightDate),
-                    y: .value("RMS", night.medianRMSArcsec)
+                    y: .value("RMS", night.nightRMSArcsec)
                 )
                 .interpolationMethod(.monotone)
                 .foregroundStyle(
@@ -132,7 +132,7 @@ struct TrendChartView: View {
             ForEach(chartPoints) { night in
                 LineMark(
                     x: .value("Night", night.nightDate),
-                    y: .value("RMS", night.medianRMSArcsec)
+                    y: .value("RMS", night.nightRMSArcsec)
                 )
                 .interpolationMethod(.monotone)
                 .foregroundStyle(Color.accentColor)
@@ -142,13 +142,13 @@ struct TrendChartView: View {
             // Verdict-colored point markers
             ForEach(chartPoints) { night in
                 let verdict = NightVerdictCalculator.verdict(
-                    rmsArcsec: night.medianRMSArcsec,
+                    rmsArcsec: night.nightRMSArcsec,
                     imagingPixelScale: imagingPixelScale,
                     rigDistribution: rmsDistribution
                 )
                 PointMark(
                     x: .value("Night", night.nightDate),
-                    y: .value("RMS", night.medianRMSArcsec)
+                    y: .value("RMS", night.nightRMSArcsec)
                 )
                 .foregroundStyle(verdict.tint)
                 .symbolSize(56)
@@ -183,7 +183,7 @@ struct TrendChartView: View {
             }
         }
         .chartYAxisLabel(position: .leading, alignment: .center, spacing: 4) {
-            Text("Median RMS (″)").font(.caption)
+            Text("Night RMS (″)").font(.caption)
         }
         .frame(height: 280)
         .padding(.vertical, 8)
@@ -206,7 +206,7 @@ struct TrendChartView: View {
         nights: (0..<14).map { i in
             NightSummary(
                 nightDate: Date(timeIntervalSince1970: 1_750_000_000).addingTimeInterval(Double(i) * 86400),
-                medianRMSArcsec: 0.3 + Double(i) * 0.05
+                nightRMSArcsec: 0.3 + Double(i) * 0.05
             )
         },
         imagingPixelScale: 0.62,

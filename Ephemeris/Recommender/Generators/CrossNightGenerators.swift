@@ -143,7 +143,7 @@ nonisolated struct SubQualityDiscrepancyObserver: CrossNightGenerator {
             guard let verdict = night.subQuality, verdict.isTrailedOrWorse else { continue }
             // Compute the rig-relative or imaging-scale verdict for this night's RMS.
             // The discrepancy that matters is "guide says good, image says bad".
-            let rms = night.medianRMSArcsec
+            let rms = night.nightRMSArcsec
             let imagingScale = context.profile.imagingPixelScale
             let guidedWell: Bool
             if imagingScale > 0 {
@@ -210,11 +210,11 @@ nonisolated struct BaselineRegressionObserver: CrossNightGenerator {
         let historical = context.nights.dropLast(3)
         guard recentWindow.count >= 2, historical.count >= 7 else { return [] }
 
-        let recentSorted = recentWindow.map { $0.medianRMSArcsec }.filter { $0 > 0 }.sorted()
+        let recentSorted = recentWindow.map { $0.nightRMSArcsec }.filter { $0 > 0 }.sorted()
         guard recentSorted.count >= 2 else { return [] }
         let recentMedian = recentSorted[recentSorted.count / 2]
 
-        let historicalSorted = historical.map { $0.medianRMSArcsec }.filter { $0 > 0 }.sorted()
+        let historicalSorted = historical.map { $0.nightRMSArcsec }.filter { $0 > 0 }.sorted()
         guard !historicalSorted.isEmpty else { return [] }
         let historicalMedian = historicalSorted[historicalSorted.count / 2]
         let historicalP90 = historicalSorted[Int(Double(historicalSorted.count) * 0.90)]

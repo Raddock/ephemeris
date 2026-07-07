@@ -279,7 +279,7 @@ actor LibraryIngestor {
                 raHours: ra,
                 decDegrees: dec,
                 totalIntegrationMinutes: n.totalIntegrationMinutes,
-                medianRMSArcsec: n.medianRMSArcsec
+                nightRMSArcsec: n.medianRMSArcsec
             )
         }
         guard !points.isEmpty else { return }
