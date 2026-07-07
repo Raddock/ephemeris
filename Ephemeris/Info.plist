@@ -12,11 +12,12 @@
          release; the /latest/download/ URL always resolves to the newest one. -->
     <key>SUFeedURL</key>
     <string>https://github.com/Raddock/ephemeris/releases/latest/download/appcast.xml</string>
-    <!-- EdDSA public key for update signatures. Generate the pair with Sparkle's
-         generate_keys tool and paste the public key here before shipping — Sparkle
-         refuses updates while this placeholder is present. -->
+    <!-- EdDSA public key for update signatures. The private half lives in the
+         signing Mac's login Keychain (generated 2026-07-07 with Sparkle's
+         generate_keys). Release archives must be signed on that machine, or the
+         key exported/imported first: `generate_keys -x/-f`. -->
     <key>SUPublicEDKey</key>
-    <string>REPLACE-WITH-GENERATED-ED25519-PUBLIC-KEY</string>
+    <string>EzaQnBBCbGOLtr63RCjFo7zcUeGbF+J7IUaHPMPXZEs=</string>
     <!-- Required for sandboxed apps: route installs through Sparkle's XPC service. -->
     <key>SUEnableInstallerLauncherService</key>
     <true/>

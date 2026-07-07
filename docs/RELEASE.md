@@ -1,18 +1,17 @@
 # Ephemeris release checklist
 
-## One-time Sparkle setup (before the first 2.x release)
+## One-time Sparkle setup — DONE (2026-07-07)
 
-1. **Generate the EdDSA keypair.** Sparkle's tools ship with the resolved package:
-   ```
-   ~/Library/Developer/Xcode/DerivedData/Ephemeris-*/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_keys
-   ```
-   The private key lands in your login Keychain ("Private key for signing Sparkle updates").
-   Keep it safe — anyone with it can push updates to your users.
-2. **Paste the printed public key** into `Ephemeris/Info.plist` → `SUPublicEDKey`
-   (replacing `REPLACE-WITH-GENERATED-ED25519-PUBLIC-KEY`). While the placeholder is
-   present the app never starts Sparkle's updater at all — "Check for Updates…"
-   shows disabled, and no appcast contact or log noise happens. The updater also
-   stays off inside test hosts regardless of the key.
+The EdDSA keypair was generated on 2026-07-07 with Sparkle's `generate_keys`.
+The private key lives in the login Keychain of the signing Mac ("Private key for
+signing Sparkle updates") — keep it safe, anyone with it can push updates to your
+users. The public key is baked into `Ephemeris/Info.plist` → `SUPublicEDKey`, so
+the updater now starts in normal builds. It still stays off inside test hosts,
+and would go dormant again if the key were ever removed from Info.plist.
+
+To sign releases from a different Mac, export/import the key first:
+`generate_keys -x private.key` on this machine, `generate_keys -f private.key`
+on the new one, then delete the exported file.
 
 ## Every release
 
