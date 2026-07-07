@@ -20,8 +20,13 @@ final class EphemerisLibrary {
             let url = Self.defaultStoreURL()
             configuration = ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)
         }
-        // Phase 3 will register a SchemaMigrationPlan when SchemaV2 lands.
-        self.container = try ModelContainer(for: schema, configurations: [configuration])
+        // The migration plan is registered now (empty stages) so the first real
+        // schema change only adds a stage instead of retrofitting the plumbing.
+        self.container = try ModelContainer(
+            for: schema,
+            migrationPlan: LibraryMigrationPlan.self,
+            configurations: [configuration]
+        )
     }
 
     // Rig-profile reads and writes go through RigProfileStore, which owns
