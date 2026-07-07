@@ -136,6 +136,9 @@ struct GuideGraphView: View {
         }
         .chartLegend(.hidden)
         .chartPlotStyle { $0.clipped() }
+        .accessibilityLabel(chartState.units == .arcsec
+            ? "Guide error over time, RA and declination in arc-seconds"
+            : "Guide error over time, RA and declination in pixels")
         .overlay(alignment: .topLeading) {
             if chartState.showHoverCard, let entry = activeEntry(in: data) {
                 HoverCard(entry: entry, session: session, chartState: chartState)

@@ -153,6 +153,8 @@ struct FrequencyAnalysisView: View {
             }
         }
         .chartLegend(.hidden)
+        .accessibilityLabel("Frequency spectrum of the guiding signal, magnitude by period in seconds")
+        .accessibilityValue(spectrum.dominantPeriod.map { "Dominant period \(formatPeriod($0))" } ?? "No dominant period found")
         .chartXSelection(value: $hoverPeriod)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

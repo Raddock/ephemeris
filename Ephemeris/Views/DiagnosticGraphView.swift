@@ -104,6 +104,7 @@ struct DiagnosticGraphView: View {
             }
         }
         .chartLegend(.hidden)
+        .accessibilityLabel("\(kind.label) over time")
         .chartXSelection(value: $hoverTime)
         .padding(.horizontal, 16)
         .padding(.vertical, 6)

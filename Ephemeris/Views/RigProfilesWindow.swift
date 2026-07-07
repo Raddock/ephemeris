@@ -63,6 +63,7 @@ struct RigProfilesWindow: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     }
+                    .accessibilityElement(children: .combine)
                     .tag(profile.id)
                     .contextMenu {
                         Button(role: .destructive) {

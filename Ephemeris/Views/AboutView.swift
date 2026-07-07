@@ -32,6 +32,7 @@ struct AboutView: View {
                 .frame(width: 160, height: 160)
                 .padding(.top, 36)
                 .padding(.bottom, 22)
+                .accessibilityHidden(true)
 
             Text(appName)
                 .font(.system(size: 28, weight: .bold))

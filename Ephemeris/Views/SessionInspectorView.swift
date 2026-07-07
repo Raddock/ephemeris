@@ -451,6 +451,7 @@ private struct EventRow: View {
                 .fill(isSelected ? Color.accentColor.opacity(0.18) : .clear)
         }
         .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
     }
 
     private var icon: String {
@@ -522,6 +523,7 @@ private struct InspectorCard<Content: View>: View {
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.tint)
                     .font(.callout)
+                    .accessibilityHidden(true)
                 Text(title)
                     .font(.subheadline.weight(.semibold))
                 if let count {

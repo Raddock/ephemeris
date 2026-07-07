@@ -30,6 +30,7 @@ struct RigProfileEditorView: View {
                         Image(systemName: "lock.fill")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
+                            .accessibilityHidden(true)
                         Text(profile.currentName.isEmpty ? "(none)" : profile.currentName)
                             .font(.callout.monospaced())
                             .textSelection(.enabled)

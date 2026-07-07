@@ -76,6 +76,7 @@ struct MCPServerWindow: View {
                 Image(systemName: "bubble.left.and.text.bubble.right")
                     .font(.title2)
                     .foregroundStyle(.blue)
+                    .accessibilityHidden(true)
                 Text("Connect to Claude")
                     .font(.title2.weight(.semibold))
             }
@@ -174,6 +175,7 @@ struct MCPServerWindow: View {
                     Image(systemName: icon)
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(iconTint)
+                        .accessibilityHidden(true)
                     Text("Connect to \(target.displayName)")
                         .font(.headline)
                         .foregroundStyle(.primary)
@@ -183,6 +185,7 @@ struct MCPServerWindow: View {
                     } else {
                         Image(systemName: "arrow.right.circle.fill")
                             .foregroundStyle(iconTint)
+                            .accessibilityHidden(true)
                     }
                 }
                 Text(subtitle)
@@ -319,6 +322,7 @@ private struct InstallSuccessSheet: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.title)
                     .foregroundStyle(.green)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(result.wasFirstInstall
                          ? "Connected to \(result.target.displayName)"

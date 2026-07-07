@@ -177,6 +177,7 @@ struct LogSummaryView: View {
     private func chip(label: String, color: Color, systemImage: String) -> some View {
         HStack(spacing: 3) {
             Image(systemName: systemImage).font(.system(size: 9, weight: .semibold))
+                .accessibilityHidden(true)
             Text(label).font(.system(size: 10, weight: .semibold))
         }
         .foregroundStyle(color)
@@ -211,6 +212,7 @@ struct LogSummaryView: View {
             }
         }
         .frame(height: 5)
+        .accessibilityHidden(true)
     }
 
     private func totalRMSColor(for r: SessionRow) -> Color {
@@ -260,6 +262,7 @@ struct LogSummaryView: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(color.opacity(0.30), lineWidth: 0.5)
             )
+            .accessibilityElement(children: .combine)
         }
         .buttonStyle(.plain)
         .help("Jump to \(label.lowercased()) session")

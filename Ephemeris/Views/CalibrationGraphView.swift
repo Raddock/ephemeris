@@ -92,6 +92,8 @@ struct CalibrationGraphView: View {
                 }
             }
         }
+        .accessibilityLabel("Calibration plot showing the guide star's path during each calibration leg, in pixels")
+        .accessibilityValue("\(calibration.entries.count) step\(calibration.entries.count == 1 ? "" : "s")")
         .aspectRatio(1, contentMode: .fit)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

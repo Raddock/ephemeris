@@ -159,6 +159,7 @@ struct PHD2HygieneStrip: View {
                 RoundedRectangle(cornerRadius: 9)
                     .stroke(tint.opacity(0.25), lineWidth: 0.5)
             )
+            .accessibilityElement(children: .combine)
         }
         .buttonStyle(.plain)
         .help(helpHover)

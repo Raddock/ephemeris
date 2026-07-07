@@ -143,6 +143,7 @@ private struct ImportProgressContent: View {
                 Image(systemName: cancelled ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                     .foregroundStyle(cancelled ? .orange : .green)
                     .font(.title)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading) {
                     Text(cancelled ? "Import cancelled" : "Import finished")
                         .font(.headline)

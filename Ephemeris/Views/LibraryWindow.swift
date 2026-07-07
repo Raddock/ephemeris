@@ -162,6 +162,7 @@ struct LibraryWindow: View {
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
                     }
+                    .accessibilityElement(children: .combine)
                     .tag(profile.id)
                     .contextMenu {
                         Button(role: .destructive) {
@@ -418,6 +419,7 @@ struct LibraryDetailView: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.title3)
                 .foregroundStyle(.orange)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text("Imaging train not configured")
                     .font(.headline)
@@ -458,6 +460,7 @@ struct LibraryDetailView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "camera.aperture")
                             .font(.caption)
+                            .accessibilityHidden(true)
                         Text(String(format: "%.2f″/px imaging", profile.imagingPixelScale))
                             .monospacedDigit()
                     }
@@ -524,6 +527,7 @@ struct LibraryDetailView: View {
                 Image(systemName: icon)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(accent)
+                    .accessibilityHidden(true)
                 Text(title.uppercased())
                     .font(.caption.weight(.semibold))
                     .tracking(0.6)
@@ -684,6 +688,7 @@ struct LibraryDetailView: View {
                 .fill(rmsTint)
                 .frame(width: 9, height: 9)
                 .help(verdict.shortLabel)
+                .accessibilityLabel("Night quality: \(verdict.shortLabel)")
             Text(record.nightDate.formatted(date: .abbreviated, time: .omitted))
                 .font(.callout.weight(.medium))
                 .frame(width: NightColumn.date, alignment: .leading)
@@ -710,6 +715,7 @@ struct LibraryDetailView: View {
             .buttonStyle(.plain)
             .disabled(record.sourceFilePath.isEmpty)
             .help("Open this night's PHD2 log in the single-night viewer.")
+            .accessibilityLabel("Open this night's PHD2 log in the single-night viewer")
             .frame(width: NightColumn.open)
             Button {
                 annotatingRecord = record
@@ -719,6 +725,7 @@ struct LibraryDetailView: View {
             }
             .buttonStyle(.plain)
             .help("Add an annotation for this night")
+            .accessibilityLabel("Add an annotation for this night")
             .frame(width: NightColumn.note)
             Text(String(format: "%.0f min", record.totalIntegrationMinutes))
                 .foregroundStyle(.secondary)
@@ -789,6 +796,7 @@ struct LibraryDetailView: View {
                 .background(tint.opacity(0.22), in: Capsule())
                 .overlay(Capsule().stroke(tint.opacity(0.55), lineWidth: 1))
                 .help(predictionTooltip(prediction: prediction, record: record))
+                .accessibilityLabel("Predicted star shape: \(prediction.displayName)")
         } else {
             // No imaging scale → can't predict. A faint ruler cue; the tooltip
             // carries the fix.
@@ -796,6 +804,7 @@ struct LibraryDetailView: View {
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .help("Star-shape prediction needs this rig's imaging pixel scale. Set the imaging focal length, pixel size, and binning under App → Rig Profiles… (⇧⌘,).")
+                .accessibilityLabel("Star shape prediction unavailable, imaging pixel scale not configured")
         }
     }
 
@@ -882,6 +891,8 @@ struct LibraryDetailView: View {
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
             .background(Color.blue.opacity(0.12), in: Capsule())
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(annotations.count) annotation\(annotations.count == 1 ? "" : "s")")
         }
     }
 

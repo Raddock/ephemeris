@@ -56,6 +56,7 @@ struct ObservationCard: View {
                 Image(systemName: expanded ? "chevron.down" : "chevron.right")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
             }
             metaRow
             Text(observation.summary)
@@ -269,6 +270,7 @@ struct ObservationsPanel: View {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle")
                         .foregroundStyle(.green)
+                        .accessibilityHidden(true)
                     Text(emptyMessage)
                         .font(.callout)
                         .foregroundStyle(.secondary)

@@ -46,6 +46,8 @@ struct ImagingScaleVerdictChip: View {
         .background(tint.opacity(0.12), in: Capsule())
         .overlay(Capsule().stroke(tint.opacity(0.35), lineWidth: 0.5))
         .help(helpText)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Imaging scale verdict: \(verdict.displayLabel)")
     }
 
     @ViewBuilder

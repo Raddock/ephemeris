@@ -99,6 +99,7 @@ struct SessionListView: View {
             }
         }
         .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
     }
 
     private func timeText(_ date: Date?) -> String {

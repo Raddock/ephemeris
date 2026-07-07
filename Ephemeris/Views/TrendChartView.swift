@@ -185,6 +185,8 @@ struct TrendChartView: View {
         .chartYAxisLabel(position: .leading, alignment: .center, spacing: 4) {
             Text("Night RMS (″)").font(.caption)
         }
+        .accessibilityLabel("Guiding error trend, one point per night, RMS in arc-seconds")
+        .accessibilityValue("\(nights.count) night\(nights.count == 1 ? "" : "s") plotted")
         .frame(height: 280)
         .padding(.vertical, 8)
     }

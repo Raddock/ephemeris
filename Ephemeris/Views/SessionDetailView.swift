@@ -195,7 +195,9 @@ struct SessionDetailView: View {
 
                 Picker("Drag", selection: $bindable.dragMode) {
                     ForEach(ChartViewState.DragMode.allCases) { m in
-                        Image(systemName: m.systemImage).tag(m)
+                        Image(systemName: m.systemImage)
+                            .accessibilityLabel(m.label)
+                            .tag(m)
                     }
                 }
                 .labelsHidden()

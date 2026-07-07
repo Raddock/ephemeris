@@ -56,6 +56,7 @@ struct ScatterInsetView: View {
                 Image(systemName: "scope")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
                 Text(title)
                     .font(.caption.weight(.medium))
                 Spacer(minLength: 0)
@@ -149,6 +150,9 @@ struct ScatterInsetView: View {
                 }
             }
         }
+        .accessibilityLabel(chartState.axisMode == .raDec
+            ? "Scatter plot of guide star positions around the lock position, RA and declination"
+            : "Scatter plot of guide star positions around the lock position, camera x and y")
         .aspectRatio(1, contentMode: .fit)
         .overlay(alignment: .bottomTrailing) {
             Text(unitsSuffix)
