@@ -70,7 +70,7 @@ struct ImagingScaleVerdictChip: View {
         switch verdict {
         case .subPixel:        return .green
         case .atResolution:    return .orange
-        case .overResolution:  return Color(red: 0.95, green: 0.45, blue: 0.45)  // coral
+        case .overResolution:  return .verdictCoral
         case .unconfigured:    return .secondary
         }
     }

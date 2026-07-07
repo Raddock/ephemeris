@@ -176,9 +176,9 @@ struct LogSummaryView: View {
 
     private func chip(label: String, color: Color, systemImage: String) -> some View {
         HStack(spacing: 3) {
-            Image(systemName: systemImage).font(.system(size: 9, weight: .semibold))
+            Image(systemName: systemImage).font(.caption2.weight(.semibold))
                 .accessibilityHidden(true)
-            Text(label).font(.system(size: 10, weight: .semibold))
+            Text(label).font(.caption2.weight(.semibold))
         }
         .foregroundStyle(color)
         .padding(.horizontal, 6)
@@ -245,7 +245,7 @@ struct LogSummaryView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
                     Image(systemName: systemImage)
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.caption2.weight(.semibold))
                         .foregroundStyle(color)
                     Text(label)
                         .font(.caption.weight(.semibold))

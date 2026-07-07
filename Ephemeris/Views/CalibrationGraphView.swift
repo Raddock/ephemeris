@@ -133,7 +133,7 @@ struct CalibrationGraphView: View {
             )
             let label = Text(String(format: "%.0f", r))
                 .font(.system(size: 9))
-                .foregroundColor(labelColor)
+                .foregroundStyle(labelColor)
             ctx.draw(label, at: CGPoint(x: center.x + pixelRadius - 2, y: center.y - 8), anchor: .trailing)
         }
     }

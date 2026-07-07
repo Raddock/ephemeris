@@ -130,9 +130,14 @@ bulk imports, MCP transport divergence (reducer factor, field shapes), contradic
 verdict tiers, midnight-split trend nights, the help book's missing pages and wrong
 book ID, MARKETING_VERSION, and the helper's single-arch/no-timestamp signing.)*
 
-- **Sparkle is integrated but not yet shippable** — `SUPublicEDKey` is a placeholder
-  until the EdDSA keypair is generated, and each release needs an `appcast.xml`
-  asset (see the release checklist). Automatic checks stay off until then.
+- **Sparkle is live as of 2026-07-07** — the EdDSA keypair exists (private key in
+  the signing Mac's login Keychain, public key in Info.plist). Each release still
+  needs an `appcast.xml` asset (see docs/RELEASE.md). Automatic checks stay
+  consent-gated.
+- **Not localized, by decision (July 2026 audit)** — ~120 user-facing strings are
+  hardcoded English; no String Catalog exists. Deferred deliberately: costs
+  nothing while English-only, but budget a mostly mechanical multi-day retrofit
+  before any international push.
 - **Embedded MCP server has no auth token** — now opt-in (off by default, choice
   persisted), loopback-only, read-only; but while running, any local process can
   read library summaries. A per-session token would close that.

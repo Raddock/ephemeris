@@ -122,7 +122,11 @@ struct GuideLogDocument: FileDocument {
             break
         }
 
-        guard let text = String(data: data, encoding: .utf8) else {
+        // UTF-8 first; Latin-1 fallback for legacy logs with odd bytes in
+        // free-text fields. The signature gate above already confirmed this is
+        // PHD2-shaped text, so the fallback can't smuggle in binary data.
+        guard let text = String(data: data, encoding: .utf8)
+                ?? String(data: data, encoding: .isoLatin1) else {
             throw GuideLogLoadError.unreadable
         }
 

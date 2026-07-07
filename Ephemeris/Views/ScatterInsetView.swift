@@ -223,7 +223,7 @@ struct ScatterInsetView: View {
             let labelText = String(format: "%.1f%@", r, unitsSuffix)
             let label = Text(labelText)
                 .font(.system(size: 8))
-                .foregroundColor(labelColor)
+                .foregroundStyle(labelColor)
             ctx.draw(label, at: CGPoint(x: center.x + pixelRadius - 2, y: center.y - 7), anchor: .trailing)
             r += 0.5
         }

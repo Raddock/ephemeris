@@ -28,9 +28,18 @@ struct FrequencyAnalysisView: View {
     @State private var driftCorrect = true
     @State private var axis: FrequencyAxis = .ra
     @State private var hoverPeriod: Double?
+    @State private var spectrum: FrequencySpectrum?
 
-    private var spectrum: FrequencySpectrum? {
-        FrequencyAnalyzer.analyze(session: session, axis: axis, driftCorrect: driftCorrect)
+    /// Inputs that require re-running the FFT. Hover is deliberately absent —
+    /// recomputing the spectrum on every mouse-move tick was audit cruft.
+    private struct SpectrumKey: Equatable {
+        let sessionID: UUID
+        let axis: FrequencyAxis
+        let driftCorrect: Bool
+    }
+
+    private var spectrumKey: SpectrumKey {
+        SpectrumKey(sessionID: session.id, axis: axis, driftCorrect: driftCorrect)
     }
 
     var body: some View {
@@ -40,6 +49,9 @@ struct FrequencyAnalysisView: View {
             content
             Divider()
             footer
+        }
+        .task(id: spectrumKey) {
+            spectrum = FrequencyAnalyzer.analyze(session: session, axis: axis, driftCorrect: driftCorrect)
         }
         .frame(minWidth: 640, idealWidth: 760, minHeight: 420, idealHeight: 480)
     }

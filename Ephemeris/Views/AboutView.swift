@@ -39,17 +39,17 @@ struct AboutView: View {
                 .padding(.bottom, 6)
 
             Text("Version \(versionString)")
-                .font(.system(size: 13))
+                .font(.body)
                 .foregroundStyle(.secondary)
                 .padding(.bottom, 14)
 
             Text(tagline)
-                .font(.system(size: 13))
+                .font(.body)
                 .foregroundStyle(.secondary)
                 .padding(.bottom, 6)
 
             Text(copyright)
-                .font(.system(size: 12))
+                .font(.callout)
                 .foregroundStyle(.tertiary)
                 .padding(.bottom, 22)
 
@@ -64,15 +64,15 @@ struct AboutView: View {
                 .buttonStyle(.link)
                 Link("Support", destination: supportURL)
             }
-            .font(.system(size: 13, weight: .medium))
+            .font(.body.weight(.medium))
             .padding(.bottom, 22)
 
             VStack(spacing: 4) {
                 Text("Acknowledgments")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Text("Based on phdlogview by Andy Galasso")
-                    .font(.system(size: 11))
+                    .font(.subheadline)
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
             }

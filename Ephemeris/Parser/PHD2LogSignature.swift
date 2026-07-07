@@ -48,8 +48,12 @@ enum PHD2LogSignature {
         // logs are 7-bit ASCII / UTF-8 text and never contain NULs.
         if head.contains(0) { return .binary }
 
-        // 3. Decode as UTF-8; on failure, treat as binary.
-        guard let text = String(data: head, encoding: .utf8) else { return .binary }
+        // 3. Decode as UTF-8, falling back to Latin-1 for legacy logs whose
+        // free-text fields (target names, notes) carry non-UTF-8 bytes. The NUL
+        // check above already screened out binary data, and Latin-1 decoding
+        // never fails, so the marker checks below still gate what gets in.
+        guard let text = String(data: head, encoding: .utf8)
+                ?? String(data: head, encoding: .isoLatin1) else { return .binary }
 
         // 4. Banner is the strongest signal.
         if text.hasPrefix("PHD2 version ") { return .confirmed }

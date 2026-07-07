@@ -134,7 +134,9 @@ final class LibraryBulkImporter {
                 guard let data = try? Data(contentsOf: url) else { return .unreadable }
                 guard !data.isEmpty else { return .empty }
                 guard data.count <= GuideLogDocument.maxLoadBytes else { return .tooLarge(bytes: data.count) }
-                guard let text = String(data: data, encoding: .utf8) else { return .notUTF8 }
+                // UTF-8 first; Latin-1 fallback matches the document-open path.
+                guard let text = String(data: data, encoding: .utf8)
+                        ?? String(data: data, encoding: .isoLatin1) else { return .notUTF8 }
                 let log = GuideLogParser.parse(text)
                 return log.isEmpty ? .empty : .parsed(data: data, log: log)
             }.value

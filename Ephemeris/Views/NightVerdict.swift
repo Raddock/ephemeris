@@ -22,7 +22,7 @@ enum NightVerdict: Sendable {
         switch self {
         case .subPixel, .best:                 return .green
         case .atResolution, .typical:          return .orange
-        case .overResolution, .elevated:       return Color(red: 0.95, green: 0.45, blue: 0.45)  // coral
+        case .overResolution, .elevated:       return .verdictCoral
         case .worst:                           return .red
         case .unknown:                         return .secondary
         }
@@ -104,7 +104,7 @@ enum NightVerdictCalculator {
         // Ramp breakpoints follow the §5.2 verdict tiers (ImagingScale.verdict):
         // solid green through the sub-pixel band, green→orange across at-resolution
         // (0.7–1.0), orange→red once over-resolved.
-        let red = Color(red: 0.95, green: 0.30, blue: 0.30)
+        let red = Color.verdictRampRed
         let ratio = rmsArcsec / imagingPixelScale
         if ratio < 0.7 { return .green }
         if ratio <= 1.0 { return Color.green.mix(with: .orange, by: (ratio - 0.7) / 0.3) }
