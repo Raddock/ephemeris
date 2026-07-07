@@ -66,8 +66,9 @@ enum GuideLogLoadError: LocalizedError {
 struct GuideLogDocument: FileDocument {
     /// Hard limits on file size before we refuse to even read it.
     /// PHD2 logs in normal use are well under 50 MB; > 500 MB is almost
-    /// certainly an accident or a wrong file.
-    private static let maxLoadBytes = 500_000_000
+    /// certainly an accident or a wrong file. Shared with the bulk importer so
+    /// both doors enforce the same cap.
+    static let maxLoadBytes = 500_000_000
 
     static var readableContentTypes: [UTType] {
         // Accept the canonical .txt UTI and the .log fallback. The PHD2

@@ -95,10 +95,18 @@ final class LibraryBulkImporter {
             return
         }
 
-        let ingestor = LibraryIngestor(modelContainer: library.container)
+        // The ingest actor's ModelContext registers every entity it inserts and
+        // never sheds them, so one actor across a whole folder scan grows without
+        // bound. Recreating the actor every batch drops that cache; each ingest
+        // re-fetches what it needs, so this is purely a memory-ceiling measure.
+        let ingestorBatchSize = 25
+        var ingestor = LibraryIngestor(modelContainer: library.container)
         var touchedRigIds: Set<UUID> = []
 
         for (index, url) in urls.enumerated() {
+            if index > 0, index % ingestorBatchSize == 0 {
+                ingestor = LibraryIngestor(modelContainer: library.container)
+            }
             if Task.isCancelled {
                 status = .cancelled(summary)
                 return
@@ -113,10 +121,19 @@ final class LibraryBulkImporter {
             enum Prepared {
                 case parsed(data: Data, log: GuideLog)
                 case unreadable, empty, notUTF8
+                case tooLarge(bytes: Int)
             }
             let prepared = await Task.detached(priority: .userInitiated) { () -> Prepared in
+                // Size gate BEFORE reading: the document window refuses > 500 MB,
+                // and a folder scan must not read an accidental huge file whole
+                // either (the audit's unguarded second door).
+                if let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize,
+                   size > GuideLogDocument.maxLoadBytes {
+                    return .tooLarge(bytes: size)
+                }
                 guard let data = try? Data(contentsOf: url) else { return .unreadable }
                 guard !data.isEmpty else { return .empty }
+                guard data.count <= GuideLogDocument.maxLoadBytes else { return .tooLarge(bytes: data.count) }
                 guard let text = String(data: data, encoding: .utf8) else { return .notUTF8 }
                 let log = GuideLogParser.parse(text)
                 return log.isEmpty ? .empty : .parsed(data: data, log: log)
@@ -133,6 +150,9 @@ final class LibraryBulkImporter {
                 continue
             case .notUTF8:
                 summary.errors.append("\(url.lastPathComponent): not UTF-8")
+                continue
+            case .tooLarge(let bytes):
+                summary.errors.append("\(url.lastPathComponent): skipped — \(bytes / 1_000_000) MB is over the \(GuideLogDocument.maxLoadBytes / 1_000_000) MB limit")
                 continue
             case .parsed(let d, let l):
                 data = d
