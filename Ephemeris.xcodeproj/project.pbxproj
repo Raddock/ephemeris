@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		5FAB00000000000000000A01 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 5FAB00000000000000000A02 /* Sparkle */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		5F9BE2BB2F9C5F1E00DD97D8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -46,10 +50,6 @@
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
-
-/* Begin PBXBuildFile section */
-		5FAB00000000000000000A01 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 5FAB00000000000000000A02 /* Sparkle */; };
-/* End PBXBuildFile section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		5F9BE2AA2F9C5F1D00DD97D8 /* Frameworks */ = {
@@ -195,9 +195,6 @@
 				};
 			};
 			buildConfigurationList = 5F9BE2A82F9C5F1D00DD97D8 /* Build configuration list for PBXProject "Ephemeris" */;
-			packageReferences = (
-				5FAB00000000000000000A03 /* XCRemoteSwiftPackageReference "Sparkle" */,
-			);
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -206,6 +203,9 @@
 			);
 			mainGroup = 5F9BE2A42F9C5F1D00DD97D8;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5FAB00000000000000000A03 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5F9BE2AE2F9C5F1D00DD97D8 /* Products */;
 			projectDirPath = "";
