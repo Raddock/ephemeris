@@ -16,6 +16,13 @@ struct TrendChartView: View {
     let nights: [NightSummary]
     let imagingPixelScale: Double  // 0 = not configured
     let annotations: [AnnotationMarker]
+    /// When set, dragging across the chart selects a date interval and hands it
+    /// up on release — the library adopts it as a custom range, mirroring the
+    /// document window's drag-to-zoom.
+    var onRangeSelected: ((ClosedRange<Date>) -> Void)? = nil
+
+    @State private var dragRange: ClosedRange<Date>?
+    @State private var lastDragRange: ClosedRange<Date>?
 
     private var rmsDistribution: [Double] {
         nights.map { $0.nightRMSArcsec }
@@ -165,6 +172,29 @@ struct TrendChartView: View {
                 RuleMark(x: .value("Annotation", marker.date))
                     .foregroundStyle(.blue.opacity(0.5))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+            }
+
+            // Live drag highlight while selecting a zoom window.
+            if let r = dragRange {
+                RectangleMark(
+                    xStart: .value("Drag start", r.lowerBound),
+                    xEnd: .value("Drag end", r.upperBound)
+                )
+                .foregroundStyle(Color.accentColor.opacity(0.18))
+            }
+        }
+        .chartXSelection(range: $dragRange)
+        .onChange(of: dragRange) { old, new in
+            if let new {
+                lastDragRange = new
+            } else if old != nil {
+                // Drag finished — hand the interval up if it spans at least half
+                // a day (a click or micro-drag shouldn't hijack the range).
+                if let last = lastDragRange, let onRangeSelected,
+                   last.upperBound.timeIntervalSince(last.lowerBound) > 12 * 3600 {
+                    onRangeSelected(last)
+                }
+                lastDragRange = nil
             }
         }
         .chartXAxis {

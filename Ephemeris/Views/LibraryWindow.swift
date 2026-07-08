@@ -25,8 +25,9 @@ struct LibraryWindow: View {
     @State private var customEnd: Date = .now
 
     /// Effective inclusive date window for the current `range` selection.
-    /// `.custom` reads the user's date pickers; everything else uses preset offsets.
-    private var dateWindow: DateInterval {
+    /// `.custom` reads the user's date pickers; presets are offsets anchored to
+    /// the rig's most recent ingested night.
+    private func dateWindow(latestNight: Date?) -> DateInterval {
         switch range {
         case .custom:
             // Order-preserving so user-flipped pickers don't yield an empty window.
@@ -38,8 +39,21 @@ struct LibraryWindow: View {
         case .all:
             return DateInterval(start: .distantPast, end: .distantFuture)
         default:
-            return DateInterval(start: range.cutoffDate, end: .distantFuture)
+            return DateInterval(start: range.cutoffDate(anchoredTo: latestNight ?? .now),
+                                end: .distantFuture)
         }
+    }
+
+    /// Most recent ingested night for a rig — the anchor for preset ranges and
+    /// the header's "week ending …" wording. A capped fetch, run once per render.
+    private func latestNightDate(for rigID: UUID) -> Date? {
+        guard let container = library?.container else { return nil }
+        var descriptor = FetchDescriptor<NightRecordEntity>(
+            predicate: #Predicate { $0.rigProfile?.id == rigID },
+            sortBy: [SortDescriptor(\.nightDate, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        return (try? container.mainContext.fetch(descriptor))?.first?.nightDate
     }
 
     var body: some View {
@@ -47,9 +61,23 @@ struct LibraryWindow: View {
             sidebar
         } detail: {
             if let library, let rigID = selectedRigID, let profile = rigStore.profiles.first(where: { $0.id == rigID }) {
-                LibraryDetailView(profile: profile, range: range, window: dateWindow)
-                    .modelContainer(library.container)
-                    .id(profile.id)
+                let latestNight = latestNightDate(for: rigID)
+                LibraryDetailView(
+                    profile: profile,
+                    range: range,
+                    window: dateWindow(latestNight: latestNight),
+                    latestNight: latestNight,
+                    onZoomToRange: { selection in
+                        // Drag-to-zoom on the trend chart: adopt the dragged
+                        // interval as a custom range so the stats, observations,
+                        // and nights list all narrow to it.
+                        customStart = selection.lowerBound
+                        customEnd = selection.upperBound
+                        range = .custom
+                    }
+                )
+                .modelContainer(library.container)
+                .id(profile.id)
             } else if library == nil {
                 ContentUnavailableView {
                     Label("Library couldn't be opened", systemImage: "exclamationmark.triangle")
@@ -209,9 +237,10 @@ struct LibraryWindow: View {
               let profile = rigStore.profiles.first(where: { $0.id == rigID })
         else { return "" }
         if range == .custom {
+            let window = dateWindow(latestNight: nil)  // custom ignores the anchor
             let f = DateFormatter()
             f.dateStyle = .medium
-            return "\(profile.effectiveName) · \(f.string(from: dateWindow.start)) – \(f.string(from: dateWindow.end))"
+            return "\(profile.effectiveName) · \(f.string(from: window.start)) – \(f.string(from: window.end))"
         }
         return "\(profile.effectiveName) · \(range.displayName)"
     }
@@ -232,14 +261,18 @@ enum TimeRange: String, CaseIterable, Sendable {
         }
     }
 
-    /// Inclusive lower bound for preset ranges. `.custom` returns `.distantPast`
-    /// here; the caller supplies the real bound.
-    var cutoffDate: Date {
+    /// Inclusive lower bound for preset ranges, anchored to a reference date —
+    /// the rig's most recent ingested night, not today. Anchoring to "now" made
+    /// Week and Month show an empty library whenever the newest saved log was
+    /// older than the window (astronomers don't image every week, and not every
+    /// log gets saved). `.custom` returns `.distantPast`; the caller supplies
+    /// the real bound.
+    func cutoffDate(anchoredTo anchor: Date) -> Date {
         let cal = Calendar.current
         switch self {
-        case .week:   return cal.date(byAdding: .day, value: -7, to: .now) ?? .distantPast
-        case .month:  return cal.date(byAdding: .day, value: -30, to: .now) ?? .distantPast
-        case .year:   return cal.date(byAdding: .year, value: -1, to: .now) ?? .distantPast
+        case .week:   return cal.date(byAdding: .day, value: -7, to: anchor) ?? .distantPast
+        case .month:  return cal.date(byAdding: .day, value: -30, to: anchor) ?? .distantPast
+        case .year:   return cal.date(byAdding: .year, value: -1, to: anchor) ?? .distantPast
         case .all:    return .distantPast
         case .custom: return .distantPast
         }
@@ -252,6 +285,12 @@ enum TimeRange: String, CaseIterable, Sendable {
 struct LibraryDetailView: View {
     let profile: RigProfile
     let range: TimeRange
+    /// The rig's most recent ingested night across ALL time (not just the
+    /// window) — distinguishes "no nights at all" from "none in this range"
+    /// and feeds the header's "week ending …" wording.
+    let latestNight: Date?
+    /// Invoked when the user drags across the trend chart to zoom into a period.
+    let onZoomToRange: ((ClosedRange<Date>) -> Void)?
 
     @Query private var nightRecords: [NightRecordEntity]
     @Query private var annotationEntities: [AnnotationEntity]
@@ -261,9 +300,15 @@ struct LibraryDetailView: View {
     @State private var annotatingRecord: NightRecordEntity?
     @State private var forumExportInputs: ForumPostExporter.Inputs?
 
-    init(profile: RigProfile, range: TimeRange, window: DateInterval) {
+    init(profile: RigProfile,
+         range: TimeRange,
+         window: DateInterval,
+         latestNight: Date? = nil,
+         onZoomToRange: ((ClosedRange<Date>) -> Void)? = nil) {
         self.profile = profile
         self.range = range
+        self.latestNight = latestNight
+        self.onZoomToRange = onZoomToRange
         let rigID = profile.id
         let start = window.start
         let end = window.end
@@ -369,11 +414,21 @@ struct LibraryDetailView: View {
                     rigIncompleteBanner
                 }
                 if nightRecords.isEmpty {
-                    ContentUnavailableView(
-                        "No nights ingested",
-                        systemImage: "moon.stars",
-                        description: Text("Open a PHD2 guide log for this rig to start populating the library. Logs are automatically ingested when the document window opens.")
-                    )
+                    if let latestNight {
+                        // The rig HAS data, just none inside the current window
+                        // (a custom range, usually — presets anchor to the data).
+                        ContentUnavailableView(
+                            "No nights in this range",
+                            systemImage: "calendar.badge.exclamationmark",
+                            description: Text("This rig's most recent night is \(latestNight.formatted(date: .abbreviated, time: .omitted)). Choose a wider range, or adjust the custom dates to cover it.")
+                        )
+                    } else {
+                        ContentUnavailableView(
+                            "No nights ingested",
+                            systemImage: "moon.stars",
+                            description: Text("Open a PHD2 guide log for this rig to start populating the library. Logs are automatically ingested when the document window opens.")
+                        )
+                    }
                 } else {
                     metricsRow
                     PHD2HygieneStrip(
@@ -383,8 +438,14 @@ struct LibraryDetailView: View {
                     TrendChartView(
                         nights: chronologicalNights,
                         imagingPixelScale: profile.imagingPixelScale,
-                        annotations: trendMarkers
+                        annotations: trendMarkers,
+                        onRangeSelected: onZoomToRange
                     )
+                    if onZoomToRange != nil {
+                        Text("Drag across the chart to zoom into that period.")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
                     ObservationsPanel(
                         observations: crossNightObservations,
                         title: "Cross-night observations · \(profile.effectiveName)",
@@ -476,10 +537,24 @@ struct LibraryDetailView: View {
                 Text("•").foregroundStyle(.tertiary)
                 Text("\(nightRecords.count) nights")
                 Text("•").foregroundStyle(.tertiary)
-                Text(range.displayName.lowercased())
+                Text(rangeDescription)
             }
             .font(.subheadline)
             .foregroundStyle(.secondary)
+        }
+    }
+
+    /// Presets read "week ending May 18, 2026" so an anchored window can't be
+    /// mistaken for the current calendar week.
+    private var rangeDescription: String {
+        switch range {
+        case .week, .month, .year:
+            if let latestNight {
+                return "\(range.displayName.lowercased()) ending \(latestNight.formatted(date: .abbreviated, time: .omitted))"
+            }
+            return range.displayName.lowercased()
+        case .all, .custom:
+            return range.displayName.lowercased()
         }
     }
 
