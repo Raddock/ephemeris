@@ -1,21 +1,36 @@
 import SwiftUI
 
-/// Renders a single `RecommenderObservation` as a disclosable card.
-/// Per design doc §5.1: severity-tier color dot, title, summary, disclosure for evidence /
-/// contributors / suggested response / source authority badge.
+/// Renders one `ObservationDisplayItem` as a disclosable card.
+///
+/// Collapsed, the card is a single title row — the severity is carried by the
+/// leading edge bar, and the summary stays behind the disclosure. Seven
+/// findings used to fill the whole inspector; title-only rows make the list
+/// scannable, and expanding one card gives the full detail (per-axis sections
+/// when the item is a merged RA + Dec pair).
 struct ObservationCard: View {
-    let observation: RecommenderObservation
+    let item: ObservationDisplayItem
     @State private var expanded: Bool = false
 
+    init(item: ObservationDisplayItem) {
+        self.item = item
+    }
+
+    /// Convenience for previews and any call site with a bare observation.
+    init(observation: RecommenderObservation) {
+        self.item = ObservationDisplayItem(primary: observation, paired: nil)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            header
+        VStack(alignment: .leading, spacing: 8) {
+            titleRow
             if expanded {
+                metaRow
                 Divider().opacity(0.5)
                 content
             }
         }
-        .padding(14)
+        .padding(.horizontal, 12)
+        .padding(.vertical, expanded ? 12 : 9)
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .fill(.regularMaterial)
@@ -39,42 +54,34 @@ struct ObservationCard: View {
                 expanded.toggle()
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(item.severity.displayName): \(item.title)")
+        .accessibilityHint(expanded ? "Collapses the detail" : "Expands the detail")
     }
 
-    /// Header layout follows the macOS HIG pattern for compact list rows
-    /// (Mail, Notes, Reminders): the primary text (title) owns the full row width,
-    /// with secondary metadata stacked beneath it. The severity color is carried
-    /// by the card's leading edge bar so we don't also need a pill flanking the title.
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(observation.title)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-            }
-            metaRow
-            Text(observation.summary)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .lineLimit(expanded ? nil : 3)
+    /// The whole collapsed card: title and chevron. Severity lives in the edge
+    /// bar; everything else waits behind the disclosure.
+    private var titleRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(item.title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.primary)
+                .lineLimit(expanded ? nil : 2)
                 .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
         }
     }
 
     /// Compact metadata row: severity label (with color dot) · source-authority badge.
-    /// Plain text + small symbols rather than competing capsules — keeps the title
-    /// area uncluttered and the labels never truncate.
     private var metaRow: some View {
         HStack(spacing: 8) {
             HStack(spacing: 4) {
                 Circle().fill(severityTint).frame(width: 6, height: 6)
-                Text(observation.severity.displayName)
+                Text(item.severity.displayName)
                     .font(.caption.weight(.medium))
                     .foregroundStyle(severityTint)
             }
@@ -87,68 +94,68 @@ struct ObservationCard: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if !observation.evidence.isEmpty {
-                evidenceSection
+            if let ra = item.raObservation, let dec = item.decObservation {
+                // Merged pair: the same finding on both axes, one section each.
+                axisSection(label: "RA", observation: ra)
+                axisSection(label: "Dec", observation: dec)
+            } else {
+                Text(item.primary.summary)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !item.primary.evidence.isEmpty {
+                    evidenceSection(item.primary.evidence)
+                }
             }
-            if !observation.candidateContributors.isEmpty {
+            if !item.candidateContributors.isEmpty {
                 contributorsSection
             }
-            if !observation.suggestedResponse.isEmpty {
+            if !item.primary.suggestedResponse.isEmpty {
                 suggestedResponseSection
             }
-            if !observation.relatedPHD2Tools.isEmpty {
+            if !item.relatedPHD2Tools.isEmpty {
                 phd2ToolsSection
             }
             // helpTopicsSection is intentionally not shown until the in-app help
             // bundle ships — its links would 404 against an Apple Help anchor
             // that doesn't exist yet.
         }
-        // Header text now starts flush with the card edge; expanded content aligns too.
     }
 
-    @ViewBuilder
-    private var helpTopicsSection: some View {
+    /// One axis of a merged pair: axis label, that axis's summary, its evidence.
+    private func axisSection(label: String, observation: RecommenderObservation) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            sectionLabel("Learn more")
-            HStack(spacing: 8) {
-                ForEach(observation.relatedHelpTopicIds, id: \.self) { topicId in
-                    Button {
-                        HelpOpener.openByID(topicId)
-                    } label: {
-                        HStack(spacing: 3) {
-                            Image(systemName: "questionmark.circle")
-                                .font(.caption2)
-                            Text(displayTitle(for: topicId))
-                                .font(.caption)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.blue)
-                }
+            sectionLabel(label)
+            Text(observation.summary)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if !observation.evidence.isEmpty {
+                evidenceRows(observation.evidence)
             }
         }
     }
 
-    private func displayTitle(for topicId: String) -> String {
-        HelpTopic(rawValue: topicId)?.displayTitle ?? topicId
-    }
-
-    private var evidenceSection: some View {
+    private func evidenceSection(_ evidence: [EvidenceItem]) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             sectionLabel("Evidence")
-            ForEach(observation.evidence, id: \.self) { item in
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("•").foregroundStyle(.secondary)
-                    Text(item.label + ":")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(item.value)
-                        .font(.caption.monospacedDigit())
-                    if let detail = item.detail {
-                        Text("— \(detail)")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
+            evidenceRows(evidence)
+        }
+    }
+
+    private func evidenceRows(_ evidence: [EvidenceItem]) -> some View {
+        ForEach(evidence, id: \.self) { item in
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("•").foregroundStyle(.secondary)
+                Text(item.label + ":")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(item.value)
+                    .font(.caption.monospacedDigit())
+                if let detail = item.detail {
+                    Text("— \(detail)")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
                 }
             }
         }
@@ -157,7 +164,7 @@ struct ObservationCard: View {
     private var contributorsSection: some View {
         VStack(alignment: .leading, spacing: 4) {
             sectionLabel("Possible contributors")
-            ForEach(observation.candidateContributors, id: \.self) { c in
+            ForEach(item.candidateContributors, id: \.self) { c in
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text("•").foregroundStyle(.secondary)
                     Text(c).font(.caption).foregroundStyle(.secondary)
@@ -169,7 +176,7 @@ struct ObservationCard: View {
     private var suggestedResponseSection: some View {
         VStack(alignment: .leading, spacing: 4) {
             sectionLabel("Suggested response")
-            Text(observation.suggestedResponse)
+            Text(item.primary.suggestedResponse)
                 .font(.caption)
         }
     }
@@ -178,7 +185,7 @@ struct ObservationCard: View {
         VStack(alignment: .leading, spacing: 4) {
             sectionLabel("PHD2 tools referenced")
             HStack(spacing: 8) {
-                ForEach(observation.relatedPHD2Tools, id: \.self) { tool in
+                ForEach(item.relatedPHD2Tools, id: \.self) { tool in
                     Link(destination: tool.manualURL) {
                         HStack(spacing: 3) {
                             Image(systemName: "arrow.up.right.square")
@@ -203,7 +210,7 @@ struct ObservationCard: View {
         HStack(spacing: 3) {
             Image(systemName: authoritySymbol)
                 .font(.caption2)
-            Text(observation.sourceAuthority.badgeLabel)
+            Text(item.sourceAuthority.badgeLabel)
                 .font(.caption)
                 .lineLimit(1)
         }
@@ -211,7 +218,7 @@ struct ObservationCard: View {
     }
 
     private var authoritySymbol: String {
-        switch observation.sourceAuthority {
+        switch item.sourceAuthority {
         case .phd2Manual, .phd2BehaviorDocumented: return "book.closed"
         case .phd2Measurement:                     return "checkmark.seal"
         case .communityConsensus:                  return "person.2"
@@ -220,7 +227,11 @@ struct ObservationCard: View {
     }
 
     private var severityTint: Color {
-        switch observation.severity {
+        Self.tint(for: item.severity)
+    }
+
+    static func tint(for severity: RecommenderObservation.Severity) -> Color {
+        switch severity {
         case .alert:      return .red
         case .pattern:    return .orange
         case .equipment:  return .yellow
@@ -231,7 +242,7 @@ struct ObservationCard: View {
     }
 
     private var authorityTint: Color {
-        switch observation.sourceAuthority {
+        switch item.sourceAuthority {
         case .phd2Manual:              return .blue
         case .phd2Measurement:         return .green
         case .phd2BehaviorDocumented:  return .indigo
@@ -241,8 +252,11 @@ struct ObservationCard: View {
     }
 }
 
-/// List of observations grouped by category. Used in the document-window inspector
-/// and (in Phase 7) the library window's active-observations panel.
+/// List of observations with per-axis pairs folded into single cards. Used in
+/// the document-window inspector and the library window's observations panel.
+/// The whole panel collapses behind a remembered header disclosure so readers
+/// who only want the charts can reclaim the space — the count badge stays
+/// visible either way, so nothing is silently missed.
 struct ObservationsPanel: View {
     let observations: [RecommenderObservation]
     let title: String
@@ -250,56 +264,79 @@ struct ObservationsPanel: View {
     /// and the library (per-range), and "this log" reads wrong in the latter.
     var emptyMessage: String = "Nothing to surface on this log."
 
+    @AppStorage("observations.panelCollapsed") private var panelCollapsed = false
+
+    private var items: [ObservationDisplayItem] {
+        ObservationPairMerger.displayItems(from: observations)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                Spacer()
-                if !observations.isEmpty {
-                    Text("\(observations.count)")
-                        .font(.caption.weight(.semibold).monospacedDigit())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2)
-                        .background(severitySummaryTint, in: Capsule())
-                }
-            }
-            if observations.isEmpty {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle")
-                        .foregroundStyle(.green)
-                        .accessibilityHidden(true)
-                    Text(emptyMessage)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.3)))
-            } else {
-                VStack(spacing: 6) {
-                    ForEach(observations) { obs in
-                        ObservationCard(observation: obs)
+            header
+            if !panelCollapsed {
+                if observations.isEmpty {
+                    emptyState
+                } else {
+                    VStack(spacing: 6) {
+                        ForEach(items) { item in
+                            ObservationCard(item: item)
+                        }
                     }
                 }
             }
         }
     }
 
+    private var header: some View {
+        HStack {
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.primary)
+            Spacer()
+            if !observations.isEmpty {
+                Text("\(items.count)")
+                    .font(.caption.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(severitySummaryTint, in: Capsule())
+            }
+            Image(systemName: panelCollapsed ? "chevron.right" : "chevron.down")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                panelCollapsed.toggle()
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(observations.isEmpty
+            ? title
+            : "\(title), \(items.count) observation\(items.count == 1 ? "" : "s")")
+        .accessibilityHint(panelCollapsed ? "Shows the observations" : "Hides the observations")
+    }
+
+    private var emptyState: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle")
+                .foregroundStyle(.green)
+                .accessibilityHidden(true)
+            Text(emptyMessage)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.3)))
+    }
+
     /// Highest severity present, used to color the count badge.
     private var severitySummaryTint: Color {
-        let max = observations.map(\.severity).max() ?? .coaching
-        switch max {
-        case .alert:      return .red
-        case .pattern:    return .orange
-        case .equipment:  return .yellow
-        case .hygiene:    return .blue
-        case .suggestion: return .teal
-        case .coaching:   return .secondary
-        }
+        ObservationCard.tint(for: observations.map(\.severity).max() ?? .coaching)
     }
 }
 
@@ -328,4 +365,31 @@ struct ObservationsPanel: View {
     return ObservationCard(observation: obs)
         .padding()
         .frame(width: 380)
+}
+
+#Preview("Observations panel — merged RA + Dec pair") {
+    let profile = RigProfile(currentName: "Edge-10m")
+    func sluggish(_ axis: String, lag: String) -> RecommenderObservation {
+        RecommenderObservation(
+            scope: .singleNight,
+            rigProfileId: profile.id,
+            category: .pattern,
+            severity: .pattern,
+            title: "\(axis) corrections appear sluggish",
+            summary: "Lag-1 autocorrelation of \(axis) corrections is \(lag). Strongly positive autocorrelation means each move repeats the last one instead of responding to fresh error.",
+            evidence: [.init(label: "Lag-1 autocorrelation", value: lag)],
+            candidateContributors: ["Aggressiveness set too low", "Lowpass2 smoothing too heavy"],
+            suggestedResponse: "Try raising the aggressiveness a notch on your next session and compare.",
+            sourceAuthority: .ephemerisHeuristic
+        )
+    }
+    return ObservationsPanel(
+        observations: [
+            sluggish("Dec", lag: "+0.47"),
+            sluggish("RA", lag: "+0.41"),
+        ],
+        title: "Observations · Edge-10m"
+    )
+    .padding()
+    .frame(width: 380)
 }
