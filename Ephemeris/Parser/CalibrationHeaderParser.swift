@@ -23,7 +23,7 @@ import Foundation
 /// Extracts structured fields from a calibration section's accumulated header
 /// lines. The reference C++ parser in agalasso/phdlogview reads a small subset
 /// of these for its UI; we pull everything useful for the inspector.
-enum CalibrationHeaderParser {
+nonisolated enum CalibrationHeaderParser {
 
     static func parse(_ lines: [String]) -> CalibrationDetails {
         var d = CalibrationDetails()

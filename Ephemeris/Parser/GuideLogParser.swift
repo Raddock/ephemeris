@@ -24,7 +24,7 @@
 
 import Foundation
 
-enum GuideLogParser {
+nonisolated enum GuideLogParser {
 
     static func parse(_ text: String) -> GuideLog {
         var log = GuideLog()
@@ -309,7 +309,7 @@ enum GuideLogParser {
 
 // MARK: - CSV tokenizer
 
-enum CSVTokenizer {
+nonisolated enum CSVTokenizer {
     static func split(_ line: String) -> [String] {
         var out: [String] = []
         var cur = ""
@@ -329,7 +329,7 @@ enum CSVTokenizer {
 
 // MARK: - ISO date parsing (YYYY-MM-DD HH:MM:SS)
 
-enum ISODateParser {
+nonisolated enum ISODateParser {
     private static let formatter: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")

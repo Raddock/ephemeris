@@ -24,7 +24,7 @@
 
 import Foundation
 
-struct Calibration: Sendable, Identifiable {
+nonisolated struct Calibration: Sendable, Identifiable {
     let id = UUID()
     var startedAt: Date?
     var device: GuideDevice.Kind = .mount
@@ -33,7 +33,7 @@ struct Calibration: Sendable, Identifiable {
     var details: CalibrationDetails = CalibrationDetails()
 }
 
-struct CalibrationDetails: Sendable, Equatable {
+nonisolated struct CalibrationDetails: Sendable, Equatable {
     var pixelScale: Double?              // arcsec/px
     var exposureMs: Int?
     var calibrationStepMs: Int?
@@ -61,13 +61,13 @@ struct CalibrationDetails: Sendable, Equatable {
     }
 }
 
-struct LegCompletion: Sendable, Equatable {
+nonisolated struct LegCompletion: Sendable, Equatable {
     var angleDeg: Double
     var ratePxPerSec: Double
     var parity: String?
 }
 
-struct CalibrationEntry: Sendable, Identifiable {
+nonisolated struct CalibrationEntry: Sendable, Identifiable {
     let id = UUID()
     var direction: Direction
     var step: Int

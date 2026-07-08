@@ -22,7 +22,7 @@ import Foundation
 
 /// Cheap head-of-file content classifier used as a gatekeeper before
 /// committing to a full parse. Only the first few KB are inspected.
-enum PHD2LogSignature {
+nonisolated enum PHD2LogSignature {
 
     enum Verdict: Equatable {
         /// `PHD2 version …` banner found at file start. Definitely a PHD2 log.

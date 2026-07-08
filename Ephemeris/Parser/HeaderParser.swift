@@ -24,7 +24,7 @@
 
 import Foundation
 
-enum HeaderParser {
+nonisolated enum HeaderParser {
 
     static func apply(_ line: String, to session: inout GuideSession, cursor: inout HeaderCursorState) {
         if line.hasPrefix("Mount = ") {
@@ -146,7 +146,7 @@ enum HeaderParser {
     }
 }
 
-struct HeaderCursorState {
+nonisolated struct HeaderCursorState {
     var device: GuideDevice.Kind = .mount
     var axis: Character = "X"
 }

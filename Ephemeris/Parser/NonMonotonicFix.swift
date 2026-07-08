@@ -24,7 +24,7 @@
 
 import Foundation
 
-enum NonMonotonicFix {
+nonisolated enum NonMonotonicFix {
 
     static func apply(to session: GuideSession) -> GuideSession {
         var s = session

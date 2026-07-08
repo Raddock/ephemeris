@@ -25,7 +25,7 @@
 import Foundation
 
 /// Categorizes an info line into a kind useful for filtering / coloring in the UI.
-enum InfoKind: Sendable, Equatable {
+nonisolated enum InfoKind: Sendable, Equatable {
     case settlingStarted
     case settlingComplete
     case settlingFailed
@@ -58,7 +58,7 @@ enum InfoKind: Sendable, Equatable {
     }
 }
 
-extension InfoEntry {
+nonisolated extension InfoEntry {
     var kind: InfoKind { InfoKind.classify(text) }
 
     /// `"key"` for a parameter-change entry like `"MultiStar = true"`. Nil otherwise.
@@ -69,7 +69,7 @@ extension InfoEntry {
     }
 }
 
-enum InfoCoalescer {
+nonisolated enum InfoCoalescer {
 
     /// Apply the three coalescing rules from logparser.cpp:
     ///

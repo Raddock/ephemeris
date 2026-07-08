@@ -20,7 +20,7 @@
 
 import Foundation
 
-struct GuideLog: Sendable {
+nonisolated struct GuideLog: Sendable {
     var phdVersion: String = ""
     var logVersion: String = ""
     var sections: [SectionRef] = []
