@@ -64,6 +64,10 @@
 
 <div class="warn"><strong>Remember:</strong> the log records the <em>guide</em> camera only. Problems that never reach the guide sensor &mdash; flexure, mirror flop, focus drift &mdash; leave no trace here. See <a href="what-the-guide-log-cant-tell-you.html">What the guide log can't tell you</a>.</div>
 
+<h2>Damaged or unusual files</h2>
+<p>If a log contains values Ephemeris couldn't read (usually because the file was truncated or corrupted on disk), those values are treated as zero, and the session inspector shows a <strong>Damaged data in this log</strong> warning card with the count. Treat that session's numbers with care: because the unreadable values became zeros, the statistics may <em>understate</em> the real guiding error. If you still have the original file, re-copy it and reopen.</p>
+<p>Old logs saved with unusual legacy text encodings open normally: when a file isn't valid UTF-8, Ephemeris falls back to a Latin-1 reading rather than rejecting the file as unreadable.</p>
+
 <h2>Where this shows up in Ephemeris</h2>
 <p>Everything described above is the document window: the sidebar lists each guiding and calibration section, the chart plots the frame table, the <span class="tag-mass">Star mass</span> / <span class="tag-snr">SNR</span> sub-charts plot the diagnostics columns, and the inspector's <strong>Events</strong> card lists the INFO lines. The statistics cards and the Library's per-night numbers are all computed from these same rows.</p>
 </div>

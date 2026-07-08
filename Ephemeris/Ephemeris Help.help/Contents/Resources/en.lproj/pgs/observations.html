@@ -17,17 +17,23 @@
 <p class="lede">Observations are Ephemeris's findings — single-night ones appear in the document window, cross-night ones in the Library. Every card states its evidence and where its advice comes from.</p>
 
 <h2>Anatomy of a card</h2>
-<p>Click anywhere on a card to expand it. From top to bottom:</p>
+<p>Cards start collapsed to a single title row, so a busy night stays scannable. Click anywhere on a card to expand it (and again to collapse). Expanded, a card shows, from top to bottom:</p>
 <ul>
     <li><strong>Severity bar</strong> — the colored bar on the card's leading edge (and the matching dot beside the severity label).</li>
-    <li><strong>Title</strong> — a specific statement, with the measured number in it where possible.</li>
+    <li><strong>Title</strong> — a specific statement, with the measured number in it where possible. This is all a collapsed card shows.</li>
     <li><strong>Severity · source badge</strong> — the metadata row beneath the title.</li>
-    <li><strong>Summary</strong> — what was seen and why it matters (clamped to three lines until expanded).</li>
+    <li><strong>Summary</strong> — what was seen and why it matters.</li>
     <li><strong>Evidence</strong> — the measured values the finding rests on, with thresholds where relevant.</li>
     <li><strong>Possible contributors</strong> — candidate causes, when the data can't single one out.</li>
     <li><strong>Suggested response</strong> — the concrete next step, usually naming the PHD2 tool to reach for.</li>
-    <li><strong>PHD2 tools referenced / Learn more</strong> — links to the PHD2 manual and to related Ephemeris help topics.</li>
+    <li><strong>PHD2 tools referenced</strong> — links to the relevant sections of the PHD2 manual.</li>
 </ul>
+
+<h2>One card for both axes</h2>
+<p>The analysis runs per axis, so the same condition can fire on RA and on Dec. Rather than showing two near-identical cards, Ephemeris folds the pair into one, titled like <em>"Corrections appear sluggish · RA + Dec"</em>. Expanding it shows an RA section and a Dec section, each with that axis's own summary and measured values. The card carries the higher severity of the pair.</p>
+
+<h2>Collapsing the panel</h2>
+<p>The whole Observations panel collapses behind its header: click the header (the chevron sits next to the count badge) to hide or show the cards. Your choice is remembered across launches, and the count badge stays visible while the panel is collapsed, so nothing is silently missed.</p>
 
 <h2>Severity tiers</h2>
 <table class="spec">

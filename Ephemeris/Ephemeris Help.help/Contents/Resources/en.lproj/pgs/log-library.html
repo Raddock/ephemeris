@@ -21,11 +21,12 @@
 <h2>Rig sidebar</h2>
 <p>The left column lists your rigs — one per PHD2 equipment profile, created automatically when a log is first opened or imported. Each row shows the rig's name (your display name if you set one, otherwise the PHD2 profile name), its imaging scale when configured, and its mount class. Select a rig to see its history; right-click (or press <kbd>⌫</kbd>) to delete a rig along with its nights and observations.</p>
 <p>Below the rigs, the <strong>Range</strong> section filters everything in the detail view: <strong>Week</strong>, <strong>Month</strong>, <strong>Year</strong>, <strong>All</strong>, or <strong>Custom range</strong> with From/To date pickers.</p>
+<p>Week, Month, and Year are anchored to the rig's <em>most recent ingested night</em>, not today's date, so the latest data is always in view even when you haven't imaged (or saved a log) lately. The header spells the window out, reading for example "week ending May 18, 2026". If the chosen range holds no nights but the rig has data (usually a custom range), the panel says <strong>No nights in this range</strong> and names the rig's most recent night so you know where to point the pickers.</p>
 
 <h2>Header and metric cards</h2>
 <p>The header shows the rig name, its imaging scale capsule, and a share button (<strong>Share for help…</strong>) that generates a forum-ready summary — see <a href="asking-for-help-well.html">When to ask for help and how</a>. Three metric cards summarize the selected range:</p>
 <ul>
-    <li><strong>Median RMS</strong> — the median of every night's median RMS, tagged with its verdict (<span class="pill best"><span class="dot"></span>Sub-pixel</span>, At resolution, Over resolution).</li>
+    <li><strong>Median RMS</strong> — the median across the range of each night's RMS, tagged with its verdict (<span class="pill best"><span class="dot"></span>Sub-pixel</span>, At resolution, Over resolution).</li>
     <li><strong>Integration</strong> — total guided hours.</li>
     <li><strong>Sessions</strong> — total guiding sessions across the range.</li>
 </ul>
@@ -41,10 +42,11 @@
 <p>Each pill is a link to the relevant section of the PHD2 manual.</p>
 
 <h2>Trend chart</h2>
-<p>One point per <em>observing night</em> — nights are bucketed noon-to-noon, so a session restarted just after midnight stays with the previous evening's run. The Y axis is median RMS in arc-seconds; points are colored by verdict (green sub-pixel, amber at-resolution, coral over-resolution). A dashed orange line marks the rig's imaging pixel scale — nights below it should produce tight stars. Dashed blue vertical lines mark your <a href="annotations-and-sub-quality.html">annotations</a>, so equipment changes line up visually with any change in the trend.</p>
+<p>One point per <em>observing night</em> — nights are bucketed noon-to-noon, so a session restarted just after midnight stays with the previous evening's run. The Y axis is <strong>night RMS</strong> in arc-seconds (a frame-weighted average across the night's sessions); points are colored by verdict (green sub-pixel, amber at-resolution, coral over-resolution). A dashed orange line marks the rig's imaging pixel scale — nights below it should produce tight stars. Dashed blue vertical lines mark your <a href="annotations-and-sub-quality.html">annotations</a>, so equipment changes line up visually with any change in the trend.</p>
+<p><strong>Drag across the chart to zoom into that period.</strong> The dragged span becomes a custom range, and the metric cards, observations, and nights list all narrow to it (a caption under the chart is there as a reminder). Drags shorter than half a day are ignored, and choosing any preset range in the sidebar exits the zoom.</p>
 
 <h2>Cross-night observations</h2>
-<p>Between the chart and the table, the observations panel lists what the cross-night engine found across the selected range — calibration step-changes, baseline regressions, GA staleness, sub-quality discrepancies. See <a href="observations.html">Reading observations</a> for the card anatomy.</p>
+<p>Between the chart and the table, the observations panel lists what the cross-night engine found across the selected range — calibration step-changes, baseline regressions, GA staleness, sub-quality discrepancies. Cards are collapsed to title rows (click one to expand it), and clicking the panel's header collapses the whole panel while keeping its count badge visible. See <a href="observations.html">Reading observations</a> for the card anatomy.</p>
 
 <h2>Recent Nights table</h2>
 <p>Every night in the selected range, most recent first. Columns:</p>
@@ -55,7 +57,7 @@
     <tr><td><strong>Open Log</strong></td><td>Opens the original PHD2 log in the single-night document window.</td></tr>
     <tr><td><strong>Note</strong></td><td>Adds an annotation for this night.</td></tr>
     <tr><td><strong>Integration</strong></td><td>Total guided minutes.</td></tr>
-    <tr><td><strong>RMS Error</strong></td><td>The night's median RMS in arc-seconds, tinted by verdict.</td></tr>
+    <tr><td><strong>RMS Error</strong></td><td>The night's RMS in arc-seconds (frame-weighted across its sessions), tinted by verdict.</td></tr>
     <tr><td><strong>Star Shape</strong></td><td>Predicted star shape from the data — sharp, bloated, elongated, trailed, or mixed. Hover for the full reasoning, including the RMS-to-imaging-scale ratio. Your own sub-quality rating, when you've recorded one, feeds the same engine — see <a href="annotations-and-sub-quality.html">Annotations and rating your nights</a>.</td></tr>
 </table>
 <ul>

@@ -21,7 +21,7 @@
 <table class="spec">
     <tr><td><code>get_corpus_summary</code></td><td>High-level inventory of the library — a useful first call.</td></tr>
     <tr><td><code>list_rigs</code></td><td>Rig profiles with their imaging-train values.</td></tr>
-    <tr><td><code>list_nights</code></td><td>Per-night rollups: RMS, integration, target, sub-quality rating.</td></tr>
+    <tr><td><code>list_nights</code></td><td>Per-night rollups: night RMS, integration, target, sub-quality rating.</td></tr>
     <tr><td><code>list_observations</code></td><td>Recommender output, including severity and source authority.</td></tr>
     <tr><td><code>get_aggregate_stats</code></td><td>Median / p75 / p90 RMS across a rig's nights.</td></tr>
 </table>
@@ -36,13 +36,13 @@
     <li><strong>Connect to Claude Desktop</strong> — adds an entry to <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>.</li>
     <li><strong>Connect to Claude Code</strong> — adds an entry to <code>~/.claude.json</code>.</li>
 </ul>
-<p>Each tile points the client at a small stdio helper bundled inside Ephemeris.app — no terminal, no JSON editing. You'll see one macOS file-access prompt (click <strong>Grant Access</strong>); that authorizes Ephemeris to update the config file. Existing connectors in the file are preserved, and the config is written atomically. Restart the Claude client afterwards to see the Ephemeris tools appear.</p>
+<p>Each tile points the client at a small stdio helper bundled inside Ephemeris.app — no terminal, no JSON editing. You'll see one macOS file-access prompt (click <strong>Grant Access</strong>); that authorizes Ephemeris to update the config file. Existing connectors in the file are preserved, the config is written atomically, and a backup of the previous file is kept next to it (with a <code>.bak</code> extension) in case you ever need to roll back. Restart the Claude client afterwards to see the Ephemeris tools appear.</p>
 
 <h2>Manual configuration</h2>
 <p>For other MCP clients, the <strong>Advanced</strong> disclosure shows the helper binary's path (use it as a stdio <code>command</code> entry) and a direct HTTP endpoint for clients that accept localhost URLs.</p>
 
 <h2>Privacy</h2>
-<div class="note"><strong>Note:</strong> The server listens on the loopback interface (<code>127.0.0.1</code>) only — nothing leaves your Mac, there is no outbound network traffic, and no telemetry. All tools are read-only unless you explicitly enable the annotation-write toggle.</div>
+<div class="note"><strong>Note:</strong> The server listens on the loopback interface (<code>127.0.0.1</code>) only — nothing leaves your Mac, there is no outbound network traffic, and no telemetry. Every tool is read-only; the connector cannot change your library.</div>
 
 <hr>
 <p><strong>Related:</strong> <a href="log-library.html">The Log Library</a> · <a href="asking-for-help-well.html">When to ask for help and how</a> · <a href="app-shortcuts.html">Shortcuts and automation</a></p>

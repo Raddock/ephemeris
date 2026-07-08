@@ -22,7 +22,7 @@
     <li>Pick the folder that holds your logs. The scan is <strong>recursive</strong>, so a top-level archive folder with per-year subfolders works fine.</li>
     <li>A progress window shows each file as it's processed; you can cancel between files.</li>
 </ol>
-<p>Only files matching <code>PHD2_GuideLog_*.txt</code> are considered — debug logs (<code>PHD2_DebugLog_*.txt</code>) are skipped, as are PHD2's empty placeholder logs.</p>
+<p>Only files matching <code>PHD2_GuideLog_*.txt</code> are considered — debug logs (<code>PHD2_DebugLog_*.txt</code>) are skipped, as are PHD2's empty placeholder logs. Files over 500 MB are skipped too and reported in the import summary; the same limit applies when opening a log directly. The summary also lists any files that couldn't be read or parsed, so nothing disappears silently.</p>
 
 <h2>Safe to re-import</h2>
 <p>Every log is fingerprinted by a hash of its content. Re-importing the same folder later — say, your live <code>~/Documents/PHD2/</code> directory at the end of each month — never duplicates a night. Logs already in the library are matched by hash and their per-session detail and observations are <strong>refreshed</strong> against the current analysis instead, so re-importing after an Ephemeris update is the easy way to re-analyze your whole archive.</p>

@@ -19,6 +19,7 @@
 <p>Standard deviation of the per-axis raw distance, in pixels (and arc-seconds when a pixel scale is available). Total RMS is the geometric sum:</p>
 <p><code>Total = √(RMS_RA² + RMS_DEC²)</code></p>
 <p>Excluded frames (PHD2 errors and any manual exclusions you've added) are skipped. The frame count shown as <code>X / Y</code> means <code>X</code> included out of <code>Y</code> total.</p>
+<div class="warn"><strong>Caveat:</strong> If the log contained values Ephemeris couldn't read (a truncated or corrupted file, usually), they are treated as zero and the inspector shows a <strong>Damaged data in this log</strong> warning with the count. Statistics for that session may understate the real guiding error. See <a href="reading-the-guide-log.html">Reading your guide log</a>.</div>
 
 <h2>Peak RA, Peak Dec</h2>
 <p>The largest absolute deviation on each axis across included frames. A peak much larger than three-times the RMS often points to a single bad frame rather than a guiding problem.</p>

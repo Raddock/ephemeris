@@ -43,7 +43,7 @@ Download the latest release from the [GitHub Releases page](https://github.com/R
 
 The app is signed with Developer ID and notarized by Apple — no Gatekeeper warnings on first launch.
 
-Grab the `Ephemeris-x.y.zip` asset attached to the latest release.
+Grab the `Ephemeris-x.y.zip` asset attached to the latest release. Once installed, Ephemeris offers in-app updates via Sparkle (automatic checks only with your consent).
 
 ## Acknowledgments
 
