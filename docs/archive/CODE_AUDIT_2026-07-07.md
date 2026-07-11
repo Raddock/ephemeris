@@ -1,5 +1,10 @@
 # Ephemeris (PHD2 Log Viewer) Code Audit — July 7, 2026
 
+> **Archived: every finding in this report was remediated on July 7-8, 2026**
+> (commits adc97dd..9699dd3 on `v2`), except localization, which was
+> deliberately deferred and is tracked in `docs/ROADMAP.md`. Kept as the
+> record of the audit and of where the two review passes disagreed.
+
 Read-only audit of the v2 branch. Two independent passes: Claude (assessed against the
 macos-native-app-dev skill, with three deep read-only scouts) and Codex (13 findings via
 the Codex plugin). Findings are written as consequence and stake for roadmap planning.

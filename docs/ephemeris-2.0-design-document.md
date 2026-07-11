@@ -2,6 +2,12 @@
 
 *Multi-night library, recommender engine, annotations, and help system*
 
+> **Status (July 2026): shipped.** All twelve build phases (§10) are implemented
+> on the `v2` branch and the open questions (§12) were resolved during
+> implementation. This document is preserved as the design the build followed;
+> it is no longer a plan. Current app state: `PROJECT_STATE.md`. Remaining
+> future work: `ROADMAP.md` (which absorbs §11's deferred items).
+
 ---
 
 ## 0. Purpose of this document

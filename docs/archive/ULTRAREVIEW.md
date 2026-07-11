@@ -1,5 +1,7 @@
 # `/ultrareview` Findings — Pre-Launch Hardening Pass
 
+> **Archived: all findings fixed before the 1.0 release (May 2026).**
+
 **Run date:** 2026-04-25
 **Scope:** 47 files changed, 1,641 insertions, 279 deletions across 3 hardening commits.
 **Branch:** `main` vs `origin/main`.

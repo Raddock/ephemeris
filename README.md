@@ -51,7 +51,7 @@ This project is a Swift/SwiftUI rewrite of [phdlogview](https://github.com/agala
 
 The PHD2 log file format itself is not formally documented; the C++ parser in [logparser.cpp](https://github.com/agalasso/phdlogview/blob/master/logparser.cpp) was used as the authoritative reference for the log structure, header conventions, and edge-case handling (non-monotonic timestamps, AO direction aliases, INFO coalescing). Statistical analysis (RMS, drift, FFT) was implemented independently using Apple's Accelerate framework, with different algorithm choices than the original.
 
-See [CODE_PROVENANCE.md](CODE_PROVENANCE.md) for the full provenance assessment.
+See [CODE_PROVENANCE.md](docs/CODE_PROVENANCE.md) for the full provenance assessment.
 
 ## License
 

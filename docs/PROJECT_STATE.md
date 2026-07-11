@@ -210,13 +210,22 @@ tools/ephemeris-mcp/   SPM stdio MCP helper (bundled into Contents/Helpers/);
                        Tests/ = catalog-parity + read-only-guarantee tests
 
 docs/
-  ephemeris-2.0-design-document.md   The v2 design this build followed
-  observation-gap-analysis.md        Observation-coverage matrix the gap tier closes
+  PROJECT_STATE.md                   This file — current state of the app
+  ROADMAP.md                         Decided-but-deferred future work (the only
+                                     forward-looking doc; delete items as they ship)
+  RELEASE.md                         Release checklist (Sparkle, notarize, appcast)
+  CODE_PROVENANCE.md                 GPL lineage analysis vs phdlogview (permanent)
+  ephemeris-2.0-design-document.md   The v2 design this build followed (historical,
+                                     all phases shipped)
+  observation-gap-analysis.md        Signature → PHD2-lever coverage map (all v2
+                                     gaps closed; debug-log rows deferred)
+  archive/                           Point-in-time reports, all findings resolved
+                                     (April ultrareview, July 2026 code audit)
 
 EphemerisTests/    Unit tests (parser + malformed fields, stats, recommender,
                    cross-night, pair merging, chart decimation, embedded MCP,
                    ingest, rig profiles, annotations, corpus validation)
 EphemerisUITests/  Launch smoke test
 
-README.md / LICENSE.txt / CODE_PROVENANCE.md / PROJECT_STATE.md (this file)
+README.md / LICENSE.txt (root)
 ```

@@ -1,6 +1,6 @@
 # Observation Gap Analysis
 
-*Maps every data signature the recommender can detect against the specific PHD2 control or tool that addresses it. Living document — update as new observations land.*
+*Maps every data signature the recommender can detect against the specific PHD2 control or tool that addresses it. Living document — update as new observations land. As of July 2026 every v2-scope gap identified here has shipped; the only open rows are the debug-log signatures deferred to v2.x.*
 
 Format: **data signal → PHD2 lever (Brain tab / Tools menu) → coverage today**
 
@@ -16,15 +16,15 @@ The "lever" column matches PHD2's UI exactly: "Brain → Algorithms → RA aggre
 | Orthogonality > 5° between west and north legs | Tools → **Calibration Assistant** (slews to celestial-equator position) | ✅ `CalibrationOrthogonalityObserver` |
 | > 30 days since last calibration | Tools → **Calibration Assistant** | ✅ `CalibrationStalenessObserver` |
 | Step-change in orthogonality between adjacent nights | Tools → **Calibration Review and Modification**; recalibrate; add annotation | ✅ `CalibrationAngleShiftObserver` |
-| Different cal residual per pier side | Recalibrate on each pier; Tools → **Cal Review and Modification** | ❌ **PierSideBiasObserver** (new) |
+| Different cal residual per pier side | Recalibrate on each pier; Tools → **Cal Review and Modification** | ✅ `PierSideBiasObserver` |
 
 ## Polar alignment & drift
 
 | Signature | PHD2 lever | Today |
 |---|---|---|
 | Dec polarity skew > 70% + drift > 0.03″/min | Tools → **Drift Alignment** / **Static Polar Alignment** / **Polar Drift Alignment** | ✅ `DecPolarityBiasObserver` |
-| Trailed predicted, Dec-dominated drift | Same — polar alignment | ❌ **StarShapePredictionObserver** (new) |
-| Trailed predicted, RA-dominated drift | Brain → Mount → **RA guide rate**; check tracking rate / refraction model; PE training in mount firmware | ❌ **StarShapePredictionObserver** (new) |
+| Trailed predicted, Dec-dominated drift | Same — polar alignment | ✅ `StarShapePredictionObserver` |
+| Trailed predicted, RA-dominated drift | Brain → Mount → **RA guide rate**; check tracking rate / refraction model; PE training in mount firmware | ✅ `StarShapePredictionObserver` |
 | Polar alignment error from GA verbatim | (PHD2 reports it; we surface it) | ✅ `GuidingAssistantRecommendationObserver` |
 
 ## Algorithm tuning
@@ -32,11 +32,11 @@ The "lever" column matches PHD2's UI exactly: "Brain → Algorithms → RA aggre
 | Signature | PHD2 lever | Today |
 |---|---|---|
 | Algorithm doesn't match mount class | Brain → Algorithms → **RA / Dec algorithm** (Hysteresis / LowPass2 / etc.) | ✅ `AlgorithmMismatchObserver` |
-| Lag-1 autocorrelation of corrections < -0.3 (oscillation) | Brain → Algorithms → **Aggressiveness** (lower) | ❌ **AggressivenessObserver** (new) |
-| Lag-1 autocorrelation > 0.3 with persistent drift (sluggish) | Brain → Algorithms → **Aggressiveness** (raise) | ❌ **AggressivenessObserver** (new) |
-| Sinusoidal residual at worm period | Brain → Algorithms → try **PredictivePEC**; or train mount PEC | ❌ **DataDrivenAlgorithmHintObserver** (new) |
-| Min-move > 1.5× seeing floor (missing motion) | Brain → Algorithms → **Min move**; Tools → **Guiding Assistant** | ❌ **MinMoveValidationObserver** (new) |
-| Min-move < 0.3× seeing floor (chasing seeing) | Brain → Algorithms → **Min move**; Tools → **Guiding Assistant** | ❌ **MinMoveValidationObserver** (new) |
+| Lag-1 autocorrelation of corrections < -0.3 (oscillation) | Brain → Algorithms → **Aggressiveness** (lower) | ✅ `AggressivenessObserver` |
+| Lag-1 autocorrelation > 0.3 with persistent drift (sluggish) | Brain → Algorithms → **Aggressiveness** (raise) | ✅ `AggressivenessObserver` |
+| Sinusoidal residual at worm period | Brain → Algorithms → try **PredictivePEC**; or train mount PEC | ✅ `DataDrivenAlgorithmHintObserver` |
+| Min-move > 1.5× seeing floor (missing motion) | Brain → Algorithms → **Min move**; Tools → **Guiding Assistant** | ✅ `MinMoveValidationObserver` |
+| Min-move < 0.3× seeing floor (chasing seeing) | Brain → Algorithms → **Min move**; Tools → **Guiding Assistant** | ✅ `MinMoveValidationObserver` |
 | GA-suggested min-move differs from active | Brain → Algorithms → **Min move** (adopt GA value) | ✅ `GuidingAssistantRecommendationObserver` |
 
 ## Mount-class-specific tuning
@@ -48,32 +48,32 @@ The "lever" column matches PHD2's UI exactly: "Brain → Algorithms → RA aggre
 | Max-duration limit being saturated | Brain → Mount → **Max RA / Dec duration** | ✅ `MaxDurationLimitObserver` |
 | Dec backlash > 3000ms (uni-directional needed) | Brain → Algorithms → **Dec guide mode** (north-only or south-only) | ✅ `GuidingAssistantRecommendationObserver` |
 | Dec backlash 100–3000ms | Brain → Algorithms → **Enable Dec backlash compensation** | ✅ `GuidingAssistantRecommendationObserver` |
-| Pulse-duration × guide-rate ≠ observed motion | Brain → Mount → **RA / Dec guide rate** (manual override); or check mount driver | ❌ **GuideRateValidationObserver** (new) |
+| Pulse-duration × guide-rate ≠ observed motion | Brain → Mount → **RA / Dec guide rate** (manual override); or check mount driver | ✅ `GuideRateValidationObserver` |
 | No GA run in corpus | Tools → **Guiding Assistant** | ✅ `GAFreshnessObserver` |
 
 ## Scale & configuration
 
 | Signature | PHD2 lever | Today |
 |---|---|---|
-| Guide profile values ≠ PHD2 header values | Edit rig profile (App → Rig Profiles…) | ❌ **GuideScaleMismatchObserver** (new) |
-| Guide arcsec/px outside 0.5–1.5× imaging arcsec/px | **Not a PHD2 lever** — hardware (different guide cam/scope/binning) | ❌ **GuideScaleMismatchObserver** (new) |
-| Guide pixel scale jumps between nights | Hardware/binning changed mid-corpus; add annotation | ❌ **GuideScaleMismatchObserver** (new) |
-| RMS > 1.25× imaging scale, symmetric (bloated round) | **Not a PHD2 lever** — accept (mount capacity floor), or reduce imaging scale (reducer / binning) | ❌ **StarShapePredictionObserver** (new) |
-| Axis-asymmetric RMS > 1.5× ratio (slightly elongated) | Brain → Algorithms → per-axis **Aggressiveness** / **Min move** | ❌ **StarShapePredictionObserver** (new) |
+| Guide profile values ≠ PHD2 header values | Edit rig profile (App → Rig Profiles…) | ✅ `GuideScaleMismatchObserver` |
+| Guide arcsec/px outside 0.5–1.5× imaging arcsec/px | **Not a PHD2 lever** — hardware (different guide cam/scope/binning) | ✅ `GuideScaleMismatchObserver` |
+| Guide pixel scale jumps between nights | Hardware/binning changed mid-corpus; add annotation | ✅ `GuideScaleMismatchObserver` |
+| RMS > 1.25× imaging scale, symmetric (bloated round) | **Not a PHD2 lever** — accept (mount capacity floor), or reduce imaging scale (reducer / binning) | ✅ `StarShapePredictionObserver` |
+| Axis-asymmetric RMS > 1.5× ratio (slightly elongated) | Brain → Algorithms → per-axis **Aggressiveness** / **Min move** | ✅ `StarShapePredictionObserver` |
 
 ## Star detection
 
 | Signature | PHD2 lever | Today |
 |---|---|---|
-| Frequent star-lost events | Brain → Guiding → **Search region** (wider); **Star mass tolerance**; Brain → Camera → **no-star timeout** | ❌ **StarLostObserver** (new) |
+| Frequent star-lost events | Brain → Guiding → **Search region** (wider); **Star mass tolerance**; Brain → Camera → **no-star timeout** | ✅ `StarLostObserver` |
 
 ## Cross-night / mechanical
 
 | Signature | PHD2 lever | Today |
 |---|---|---|
 | Rated trailed but data sub-pixel (differential flexure) | **Not a PHD2 lever** — mechanical (OAG mount, focuser stability, rotator clamp) | ✅ `SubQualityDiscrepancyObserver` |
-| Best-to-worst session spread > 3× within a night (Mixed) | **Not a PHD2 lever** — transparency / wind / mid-session event; investigate annotations | ❌ **StarShapePredictionObserver** (new) |
-| First-hour-of-night elevated RMS | **Not a PHD2 lever** — thermal cooldown; OTA fan; longer pre-imaging warm-up | ❌ **CooldownSignatureObserver** (new) |
+| Best-to-worst session spread > 3× within a night (Mixed) | **Not a PHD2 lever** — transparency / wind / mid-session event; investigate annotations | ✅ `StarShapePredictionObserver` |
+| First-hour-of-night elevated RMS | **Not a PHD2 lever** — thermal cooldown; OTA fan; longer pre-imaging warm-up | ✅ `CooldownSignatureObserver` |
 | Atmospheric proxy (CV + altitude + RMS) | **Not a PHD2 lever** — accept; higher-altitude target next | ✅ `AtmosphericConditionsProxy` |
 | Baseline RMS drifting upward across weeks | **Not a PHD2 lever directly** — investigate mount/equipment; prompt annotation | ✅ `BaselineRegressionObserver` |
 
@@ -89,9 +89,8 @@ The "lever" column matches PHD2's UI exactly: "Brain → Algorithms → RA aggre
 
 ## Summary
 
-- **Existing coverage**: 14 observation generators. Strong on PHD2-canon scenarios.
-- **Inside v2 scope, not yet covered**: 9 generators (the "new" rows above).
-- **Debug-log scope**: 3 generators deferred to v2.x.
+- **Existing coverage**: 23 observation generators — every v2-scope row above is covered (the nine gaps identified in the June 2026 revision of this document all shipped in the gap-closure tier).
+- **Debug-log scope**: 3 generators deferred to v2.x (see docs/ROADMAP.md).
 - **No PHD2 lever (we educate, not prescribe)**: 5 scenarios — bloated stars at mount-capacity floor, mixed-conditions nights, cooldown, flexure, atmospheric. Surface as `.coaching` severity with help-topic links.
 
 ## PHD2 control surface reference
