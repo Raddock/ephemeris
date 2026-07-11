@@ -15,23 +15,26 @@ on the new one, then delete the exported file.
 
 ## Every release
 
-1. Bump `MARKETING_VERSION` (and `CURRENT_PROJECT_VERSION`) in the project.
-2. Archive with the Release configuration (Developer ID identity). The bundling
+1. Merge the working branch to `main`, confirm the full test suite passes
+   (`xcodebuild test` for the app plus `swift test` in `tools/ephemeris-mcp/`),
+   and tag `vX.Y` on `main` — releases and the appcast feed are cut from `main`.
+2. Bump `MARKETING_VERSION` (and `CURRENT_PROJECT_VERSION`) in the project.
+3. Archive with the Release configuration (Developer ID identity). The bundling
    phase builds the MCP helper universal and signs it with a secure timestamp.
-3. Notarize and staple as usual; zip as `Ephemeris-x.y.zip`.
-4. **Generate the appcast** over a folder containing the zip:
+4. Notarize and staple as usual; zip as `Ephemeris-x.y.zip`.
+5. **Generate the appcast** over a folder containing the zip:
    ```
    .../SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast /path/to/release-folder
    ```
    This signs the archive with the Keychain key and writes/updates `appcast.xml`.
-5. Create the GitHub release and attach **both** `Ephemeris-x.y.zip` and `appcast.xml`.
+6. Create the GitHub release and attach **both** `Ephemeris-x.y.zip` and `appcast.xml`.
    The feed URL baked into the app is
    `https://github.com/Raddock/ephemeris/releases/latest/download/appcast.xml`,
    which always resolves to the newest release's asset — no separate hosting needed.
    (Caveat: because the feed always points at the *latest* release's appcast, keep
    each release's appcast.xml cumulative — `generate_appcast` does this automatically
    if you keep prior zips in the folder.)
-6. Update the help book index if any help pages changed:
+7. Update the help book index if any help pages changed:
    ```
    cd "Ephemeris/Ephemeris Help.help/Contents/Resources/en.lproj"
    hiutil -C -a -f "Ephemeris Help.helpindex" .

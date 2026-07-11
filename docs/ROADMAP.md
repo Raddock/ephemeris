@@ -22,6 +22,10 @@ recorded during the July 2026 audit.*
   user-facing strings are hardcoded English and no String Catalog exists. Costs
   nothing while English-only; budget a mostly mechanical multi-day retrofit
   before any international push.
+- **Wire observation cards' "Learn more" links to the help book.** The help
+  topics, `HelpOpener.openByID`, and the card section all exist, but the
+  section is deliberately hidden until the help-book anchor IDs are verified
+  against the shipped book. Small job; unlocks per-card deep links.
 - **100 MB "may take a while" confirmation** on document open (only the 500 MB
   hard refusal shipped; the bulk importer now enforces the same cap).
 - **Analysis-fingerprint skip on re-import.** Re-importing an unchanged folder

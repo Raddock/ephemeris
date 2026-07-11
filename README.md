@@ -11,7 +11,7 @@ Ephemeris is a Universal macOS app for astrophotographers who use [PHD2](https:/
 ### The Log Library (new in 2.0)
 - **Multi-night library** — bulk-import a folder of PHD2 logs (deduplicated by content, organized per rig) or let every log you open auto-ingest. The library is the app's home window.
 - **Cross-night trend chart** — RMS per observing night, color-coded against your rig's imaging pixel scale.
-- **Recommender observations** — 23 analysis rules spanning PHD2's documented guidance (calibration sanity alerts, Guiding Assistant results surfaced verbatim, max-duration rail-rates) and data-derived patterns (pier-side bias, cooldown signatures, star-shape prediction, baseline regression). Every card carries a source-authority badge and a "Learn more" link into the help book.
+- **Recommender observations** — 23 analysis rules spanning PHD2's documented guidance (calibration sanity alerts, Guiding Assistant results surfaced verbatim, max-duration rail-rates) and data-derived patterns (pier-side bias, cooldown signatures, star-shape prediction, baseline regression). Every card carries a source-authority badge, its evidence, and links to the PHD2 tools it references.
 - **PHD2 hygiene strip** — days since last calibration, Guiding Assistant run, and polar-alignment measurement, at a glance.
 - **Rig profiles** — your imaging train (focal length, pixel size, binning, reducer) anchors verdicts to *your* sky-sampling: sub-pixel / at-resolution / over-resolution.
 - **Annotations & sub-quality ratings** — record equipment changes and rate each night's stars (round / elongated / trailed); a rating that contradicts the guide RMS triggers a differential-flexure suspicion.
@@ -29,7 +29,7 @@ Ephemeris is a Universal macOS app for astrophotographers who use [PHD2](https:/
 - **Frequency analysis** — FFT-based periodogram for RA or Dec to surface worm-gear periodic error.
 - **Calibration view** — square XY plot with concentric reference rings, leg rates, parity, and orthogonality readouts.
 - **Export** — chart as PNG, session/frame/log-summary CSVs via the system share sheet.
-- **Apple Help Book** — searchable in-app documentation, deep-linked from every observation card.
+- **Apple Help Book** — 41 pages of searchable in-app documentation covering the interface and the guiding concepts behind every observation.
 - **Universal binary** — runs natively on Apple silicon and Intel Macs.
 
 ## Requirements
@@ -39,11 +39,9 @@ Ephemeris is a Universal macOS app for astrophotographers who use [PHD2](https:/
 
 ## Installation
 
-Download the latest release from the [GitHub Releases page](https://github.com/Raddock/ephemeris/releases/latest), unzip, and drag `Ephemeris.app` into your `Applications` folder.
+Download the `Ephemeris-x.y.zip` asset from the [GitHub Releases page](https://github.com/Raddock/ephemeris/releases/latest), unzip, and drag `Ephemeris.app` into your `Applications` folder.
 
-The app is signed with Developer ID and notarized by Apple — no Gatekeeper warnings on first launch.
-
-Grab the `Ephemeris-x.y.zip` asset attached to the latest release. Once installed, Ephemeris offers in-app updates via Sparkle (automatic checks only with your consent).
+The app is signed with Developer ID and notarized by Apple — no Gatekeeper warnings on first launch. Once installed, Ephemeris offers in-app updates via Sparkle (automatic checks only with your consent).
 
 ## Acknowledgments
 

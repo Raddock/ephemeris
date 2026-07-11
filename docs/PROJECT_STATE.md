@@ -123,6 +123,10 @@ Unchanged from v1 (five-state machine, quote-aware 18/19-column tokenizer, signe
 
 ## 10. Known limitations and rough edges
 
+*Items here are live constraints of the current build. Deferred feature work
+lives in `docs/ROADMAP.md`; a few small items appear in both because they are
+simultaneously a limitation and planned work.*
+
 *(The June 2026 pre-release hardening pass fixed the earlier list: dead recommender
 paths matched against invented log formats, the sourceFilePath clobber, rig-profile
 dual-store drift on edit/delete, sandbox-broken "open original log", concurrent
