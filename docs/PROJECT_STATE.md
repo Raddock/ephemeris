@@ -144,8 +144,8 @@ charts, icon buttons, and combined rows.)*
   the signing Mac's login Keychain, public key in Info.plist). Each release still
   needs an `appcast.xml` asset (see docs/RELEASE.md). Automatic checks stay
   consent-gated.
-- **Not localized, by decision (July 2026 audit)** — ~120 user-facing strings are
-  hardcoded English; no String Catalog exists. Deferred deliberately: costs
+- **Not localized** — ~120 user-facing strings are
+  hardcoded English; no String Catalog exists (decision and scheduling: `ROADMAP.md`). Deferred: costs
   nothing while English-only, but budget a mostly mechanical multi-day retrofit
   before any international push.
 - **Embedded MCP server has no auth token** — now opt-in (off by default, choice
@@ -157,7 +157,7 @@ charts, icon buttons, and combined rows.)*
   aggression/min-move aren't attributable to an axis by the header parser.
 - **`hourAngleHours` / `pierSide`** calibration-side values still surface only in
   the inspector.
-- **100 MB "may take a while" confirmation** still deferred (only the 500 MB
+- **100 MB "may take a while" confirmation** still deferred, tracked in `ROADMAP.md` (only the 500 MB
   refusal shipped).
 - **Legacy `.appiconset` + `.icon` package dual-maintenance** and the post-CodeSign
   icon copy phase (v1 carryovers).
