@@ -2,11 +2,16 @@
 
 **Date:** 2026-04-25
 **Addendum (2026-07-11):** paths below predate the app's rename: the module
-`PHD2 Log Viewer/` is now `Ephemeris/`, and the parser files have grown
+`PHD2 Log Viewer/` is now `Ephemeris/` (and "PHD2 Log Viewer" as "this project"
+below is the pre-rename name of Ephemeris), and the parser files have grown
 (malformed-field accounting, explicit nonisolated annotations). Neither change
 alters the behavioral-fingerprint analysis or the verdict: the parser remains a
 behavioral reimplementation of `logparser.cpp`, and the project remains GPLv3.
 The dated assessment below is preserved verbatim as the record.
+**Addendum (2026-07-18):** the `.claude/skills/phd2-log-format/SKILL.md` file
+cited in the risk sections below no longer exists anywhere in the repository
+(removed before the `v2` branch), so the distribution-risk item that names it
+is resolved by removal.
 **Reviewer:** Claude (automated engineering analysis — *not* legal advice)
 **Original under review:** [agalasso/phdlogview](https://github.com/agalasso/phdlogview), GPLv3, © 2016–2018 Andy Galasso
 **This project:** PHD2 Log Viewer (Swift/SwiftUI for macOS)

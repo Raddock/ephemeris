@@ -21,7 +21,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "ephemeris": {
-      "command": "/absolute/path/to/PHD2-Log-Viewer/tools/ephemeris-mcp/.build/release/ephemeris-mcp"
+      "command": "/absolute/path/to/ephemeris/tools/ephemeris-mcp/.build/release/ephemeris-mcp"
     }
   }
 }
@@ -37,7 +37,7 @@ Add to `~/.claude.json` (or the project-local `.claude/mcp_servers.json`):
 {
   "mcpServers": {
     "ephemeris": {
-      "command": "/absolute/path/to/PHD2-Log-Viewer/tools/ephemeris-mcp/.build/release/ephemeris-mcp"
+      "command": "/absolute/path/to/ephemeris/tools/ephemeris-mcp/.build/release/ephemeris-mcp"
     }
   }
 }

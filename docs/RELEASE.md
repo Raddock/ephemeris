@@ -15,6 +15,8 @@ on the new one, then delete the exported file.
 
 ## Every release
 
+> Status note (July 2026): active development lives on the `v2` branch, and `main` also carries unreleased post-1.0 work. Step 1's merge to `main` is the act that begins a release; until the v2 work is finished and merged, nothing past 1.0 is released. (`MARKETING_VERSION` already reads 2.0 with `CURRENT_PROJECT_VERSION` 1, and no v2 tag exists — the version was pre-bumped mid-development.)
+
 1. Merge the working branch to `main`, confirm the full test suite passes
    (`xcodebuild test` for the app plus `swift test` in `tools/ephemeris-mcp/`),
    and tag `vX.Y` on `main` — releases and the appcast feed are cut from `main`.

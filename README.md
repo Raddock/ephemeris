@@ -4,11 +4,16 @@ A Mac-native analyzer for PHD2 guide logs — single-night review and a multi-ni
 
 Ephemeris is a Universal macOS app for astrophotographers who use [PHD2](https://openphdguiding.org) for autoguiding. Version 2 grows beyond a log viewer: import your whole log archive into a **Log Library**, see per-rig trends across nights, and get observations in plain language — "calibration is 34 days old", "Dec drift at this rate would trail stars on a 5-minute sub at your imaging scale" — each labeled with whether it comes from PHD2's own measurements or an Ephemeris heuristic.
 
+## Status
+
+- **Current release: 1.0** (May 2026) — the single-log analyzer, macOS 14+, available from [GitHub Releases](https://github.com/Raddock/ephemeris/releases/latest).
+- **Version 2.0 is in active development on this branch (`v2`) and has not been released.** The Log Library section below describes the 2.0 work in progress; it will ship when it is finished.
+
 <!-- TODO: add screenshots -->
 
 ## Features
 
-### The Log Library (new in 2.0)
+### The Log Library (2.0, in development — unreleased)
 - **Multi-night library** — bulk-import a folder of PHD2 logs (deduplicated by content, organized per rig) or let every log you open auto-ingest. The library is the app's home window.
 - **Cross-night trend chart** — RMS per observing night, color-coded against your rig's imaging pixel scale.
 - **Recommender observations** — 23 analysis rules spanning PHD2's documented guidance (calibration sanity alerts, Guiding Assistant results surfaced verbatim, max-duration rail-rates) and data-derived patterns (pier-side bias, cooldown signatures, star-shape prediction, baseline regression). Every card carries a source-authority badge, its evidence, and links to the PHD2 tools it references.
@@ -29,19 +34,19 @@ Ephemeris is a Universal macOS app for astrophotographers who use [PHD2](https:/
 - **Frequency analysis** — FFT-based periodogram for RA or Dec to surface worm-gear periodic error.
 - **Calibration view** — square XY plot with concentric reference rings, leg rates, parity, and orthogonality readouts.
 - **Export** — chart as PNG, session/frame/log-summary CSVs via the system share sheet.
-- **Apple Help Book** — 41 pages of searchable in-app documentation covering the interface and the guiding concepts behind every observation.
+- **Apple Help Book** — searchable in-app documentation covering the interface and the guiding concepts behind the analysis (expanded to 41 pages in the 2.0 work).
 - **Universal binary** — runs natively on Apple silicon and Intel Macs.
 
 ## Requirements
 
-- macOS 15 (Sequoia) or later. (Version 1.0 supported macOS 14; the 2.0 library is built on APIs that require 15.)
+- The released 1.0: macOS 14 (Sonoma) or later. The in-development 2.0: macOS 15 (Sequoia) or later (the library is built on APIs that require it).
 - A PHD2 `.txt` guide log to open. PHD2 typically saves logs to `~/Documents/PHD2/` on Mac, or `Documents\PHD2\` on Windows.
 
 ## Installation
 
-Download the `Ephemeris-x.y.zip` asset from the [GitHub Releases page](https://github.com/Raddock/ephemeris/releases/latest), unzip, and drag `Ephemeris.app` into your `Applications` folder.
+Download the `Ephemeris-x.y.zip` asset from the [GitHub Releases page](https://github.com/Raddock/ephemeris/releases/latest) (currently v1.0), unzip, and drag `Ephemeris.app` into your `Applications` folder. To try the in-development 2.0, build this branch from source in Xcode.
 
-The app is signed with Developer ID and notarized by Apple — no Gatekeeper warnings on first launch. Once installed, Ephemeris offers in-app updates via Sparkle (automatic checks only with your consent).
+The app is signed with Developer ID and notarized by Apple — no Gatekeeper warnings on first launch. Starting with 2.0, Ephemeris will offer in-app updates via Sparkle (automatic checks only with your consent); 1.0 shipped without Sparkle, so 1.0 users update manually.
 
 ## Acknowledgments
 
