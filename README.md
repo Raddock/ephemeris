@@ -1,16 +1,20 @@
+<!-- Generated from commit 751e29a at version 2.0 / build 1, 2026-07-19. -->
 # Ephemeris
 
 A Mac-native analyzer for PHD2 guide logs — single-night review and a multi-night library with plain-language recommendations.
 
 Ephemeris is a Universal macOS app for astrophotographers who use [PHD2](https://openphdguiding.org) for autoguiding. Version 2 grows beyond a log viewer: import your whole log archive into a **Log Library**, see per-rig trends across nights, and get observations in plain language — "calibration is 34 days old", "Dec drift at this rate would trail stars on a 5-minute sub at your imaging scale" — each labeled with whether it comes from PHD2's own measurements or an Ephemeris heuristic.
 
+<!-- sidecar:facts:begin -->
 ## Status
 
-- **Current release: 1.0** (May 2026) — the single-log analyzer, macOS 14+, available from [GitHub Releases](https://github.com/Raddock/ephemeris/releases/latest).
+- **Current release: 1.0** (May 2026) — the single-log analyzer, macOS 14.0+, available from [GitHub Releases](https://github.com/Raddock/ephemeris/releases/latest).
 - **Version 2.0 is in active development on this branch (`v2`) and has not been released.** The Log Library section below describes the 2.0 work in progress; it will ship when it is finished.
+<!-- sidecar:facts:end -->
 
 <!-- TODO: add screenshots -->
 
+<!-- draft:begin -->
 ## Features
 
 ### The Log Library (2.0, in development — unreleased)
@@ -37,9 +41,12 @@ Ephemeris is a Universal macOS app for astrophotographers who use [PHD2](https:/
 - **Apple Help Book** — searchable in-app documentation covering the interface and the guiding concepts behind the analysis (expanded to 41 pages in the 2.0 work).
 - **Universal binary** — runs natively on Apple silicon and Intel Macs.
 
+<!-- draft:end -->
 ## Requirements
+<!-- draft:begin -->
 
 - The released 1.0: macOS 14 (Sonoma) or later. The in-development 2.0: macOS 15 (Sequoia) or later (the library is built on APIs that require it).
+<!-- draft:end -->
 - A PHD2 `.txt` guide log to open. PHD2 typically saves logs to `~/Documents/PHD2/` on Mac, or `Documents\PHD2\` on Windows.
 
 ## Installation
