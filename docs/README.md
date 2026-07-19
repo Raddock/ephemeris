@@ -15,7 +15,18 @@ Therefore every document is classified by *who keeps it true*:
 
 - **Auto** — Sidecar regenerates it from the code. These hold code-derived facts. Humans should not hand-edit them; edits go stale and get overwritten.
 - **Draft** — Sidecar writes a proposed version from the code; the owner reviews and tone-checks before it reaches humans. For anything with a human voice or external audience.
-- **Manual** — Humans own the content. Sidecar never writes it; it may only lint for factual drift (e.g. a wrong build number), index it, or mechanically cross-link it. For judgment, priorities, and decisions.
+- **Manual** — Humans own the content. Sidecar never writes it; it may only lint for factual drift (e.g. a wrong build number), index it, or report on it. For judgment, priorities, and decisions.
+
+## Church and state: one owner per file
+
+Ratified July 2026, superseding mixed-ownership regions inside shared docs: **every document has exactly one owner, and owners never write into each other's files.** Single ownership per file holds by construction; it is not a mechanism that has to keep being gotten right.
+
+- **Sidecar owns** (derived from code; regenerated; never hand-edited once the doc carries the header): `docs/CODEBASE_OVERVIEW.md`, `docs/PROJECT_STATE.md`, `docs/CHANGELOG.md`, `docs/README.md` (standard propagation), the S2 cross-app overviews, and `docs/RELEASE_NOTES.md` / `docs/APP_STORE_RELEASE_NOTES.md` as Draft (Sidecar proposes; Andrew approves before it ships).
+- **Claude Code owns** (derived from conversation; Sidecar never writes, only lints and reports): `CLAUDE.md`, `docs/ROADMAP.md`, `docs/FEEDBACK.md` and `docs/FEEDBACK_HISTORY.md`, `docs/decisions/`, `docs/RELEASE.md`.
+- **Frozen** (nobody writes): `docs/archive/`.
+- **The one documented exception:** `README.md` is Sidecar-owned but structurally mixes measured facts with marketing prose, so it keeps `draft:begin/end` human regions. This is the only file with mixed ownership, and it is deliberate.
+
+The principle, plainly: **Sidecar knows what the code says; Claude Code knows what the conversation said.** If a fact cannot be produced by a command, it does not belong in a Sidecar-owned doc; it belongs with the owner who heard it. **Business facts are nobody's here:** pricing, store status beyond what the repo records, and marketing claims are not code-derived and do not belong in Sidecar-owned docs at all; they live on the product pages and in App Store Connect, and generated docs point there instead of copying them (a copied price is transcription rot with a currency symbol). Consequently PROJECT_STATE carries only re-derivable state; feedback-derived observations live in FEEDBACK.md, open questions and decisions in ROADMAP.md or docs/decisions/.
 
 ---
 
@@ -29,8 +40,8 @@ Therefore every document is classified by *who keeps it true*:
 | 4 | `docs/PROJECT_STATE.md` | What is true of the app *right now*: shipped surfaces, known limitations, in-flight work | Code + git + changelog | **Auto** (the "what's next" queue lives in ROADMAP, not here) |
 | 5 | `docs/CHANGELOG.md` | What shipped when, dev-facing (Keep a Changelog format) | Git history + release tags | **Auto** (append-only) |
 | 6 | `docs/RELEASE_NOTES.md` (+ `APP_STORE_RELEASE_NOTES.md` where App Store distributed) | Tester- and store-facing "what's new" | Distilled from CHANGELOG | **Draft** — Sidecar writes, owner tone-checks before it reaches humans |
-| 7 | `docs/ROADMAP.md` | Every decided-but-unbuilt item, with its source (feedback ID, spec section); items deleted when shipped | Owner decisions | **Manual** for priorities; Sidecar auto-marks shipped items and validates that spec links resolve |
-| 8 | `docs/FEEDBACK.md` (+ `FEEDBACK_HISTORY.md` archive) | The tester/user ledger and its archive | Humans (triaged against code, often from screenshots and user emails) | **Manual** — the judgment doc. Sidecar may only cross-link IDs to changelog entries and mechanically move resolved items to history |
+| 7 | `docs/ROADMAP.md` | Every decided-but-unbuilt item, with its source (feedback ID, spec section); items deleted when shipped | Owner decisions | **Claude Code-owned.** Sidecar reports shipped-item matches and unresolved spec links; it never writes |
+| 8 | `docs/FEEDBACK.md` (+ `FEEDBACK_HISTORY.md` archive) | The tester/user ledger and its archive | Humans (triaged against code, often from screenshots and user emails) | **Claude Code-owned** — the judgment doc. Sidecar may report changelog cross-links; moves to history are Claude Code's work, on Andrew's ask |
 | 9 | `docs/decisions/` | Dated, append-only records: ADRs, audits, research, strategy, and their rationale (the "why") | Humans and review agents, with owner corrections | **Manual**, never regenerated; Sidecar may index them |
 | 10 | `docs/RELEASE.md` | The mechanical release checklist (signing, notarization, appcast/App Store steps) | The actual release process | **Draft** once, then **Manual** |
 | S1 | `docs/README.md` (this file) | Defines the standard: the canonical set, policies, and lifecycle rules | This document | Written once for the suite, identical in every repo |
@@ -47,6 +58,8 @@ Therefore every document is classified by *who keeps it true*:
 ```
 
 Sidecar regenerates the doc when the project's `MARKETING_VERSION` or `CURRENT_PROJECT_VERSION` moves past what the header records. A doc whose header lags the pbxproj is, by definition, due for regeneration. A doc whose header is weeks stale *and* the version hasn't moved signals that Sidecar itself has stalled — a health signal worth surfacing.
+
+**The per-doc handoff rule.** A doc is hand-maintained until it carries the `Generated from commit...` header. Only Sidecar ever stamps that header — never stamp it by hand, and never stamp it on a doc Sidecar did not generate. Once the header exists, the doc is machine-owned: hand-edits will be overwritten on the next regeneration, and maintenance duties end. Until then, maintain the doc normally, whatever its Auto/Draft classification says about its eventual owner. The handoff is therefore per-doc and self-announcing; no session needs to ask whether a doc has been taken over — the header is the answer. (Header form: a visible `> Generated from commit...` quote on internal docs, where freshness is useful to developers and agents; an HTML comment `<!-- Generated from commit... -->` on public-facing READMEs, where commit hashes read as noise to outside readers.)
 
 **The archive rule (from Strata).** Superpowers plans/specs and SDD task files move to `docs/archive/` when their work ships. Archives and `docs/decisions/` are **frozen**: never updated, never regenerated. They are permanent provenance.
 
