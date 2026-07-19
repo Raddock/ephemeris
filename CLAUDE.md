@@ -77,3 +77,16 @@ Per the standard (docs/README.md): every doc has exactly one owner; owners never
 
 Until a doc carries the header it is hand-maintained, whatever its eventual owner. Sidecar knows what the code says; Claude Code knows what the conversation said: a fact that cannot be produced by a command does not belong in a Sidecar-owned doc.
 
+
+## After a version bump
+
+When you bump `MARKETING_VERSION` or `CURRENT_PROJECT_VERSION`, run the Sidecar
+refresh afterward so the docs catch up the same day (the nightly run is the
+backstop, not the plan):
+
+```sh
+node ~/Developer/MacObservatory/Sidecar/generator/sidecar-generate.mjs refresh ephemeris
+```
+
+It reports which Sidecar-owned docs need regeneration; complete them per its
+output (or hand the report to a Sidecar session).

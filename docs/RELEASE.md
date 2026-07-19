@@ -21,6 +21,7 @@ on the new one, then delete the exported file.
    (`xcodebuild test` for the app plus `swift test` in `tools/ephemeris-mcp/`),
    and tag `vX.Y` on `main` — releases and the appcast feed are cut from `main`.
 2. Bump `MARKETING_VERSION` (and `CURRENT_PROJECT_VERSION`) in the project.
+   After the bump, run the Sidecar refresh (see CLAUDE.md, "After a version bump").
 3. Archive with the Release configuration (Developer ID identity). The bundling
    phase builds the MCP helper universal and signs it with a secure timestamp.
 4. Notarize and staple as usual; zip as `Ephemeris-x.y.zip`.
