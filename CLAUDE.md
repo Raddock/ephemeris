@@ -15,7 +15,7 @@ Ephemeris is a Mac-native analyzer for PHD2 guide logs: single-night review plus
 - macOS 15.0 deployment target (v2; 1.0 shipped on 14.0). Universal binary (Apple silicon + Intel).
 - SwiftUI throughout; AppKit interop only where SwiftUI cannot express the need. SwiftData persistence. Swift Charts. Accelerate for FFT.
 - `SWIFT_VERSION = 5.0` with Swift 6 concurrency idioms: `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`; parser, model, stats, and log-value layers are explicitly `nonisolated`; the library ingestor is a `ModelActor`; recommender generators are `nonisolated struct`s.
-- Sandboxed, Developer ID distribution (not the Mac App Store; GPLv3 conflicts with App Store terms). Sparkle 2 for updates.
+- Sandboxed, Developer ID distribution via GitHub Releases (`Raddock/ephemeris`); not on the Mac App Store, and never going there, by the owner's channel choice for the suite's open-source app. (Do not cite license conflict as the reason: `docs/CODE_PROVENANCE.md` records that GPLv3 is App Store compatible for the developer's own apps.) Sparkle 2 for updates.
 - **Ephemeris does not use the Mac Observatory suite design system** (`~/Developer/MacObservatory/DESIGN_SYSTEM.md` is not referenced here, and no suite accent is defined). Follow this app's own established look and the HIG; do not import suite tokens without the owner's direction.
 
 ## Commands

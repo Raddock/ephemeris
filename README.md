@@ -55,6 +55,8 @@ Download the `Ephemeris-x.y.zip` asset from the [GitHub Releases page](https://g
 
 The app is signed with Developer ID and notarized by Apple — no Gatekeeper warnings on first launch. Starting with 2.0, Ephemeris will offer in-app updates via Sparkle (automatic checks only with your consent); 1.0 shipped without Sparkle, so 1.0 users update manually.
 
+GitHub Releases is Ephemeris's only distribution channel: it is not sold on the Mac App Store, a deliberate choice for the suite's open-source app.
+
 ## Acknowledgments
 
 This project is a Swift/SwiftUI rewrite of [phdlogview](https://github.com/agalasso/phdlogview) by Andy Galasso, originally implemented in C++ with wxWidgets. The original tool is the de facto standard log analyzer in the astrophotography community and informs this project's feature set, terminology, and core analysis workflow.
