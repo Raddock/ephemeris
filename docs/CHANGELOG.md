@@ -1,7 +1,3 @@
-> Generated from commit 751e29a at version 2.0 / build 1, 2026-07-19.
-> Append-only: Sidecar appends release entries derived from git; existing entries are never rewritten or reordered.
-<!-- sidecar:append-only -->
-
 # Changelog — Ephemeris
 
 > Per-version record, newest first. Ephemeris has shipped exactly one release: **v1.0** (tag `v1.0`). Everything since lives under **[Unreleased]**: the 2.0 work is in active development (currently on the `v2` branch, with earlier 2.0 phases on `main` after the v1.0 tag) and none of it has shipped. Created during the July 2026 documentation-standard conform pass from git history and the v1.0 tag.
