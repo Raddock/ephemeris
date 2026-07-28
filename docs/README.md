@@ -21,8 +21,8 @@ Therefore every document is classified by *who keeps it true*:
 
 Ratified July 2026, superseding mixed-ownership regions inside shared docs: **every document has exactly one owner, and owners never write into each other's files.** Single ownership per file holds by construction; it is not a mechanism that has to keep being gotten right.
 
-- **Sidecar owns** (derived from code; regenerated; never hand-edited once the doc carries the header): `docs/CODEBASE_OVERVIEW.md`, `docs/PROJECT_STATE.md`, `docs/CHANGELOG.md`, `docs/README.md` (standard propagation), the S2 cross-app overviews, and `docs/RELEASE_NOTES.md` / `docs/APP_STORE_RELEASE_NOTES.md` as Draft (Sidecar proposes; Andrew approves before it ships).
-- **Claude Code owns** (derived from conversation; Sidecar never writes, only lints and reports): `CLAUDE.md`, `docs/ROADMAP.md`, `docs/FEEDBACK.md` and `docs/FEEDBACK_HISTORY.md`, `docs/decisions/`, `docs/RELEASE.md`.
+- **Sidecar owns** (derived from code; regenerated; never hand-edited once the doc carries the header): `docs/CODEBASE_OVERVIEW.md`, `docs/PROJECT_STATE.md`, `docs/README.md` (standard propagation), the S2 cross-app overviews, and `docs/RELEASE_NOTES.md` / `docs/APP_STORE_RELEASE_NOTES.md` as Draft (Sidecar proposes; Andrew approves before it ships).
+- **Claude Code owns** (derived from conversation; Sidecar never writes, only lints and reports): `CLAUDE.md`, `docs/ROADMAP.md`, `docs/FEEDBACK.md` and `docs/FEEDBACK_HISTORY.md`, `docs/decisions/`, `docs/RELEASE.md`, and `docs/CHANGELOG.md` (owner decision 2026-07-28: a changelog records human-meaningful change and intent, so release sessions write it as part of the change; Sidecar reads and cites it, never regenerates it).
 - **Frozen** (nobody writes): `docs/archive/`.
 - **The one documented exception:** `README.md` is Sidecar-owned but structurally mixes measured facts with marketing prose, so it keeps `draft:begin/end` human regions. This is the only file with mixed ownership, and it is deliberate.
 
@@ -38,7 +38,7 @@ The principle, plainly: **Sidecar knows what the code says; Claude Code knows wh
 | 2 | `CLAUDE.md` | Agent conventions, invariants, gotchas, doc map | Accumulated rules and hard-won lessons | **Manual**; Sidecar lints factual drift only (build numbers, architecture claims) |
 | 3 | `docs/CODEBASE_OVERVIEW.md` | Architecture + file inventory, so a reader understands the app without reading the source | The code, stamped with the commit it was generated from | **Auto** |
 | 4 | `docs/PROJECT_STATE.md` | What is true of the app *right now*: shipped surfaces, known limitations, in-flight work | Code + git + changelog | **Auto** (the "what's next" queue lives in ROADMAP, not here) |
-| 5 | `docs/CHANGELOG.md` | What shipped when, dev-facing (Keep a Changelog format) | Git history + release tags | **Auto** (append-only) |
+| 5 | `docs/CHANGELOG.md` | What shipped when, dev-facing (Keep a Changelog format) | The release session that ships the change | **Claude Code-owned** (owner decision 2026-07-28); append-only; Sidecar reads and cites, never writes |
 | 6 | `docs/RELEASE_NOTES.md` (+ `APP_STORE_RELEASE_NOTES.md` where App Store distributed) | Tester- and store-facing "what's new" | Distilled from CHANGELOG | **Draft** — Sidecar writes, owner tone-checks before it reaches humans |
 | 7 | `docs/ROADMAP.md` | Every decided-but-unbuilt item, with its source (feedback ID, spec section); items deleted when shipped | Owner decisions | **Claude Code-owned.** Sidecar reports shipped-item matches and unresolved spec links; it never writes |
 | 8 | `docs/FEEDBACK.md` (+ `FEEDBACK_HISTORY.md` archive) | The tester/user ledger and its archive | Humans (triaged against code, often from screenshots and user emails) | **Claude Code-owned** — the judgment doc. Sidecar may report changelog cross-links; moves to history are Claude Code's work, on Andrew's ask |
@@ -78,7 +78,7 @@ Sidecar regenerates the doc when the project's `MARKETING_VERSION` or `CURRENT_P
 ```
 Idea / decision      → docs/decisions/ (Manual, frozen)  and/or  ROADMAP.md (Manual)
 In-flight work       → PROJECT_STATE.md (Auto, "in-flight" section)
-Shipped              → CHANGELOG.md (Auto) + RELEASE_NOTES (Draft); ROADMAP item deleted;
+Shipped              → CHANGELOG.md (Claude Code-owned, written with the change) + RELEASE_NOTES (Draft); ROADMAP item deleted;
                        design specs moved to docs/archive/ (frozen)
 How it works now     → CODEBASE_OVERVIEW.md (Auto) + PROJECT_STATE.md (Auto)
 User/tester reports  → FEEDBACK.md (Manual) → resolved items → FEEDBACK_HISTORY.md
