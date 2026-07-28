@@ -50,14 +50,27 @@ on the new one, then delete the exported file.
 - v1.0 shipped without Sparkle, so 1.0 users will not auto-update — the 2.0
   announcement needs to reach them through release notes / the website.
 
-## Store status and docs (added 2026-07-28)
+## Store status and docs (added 2026-07-28; tightened same day after the Meridian 1.0.1 exercise)
 
-When this app's store status changes (submitted, approved, released,
-rejected, removed): update the canonical docs in the same session, not after.
-That means the distribution and release-identity language in
-`docs/PROJECT_STATE.md` and `README.md`, date-stamping any in-flight status
-("as of YYYY-MM-DD"). Then hand-run the Sidecar overview refresh on the
-Studio so the published overview does not go stale on prose the nightly
-cannot detect (`node generator/sidecar-generate.mjs overview-check <app>`,
-regenerate, validate, `overview-commit`, `overview-push`). Why this is
-manual for now: `docs/decisions/2026-07-28-store-status-staleness.md`.
+When this app's store status changes (submitted, approved, released, rejected,
+removed), in the SAME session and in this order:
+
+1. **Update every canonical surface that asserts release state.** Known
+   surfaces: `docs/PROJECT_STATE.md` (distribution and release identity,
+   including any "awaiting" items), `README.md` (current status and
+   distribution), `docs/CHANGELOG.md` (retitle in-development sections when
+   they ship; add the release boundary), `docs/FEEDBACK.md` (dated status
+   line if a submission thread lives there), and `CLAUDE.md` (implementation
+   status). Then grep the repo for the previous status wording to catch any
+   surface this list misses.
+2. **Record only what is known.** Date-stamp in-flight status ("as of
+   YYYY-MM-DD"). If a submission date or review detail is not known, write
+   that it is unrecorded; never infer it.
+3. **Only after the docs are corrected**, hand-run the Sidecar overview
+   refresh on the Studio: `overview-check`, regenerate, `overview-validate`,
+   `overview-commit`, `overview-push`. Regenerating against stale source
+   restamps a stale claim with a fresh date, which is worse than leaving it.
+
+Why this is manual for now: `docs/decisions/2026-07-28-store-status-staleness.md`.
+A checklist fires only when a human runs it, and App Review acts
+asynchronously; ASC-as-source remains the real fix.
