@@ -49,3 +49,15 @@ on the new one, then delete the exported file.
   prompt and flips the preference per-user. Don't set it to `true` globally.
 - v1.0 shipped without Sparkle, so 1.0 users will not auto-update — the 2.0
   announcement needs to reach them through release notes / the website.
+
+## Store status and docs (added 2026-07-28)
+
+When this app's store status changes (submitted, approved, released,
+rejected, removed): update the canonical docs in the same session, not after.
+That means the distribution and release-identity language in
+`docs/PROJECT_STATE.md` and `README.md`, date-stamping any in-flight status
+("as of YYYY-MM-DD"). Then hand-run the Sidecar overview refresh on the
+Studio so the published overview does not go stale on prose the nightly
+cannot detect (`node generator/sidecar-generate.mjs overview-check <app>`,
+regenerate, validate, `overview-commit`, `overview-push`). Why this is
+manual for now: `docs/decisions/2026-07-28-store-status-staleness.md`.
