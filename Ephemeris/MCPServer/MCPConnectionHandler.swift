@@ -69,9 +69,24 @@ final class MCPConnectionHandler: @unchecked Sendable {
             send(connection: connection, statusCode: 403, body: Data("forbidden\n".utf8), contentType: "text/plain")
             return
         }
+        // An Origin header means a browser sent this. No legitimate MCP client
+        // is a browser page — the Streamable HTTP spec requires Origin
+        // validation precisely because CORS "simple" POSTs reach localhost
+        // servers even when the response is unreadable cross-origin. The Host
+        // check above can't catch these (the browser sends a loopback Host).
+        guard request.headers["origin"] == nil else {
+            send(connection: connection, statusCode: 403, body: Data("forbidden\n".utf8), contentType: "text/plain")
+            return
+        }
         switch (request.method, request.path) {
         case ("POST", "/mcp"), ("POST", "/"):
             handleMCPPost(request: request, on: connection)
+        case ("GET", "/mcp"):
+            // Spec: the MCP endpoint answers GET with an SSE stream or 405.
+            // This server is synchronous-only, so 405 — a 404 here would read
+            // as "wrong URL" to clients probing for stream support.
+            send(connection: connection, statusCode: 405, body: Data("method not allowed\n".utf8),
+                 contentType: "text/plain", extraHeaders: ["Allow": "POST"])
         case ("GET", "/"), ("GET", "/health"):
             send(connection: connection, statusCode: 200, body: Data("ephemeris-mcp running\n".utf8), contentType: "text/plain")
         default:
@@ -80,20 +95,62 @@ final class MCPConnectionHandler: @unchecked Sendable {
     }
 
     /// True when the HTTP `Host` header names a loopback address. Strips the port
-    /// and any IPv6 brackets. A missing Host is treated as untrusted — HTTP/1.1
-    /// clients are required to send one. Static so tests can exercise it directly.
+    /// and any IPv6 brackets; DNS names are case-insensitive and may carry a
+    /// trailing dot. A missing Host is treated as untrusted — HTTP/1.1 clients
+    /// are required to send one. Static so tests can exercise it directly.
     static func isLoopbackHost(_ hostHeader: String?) -> Bool {
         guard let hostHeader, !hostHeader.isEmpty else { return false }
-        let host: String
+        var host: String
         if hostHeader.hasPrefix("[") {
             host = String(hostHeader.dropFirst().prefix { $0 != "]" })
         } else {
             host = String(hostHeader.prefix { $0 != ":" })
         }
+        host = host.lowercased()
+        if host.hasSuffix(".") { host.removeLast() }
         return host == "127.0.0.1" || host == "localhost" || host == "::1"
     }
 
+    /// POST /mcp content-negotiation gates, split out for testability.
+    /// Content-Type must be JSON (the spec requires clients to send it, and the
+    /// requirement is also what blocks browser `text/plain` CSRF bodies).
+    static func isJSONContentType(_ header: String?) -> Bool {
+        guard let header else { return false }
+        return header.split(separator: ";")[0].trimmingCharacters(in: .whitespaces).lowercased() == "application/json"
+    }
+
+    /// Accept is permissive: absent is fine (curl-style clients), and any of
+    /// application/json, text/event-stream, or */* passes. Only an Accept that
+    /// excludes JSON outright is rejected.
+    static func isAcceptableAccept(_ header: String?) -> Bool {
+        guard let header else { return true }
+        let types = header.split(separator: ",").map {
+            $0.split(separator: ";")[0].trimmingCharacters(in: .whitespaces).lowercased()
+        }
+        return types.contains("application/json") || types.contains("text/event-stream")
+            || types.contains("*/*") || types.contains("application/*")
+    }
+
+    /// `MCP-Protocol-Version` (required from clients since 2025-06-18): absent
+    /// falls back per spec; present-but-unsupported gets 400.
+    static func isSupportedProtocolVersionHeader(_ header: String?) -> Bool {
+        guard let header else { return true }
+        return MCPProtocolHandler.supportedProtocolVersions.contains(header.trimmingCharacters(in: .whitespaces))
+    }
+
     private func handleMCPPost(request: HTTPRequest, on connection: NWConnection) {
+        guard Self.isJSONContentType(request.headers["content-type"]) else {
+            send(connection: connection, statusCode: 415, body: Data("unsupported media type\n".utf8), contentType: "text/plain")
+            return
+        }
+        guard Self.isAcceptableAccept(request.headers["accept"]) else {
+            send(connection: connection, statusCode: 406, body: Data("not acceptable\n".utf8), contentType: "text/plain")
+            return
+        }
+        guard Self.isSupportedProtocolVersionHeader(request.headers["mcp-protocol-version"]) else {
+            send(connection: connection, statusCode: 400, body: Data("unsupported MCP-Protocol-Version\n".utf8), contentType: "text/plain")
+            return
+        }
         // Synchronously dispatch the JSON-RPC payload. The protocol handler runs on
         // a non-main actor; we trampoline into the MainActor for the SwiftData reads.
         Task { @MainActor in
@@ -102,8 +159,8 @@ final class MCPConnectionHandler: @unchecked Sendable {
             if let responseData {
                 send(connection: connection, statusCode: 200, body: responseData, contentType: "application/json")
             } else {
-                // Notification — no body to return; HTTP 204
-                send(connection: connection, statusCode: 204, body: Data(), contentType: "application/json")
+                // Notification-only payload — spec: 202 Accepted, no body.
+                send(connection: connection, statusCode: 202, body: Data(), contentType: "application/json")
             }
         }
     }
@@ -111,10 +168,14 @@ final class MCPConnectionHandler: @unchecked Sendable {
     private func send(connection: NWConnection,
                       statusCode: Int,
                       body: Data,
-                      contentType: String) {
+                      contentType: String,
+                      extraHeaders: [String: String] = [:]) {
         var response = "HTTP/1.1 \(statusCode) \(statusText(statusCode))\r\n"
         response += "Content-Type: \(contentType)\r\n"
         response += "Content-Length: \(body.count)\r\n"
+        for (key, value) in extraHeaders {
+            response += "\(key): \(value)\r\n"
+        }
         response += "Connection: close\r\n"
         response += "\r\n"
         var responseData = Data(response.utf8)
@@ -127,10 +188,15 @@ final class MCPConnectionHandler: @unchecked Sendable {
     private func statusText(_ code: Int) -> String {
         switch code {
         case 200: return "OK"
+        case 202: return "Accepted"
         case 204: return "No Content"
         case 400: return "Bad Request"
+        case 403: return "Forbidden"
         case 404: return "Not Found"
+        case 405: return "Method Not Allowed"
+        case 406: return "Not Acceptable"
         case 413: return "Content Too Large"
+        case 415: return "Unsupported Media Type"
         case 500: return "Internal Server Error"
         default:  return "OK"
         }
@@ -178,6 +244,10 @@ struct HTTPRequest {
                 headers[key] = value
             }
         }
+
+        // This parser reads bodies by Content-Length only. A chunked request
+        // would be silently misread as empty-bodied, so reject it outright.
+        guard headers["transfer-encoding"] == nil else { return .invalid }
 
         // Content-Length must be a nonnegative integer within the request cap.
         // Anything else is a hostile or broken client, not an incomplete read.

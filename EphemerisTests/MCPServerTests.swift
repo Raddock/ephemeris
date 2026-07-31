@@ -80,6 +80,53 @@ struct MCPHTTPRequestParseTests {
     @Test func garbageRequestLineIsInvalid() {
         #expect(isInvalid(parse("GARBAGE\r\n\r\n")))
     }
+
+    /// The parser reads bodies by Content-Length only; a chunked request would
+    /// be misread as empty-bodied, so it must be rejected outright.
+    @Test func transferEncodingIsInvalid() {
+        #expect(isInvalid(parse("POST /mcp HTTP/1.1\r\nHost: 127.0.0.1\r\nTransfer-Encoding: chunked\r\n\r\n2\r\n{}\r\n0\r\n\r\n")))
+    }
+}
+
+// MARK: - Content negotiation gates
+
+@Suite("MCP HTTP content gates")
+struct MCPContentGateTests {
+
+    @Test func jsonContentTypeAccepted() {
+        #expect(MCPConnectionHandler.isJSONContentType("application/json"))
+        #expect(MCPConnectionHandler.isJSONContentType("application/json; charset=utf-8"))
+        #expect(MCPConnectionHandler.isJSONContentType("Application/JSON"))
+    }
+
+    /// text/plain is the browser CSRF "simple request" content type — the
+    /// whole reason the gate exists. Absent is also rejected: the spec
+    /// requires clients to send Content-Type on POST.
+    @Test func nonJSONContentTypeRejected() {
+        #expect(!MCPConnectionHandler.isJSONContentType("text/plain"))
+        #expect(!MCPConnectionHandler.isJSONContentType("text/plain;charset=UTF-8"))
+        #expect(!MCPConnectionHandler.isJSONContentType(nil))
+    }
+
+    @Test func acceptHeaderPermissive() {
+        #expect(MCPConnectionHandler.isAcceptableAccept(nil))
+        #expect(MCPConnectionHandler.isAcceptableAccept("application/json, text/event-stream"))
+        #expect(MCPConnectionHandler.isAcceptableAccept("*/*"))
+        #expect(!MCPConnectionHandler.isAcceptableAccept("text/html"))
+    }
+
+    @Test func protocolVersionHeaderValidated() {
+        #expect(MCPConnectionHandler.isSupportedProtocolVersionHeader(nil))
+        #expect(MCPConnectionHandler.isSupportedProtocolVersionHeader("2025-06-18"))
+        #expect(MCPConnectionHandler.isSupportedProtocolVersionHeader("2024-11-05"))
+        #expect(!MCPConnectionHandler.isSupportedProtocolVersionHeader("1999-01-01"))
+    }
+
+    @Test func hostCheckIsCaseInsensitiveAndTolerant() {
+        #expect(MCPConnectionHandler.isLoopbackHost("LOCALHOST"))
+        #expect(MCPConnectionHandler.isLoopbackHost("localhost."))
+        #expect(!MCPConnectionHandler.isLoopbackHost("localhost.evil.com"))
+    }
 }
 
 // MARK: - Loopback Host gate (DNS-rebinding defense)
@@ -136,6 +183,59 @@ struct MCPProtocolHandlerTests {
         let result = try #require(response["result"] as? [String: Any])
         let serverInfo = try #require(result["serverInfo"] as? [String: Any])
         #expect(serverInfo["name"] as? String == "ephemeris")
+    }
+
+    /// Version negotiation: echo a supported requested version; answer with the
+    /// latest for unsupported or absent ones.
+    @Test func initializeNegotiatesProtocolVersion() throws {
+        let handler = try makeHandler()
+
+        let echoed = try #require(try call(handler,
+            #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05"}}"#))
+        let echoedResult = try #require(echoed["result"] as? [String: Any])
+        #expect(echoedResult["protocolVersion"] as? String == "2024-11-05")
+
+        let fallback = try #require(try call(handler,
+            #"{"jsonrpc":"2.0","id":2,"method":"initialize","params":{"protocolVersion":"2099-01-01"}}"#))
+        let fallbackResult = try #require(fallback["result"] as? [String: Any])
+        #expect(fallbackResult["protocolVersion"] as? String == MCPProtocolHandler.latestProtocolVersion)
+    }
+
+    /// Valid JSON with the wrong JSON-RPC shape is -32600 Invalid Request, not
+    /// -32700 Parse Error — the two were previously conflated.
+    @Test func wrongShapeIsInvalidRequestNotParseError() throws {
+        let handler = try makeHandler()
+        let noMethod = try #require(try call(handler, #"{"jsonrpc":"2.0","id":1}"#))
+        #expect((noMethod["error"] as? [String: Any])?["code"] as? Int == -32600)
+
+        let wrongVersion = try #require(try call(handler, #"{"jsonrpc":"1.0","id":1,"method":"ping"}"#))
+        #expect((wrongVersion["error"] as? [String: Any])?["code"] as? Int == -32600)
+    }
+
+    /// 2025-03-26 batch: an array of requests gets an array of responses;
+    /// an all-notifications batch gets no body.
+    @Test func batchRequestsReturnBatchResponses() throws {
+        let handler = try makeHandler()
+        let data = try #require(handler.handle(requestData: Data(
+            #"[{"jsonrpc":"2.0","id":1,"method":"ping"},{"jsonrpc":"2.0","id":2,"method":"ping"}]"#.utf8)))
+        let responses = try #require(try JSONSerialization.jsonObject(with: data) as? [[String: Any]])
+        #expect(responses.count == 2)
+
+        let silent = handler.handle(requestData: Data(
+            #"[{"jsonrpc":"2.0","method":"notifications/initialized"}]"#.utf8))
+        #expect(silent == nil)
+    }
+
+    /// Every embedded tool is read-only and must say so in spec vocabulary.
+    @Test func toolsListCarriesReadOnlyAnnotations() throws {
+        let handler = try makeHandler()
+        let response = try #require(try call(handler, #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#))
+        let result = try #require(response["result"] as? [String: Any])
+        let tools = try #require(result["tools"] as? [[String: Any]])
+        for tool in tools {
+            let annotations = try #require(tool["annotations"] as? [String: Any])
+            #expect(annotations["readOnlyHint"] as? Bool == true)
+        }
     }
 
     /// Parity tripwire: the standalone helper pins this same five-tool subset in

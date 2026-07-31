@@ -74,4 +74,4 @@ The server speaks stdio only — no outbound network. It reads the local SQLite 
 
 - The Ephemeris app must have been run at least once to create the library store. Until you open a PHD2 log in the app, the store is empty and the tools return empty arrays.
 - Concurrent access is safe — SwiftData configures SQLite WAL mode, so the app's writes don't block the helper's reads.
-- This is the Phase 8 initial ship. Resources (`ephemeris://rig/{id}`, `ephemeris://night/{id}`) and write tools (`add_annotation`) are deferred.
+- This is the Phase 8 initial ship. Resources (`ephemeris://rig/{id}`, `ephemeris://night/{id}`) are implemented via `resources/list` / `resources/read`; write tools (`add_annotation`) are deferred.

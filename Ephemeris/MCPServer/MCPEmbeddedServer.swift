@@ -129,12 +129,44 @@ final class MCPEmbeddedServer {
         }
     }
 
+    /// Ceiling on simultaneously open connections. Legitimate MCP clients hold
+    /// one short-lived connection at a time; dozens means a hostile local
+    /// process trying to exhaust the app.
+    static let maxConcurrentConnections = 32
+    /// A client that hasn't completed its single request-response within this
+    /// window is not a legitimate MCP client — reclaim the slot.
+    static let connectionDeadlineSeconds: TimeInterval = 30
+
+    private var activeConnections = 0
+
     private func handleNewConnection(_ connection: NWConnection) {
+        guard activeConnections < Self.maxConcurrentConnections else {
+            connection.cancel()
+            return
+        }
+        activeConnections += 1
         requestCount += 1
         lastConnectionAt = .now
+
+        connection.stateUpdateHandler = { [weak self] state in
+            switch state {
+            case .cancelled, .failed:
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.activeConnections = max(0, self.activeConnections - 1)
+                }
+            default:
+                break
+            }
+        }
+
         let handler = MCPConnectionHandler(library: library)
         connection.start(queue: .global(qos: .userInitiated))
         handler.handle(connection: connection)
+
+        DispatchQueue.global().asyncAfter(deadline: .now() + Self.connectionDeadlineSeconds) { [weak connection] in
+            connection?.cancel()
+        }
     }
 }
 

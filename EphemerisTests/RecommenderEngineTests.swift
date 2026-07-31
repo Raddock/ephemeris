@@ -117,15 +117,20 @@ final class RecommenderEngineTests: XCTestCase {
         let stale = obs.first { $0.title.contains("Calibration is") }
         XCTAssertNotNil(stale)
         XCTAssertEqual(stale?.severity, .coaching)  // 21-29 days = coaching
-        XCTAssertEqual(stale?.sourceAuthority, .phd2Manual)
+        // Age-based staleness is an Ephemeris heuristic: PHD2's Best Practices
+        // (2019) recommends reuse of a good calibration and names equipment /
+        // rotation / guide-speed changes as the recalibration triggers, not age.
+        XCTAssertEqual(stale?.sourceAuthority, .ephemerisHeuristic)
     }
 
-    func test_calibrationStaleness_alertsAfter30Days() {
+    func test_calibrationStaleness_hygieneAfter30Days() {
         let log = makeLog(orthogonalityError: 1.0, calibrationDaysAgo: 40)
         let profile = RigProfile(currentName: "Test")
         let obs = RecommenderEngine.default.analyze(log: log, profile: profile)
         let stale = obs.first { $0.title.contains("Calibration is") }
-        XCTAssertEqual(stale?.severity, .alert)
+        // Never an alert: on a permanent unchanged rig an old calibration is
+        // exactly what PHD2 endorses. Hygiene is the ceiling.
+        XCTAssertEqual(stale?.severity, .hygiene)
     }
 
     func test_calibrationStaleness_silentUnder21Days() {

@@ -15,46 +15,83 @@ struct MCPProtocolHandler {
         self.library = library
     }
 
+    /// Protocol revisions this server can speak. Initialize echoes the client's
+    /// requested revision when supported, else answers with the latest — per the
+    /// spec's version-negotiation rules. The connection handler also validates
+    /// the `MCP-Protocol-Version` HTTP header against this set.
+    static let supportedProtocolVersions: Set<String> = ["2024-11-05", "2025-03-26", "2025-06-18"]
+    static let latestProtocolVersion = "2025-06-18"
+
     /// Returns the response bytes (no trailing newline — the HTTP transport handles framing),
-    /// or nil for notifications (no id) which get HTTP 204 from the connection handler.
+    /// or nil for notification-only payloads, which get HTTP 202 from the connection handler.
+    /// Accepts either a single JSON-RPC object or a batch array (2025-03-26 revision).
     func handle(requestData: Data) -> Data? {
-        do {
-            let request = try JSONDecoder().decode(MCPJSONRPCRequest.self, from: requestData)
-            let isNotification = request.id == nil
-            let result: Result<MCPJSONValue, MCPJSONRPCError>
+        // Syntactic validity first: only unparseable bytes are a -32700 parse
+        // error. Well-formed JSON with the wrong shape is -32600 invalid request.
+        guard let raw = try? JSONSerialization.jsonObject(with: requestData) else {
+            return try? JSONEncoder().encode(MCPJSONRPCResponse(id: .null, error: .parseError))
+        }
 
-            switch request.method {
-            case "initialize":      result = .success(initializeResult())
-            case "tools/list":      result = .success(toolsList())
-            case "tools/call":      result = handleToolsCall(params: request.params)
-            case "notifications/initialized":
-                return nil
-            case "ping":
-                result = .success(.object([:]))
-            default:
-                result = .failure(MCPJSONRPCError(code: -32601,
-                                                  message: "Method not found: \(request.method)",
-                                                  data: nil))
+        if let batch = raw as? [Any] {
+            guard !batch.isEmpty else {
+                return try? JSONEncoder().encode(MCPJSONRPCResponse(id: .null, error: .invalidRequest))
             }
-            if isNotification { return nil }
+            var responses: [MCPJSONRPCResponse] = []
+            for element in batch {
+                guard let elementData = try? JSONSerialization.data(withJSONObject: element) else {
+                    responses.append(MCPJSONRPCResponse(id: .null, error: .invalidRequest))
+                    continue
+                }
+                if let response = handleSingle(elementData) {
+                    responses.append(response)
+                }
+            }
+            guard !responses.isEmpty else { return nil }   // batch of notifications
+            return try? JSONEncoder().encode(responses)
+        }
 
-            let response: MCPJSONRPCResponse
-            switch result {
-            case .success(let v): response = MCPJSONRPCResponse(id: request.id, result: v)
-            case .failure(let e): response = MCPJSONRPCResponse(id: request.id, error: e)
-            }
-            return try JSONEncoder().encode(response)
-        } catch {
-            let response = MCPJSONRPCResponse(id: .null, error: MCPJSONRPCError.parseError)
-            return try? JSONEncoder().encode(response)
+        return handleSingle(requestData).flatMap { try? JSONEncoder().encode($0) }
+    }
+
+    /// One JSON-RPC message → one response, or nil for a notification.
+    private func handleSingle(_ requestData: Data) -> MCPJSONRPCResponse? {
+        guard let request = try? JSONDecoder().decode(MCPJSONRPCRequest.self, from: requestData),
+              request.jsonrpc == "2.0"
+        else {
+            return MCPJSONRPCResponse(id: .null, error: .invalidRequest)
+        }
+        let isNotification = request.id == nil
+        let result: Result<MCPJSONValue, MCPJSONRPCError>
+
+        switch request.method {
+        case "initialize":      result = .success(initializeResult(params: request.params))
+        case "tools/list":      result = .success(toolsList())
+        case "tools/call":      result = handleToolsCall(params: request.params)
+        case "notifications/initialized":
+            return nil
+        case "ping":
+            result = .success(.object([:]))
+        default:
+            result = .failure(MCPJSONRPCError(code: -32601,
+                                              message: "Method not found: \(request.method)",
+                                              data: nil))
+        }
+        if isNotification { return nil }
+
+        switch result {
+        case .success(let v): return MCPJSONRPCResponse(id: request.id, result: v)
+        case .failure(let e): return MCPJSONRPCResponse(id: request.id, error: e)
         }
     }
 
     // MARK: - Methods
 
-    private func initializeResult() -> MCPJSONValue {
-        .object([
-            "protocolVersion": .string("2024-11-05"),
+    private func initializeResult(params: MCPJSONValue?) -> MCPJSONValue {
+        let requested = params?.dictValue?["protocolVersion"]?.stringValue
+        let negotiated = requested.flatMap { Self.supportedProtocolVersions.contains($0) ? $0 : nil }
+            ?? Self.latestProtocolVersion
+        return .object([
+            "protocolVersion": .string(negotiated),
             "capabilities": .object(["tools": .object([:])]),
             "serverInfo": .object([
                 "name": .string("ephemeris"),
@@ -70,6 +107,9 @@ struct MCPProtocolHandler {
                     "name": .string(tool.name),
                     "description": .string(tool.description),
                     "inputSchema": tool.inputSchema,
+                    // The embedded catalog is read-only by design; say so in the
+                    // spec's vocabulary so clients can apply approval policy.
+                    "annotations": .object(["readOnlyHint": .bool(true)]),
                 ])
             })
         ])

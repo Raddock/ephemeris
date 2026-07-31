@@ -98,7 +98,7 @@ nonisolated struct GAFreshnessObserver: CrossNightGenerator {
 
         let summary: String
         if let date = mostRecentGADate {
-            summary = "The Guiding Assistant last ran on \(date.formatted(date: .abbreviated, time: .omitted)) — \(daysSinceGA) days ago. PHD2's Best Practices recommend running GA when seeing or equipment changes, or after long gaps; its measured min-move and backlash values supersede any computed estimate."
+            summary = "The Guiding Assistant last ran on \(date.formatted(date: .abbreviated, time: .omitted)) — \(daysSinceGA) days ago. PHD2's Best Practices recommend running the GA at first setup and again as needed — after equipment changes or to re-baseline seeing; its measured min-move and backlash values supersede any computed estimate."
         } else {
             summary = "No Guiding Assistant run has been detected in your corpus. PHD2's measured values for min-move RA/Dec, exposure, and Dec backlash carry highest authority — without a GA run the recommender falls back to heuristics."
         }

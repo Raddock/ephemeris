@@ -79,7 +79,7 @@ final class CorpusValidationTests: XCTestCase {
                 let key = obs.title
                 byGenerator[key, default: 0] += 1
                 if obs.title.contains("orthogonality") && obs.severity == .alert { orthoAlerts += 1 }
-                if obs.title.contains("Calibration is") && obs.severity == .alert { stalenessAlerts += 1 }
+                if obs.title.contains("Calibration is") && obs.severity == .hygiene { stalenessAlerts += 1 }
             }
 
             // Real-format regression guards. These paths shipped dead once because

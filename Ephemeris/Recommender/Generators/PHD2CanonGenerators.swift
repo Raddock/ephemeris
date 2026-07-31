@@ -208,8 +208,13 @@ nonisolated struct MaxDurationLimitObserver: RecommenderGenerator {
 
 // MARK: - CalibrationStalenessObserver
 
-/// Calibration age relative to session date. Per design doc §6.2 (corpus-calibrated):
-/// >21 days = coaching, >30 days = alert.
+/// Calibration age relative to session date. The 21/30-day thresholds are
+/// corpus-calibrated Ephemeris heuristics — PHD2's Best Practices (2019) never
+/// recommends age-based recalibration; its triggers are equipment change,
+/// guide-camera rotation, and guide-speed changes, and it explicitly endorses
+/// reusing a good calibration on permanent setups. So this observation is a
+/// nudge that something may have changed unnoticed, never an alert, and it
+/// carries ephemerisHeuristic authority rather than phd2Manual.
 nonisolated struct CalibrationStalenessObserver: RecommenderGenerator {
     let identifier = "calibrationStalenessObserver"
     init() {}
@@ -225,7 +230,7 @@ nonisolated struct CalibrationStalenessObserver: RecommenderGenerator {
         let days = interval / (24 * 3600)
         guard days >= 21 else { return [] }
 
-        let severity: RecommenderObservation.Severity = days >= 30 ? .alert : .coaching
+        let severity: RecommenderObservation.Severity = days >= 30 ? .hygiene : .coaching
         let dayCount = Int(days.rounded())
 
         return [RecommenderObservation(
@@ -235,18 +240,18 @@ nonisolated struct CalibrationStalenessObserver: RecommenderGenerator {
             category: .phd2Hygiene,
             severity: severity,
             title: "Calibration is \(dayCount) days old",
-            summary: "The calibration used for this session was run \(dayCount) days ago. PHD2's Best Practices document recommends recalibrating after equipment changes or substantial pointing shifts.",
+            summary: "The calibration used for this session was run \(dayCount) days ago. PHD2's Best Practices guidance is to reuse a good calibration and recalibrate after equipment changes, guide-camera rotation, or guide-speed changes — age by itself isn't a trigger. A long gap just raises the odds one of those changed unnoticed.",
             evidence: [
                 .init(label: "Calibration date", value: calDate.formatted(date: .abbreviated, time: .omitted)),
                 .init(label: "Session date", value: sessionDate.formatted(date: .abbreviated, time: .omitted)),
                 .init(label: "Age", value: "\(dayCount) days"),
             ],
             candidateContributors: [],
-            suggestedResponse: "Run the Calibration Assistant on your next session. It slews to the optimum sky position, pre-clears Dec backlash, and reports cal quality automatically.",
+            suggestedResponse: "If nothing in the guide train has changed since, this is safe to ignore — permanent setups legitimately reuse calibrations for months. If something did change, run the Calibration Assistant: it slews to the optimum sky position, pre-clears Dec backlash, and reports cal quality automatically.",
             relatedHelpTopicIds: [HelpTopic.calibrationStaleness.rawValue],
             relatedPHD2Tools: [.calibrationAssistant],
-            confidence: .high,
-            sourceAuthority: .phd2Manual
+            confidence: .medium,
+            sourceAuthority: .ephemerisHeuristic
         )]
     }
 }
