@@ -27,6 +27,8 @@ enum MCPTools {
         listObservations,
         getAggregateStats,
         getCorpusSummary,
+        search,
+        fetch,
     ]
 
     // MARK: - list_rigs
@@ -276,6 +278,175 @@ enum MCPTools {
                 "newest_night": newest.map { .string(iso.string(from: $0)) } ?? .null,
                 "rig_names": .array(rigs.map { .string($0.currentName) }),
             ])
+        }
+    )
+
+    // MARK: - search / fetch (ChatGPT deep-research contract)
+
+    /// OpenAI's deep-research connectors require exactly two retrieval tools:
+    /// `search` (query → result stubs) and `fetch` (id → full record). These
+    /// wrap the same read-only library the domain tools expose; ids are
+    /// "rig:<uuid>", "night:<uuid>", or "obs:<uuid>".
+    static let search = MCPTool(
+        name: "search",
+        description: "Search the Ephemeris library for rigs, nights, and recommender observations matching a query. Returns result stubs with an id to pass to fetch. Matches rig names, target catalog names, night dates (ISO), observation titles and summaries.",
+        inputSchema: .object([
+            "type": .string("object"),
+            "properties": .object([
+                "query": .object(["type": .string("string"), "description": .string("Free-text query; all whitespace-separated terms must match")]),
+            ]),
+            "required": .array([.string("query")]),
+        ]),
+        invoke: { args, container in
+            guard let query = args["query"]?.stringValue?.trimmingCharacters(in: .whitespaces),
+                  !query.isEmpty
+            else { return .object(["error": .string("missing query")]) }
+            let terms = query.lowercased().split(separator: " ").map(String.init)
+            func matches(_ haystack: String) -> Bool {
+                let lowered = haystack.lowercased()
+                return terms.allSatisfy { lowered.contains($0) }
+            }
+
+            let context = ModelContext(container)
+            let iso = ISO8601DateFormatter()
+            var results: [MCPJSONValue] = []
+            let cap = 25
+
+            let rigs = (try? context.fetch(FetchDescriptor<RigProfileEntity>())) ?? []
+            for r in rigs where matches([r.currentName, r.mountModel ?? "", r.notes ?? "", r.mountClassRaw].joined(separator: " ")) {
+                results.append(.object([
+                    "id": .string("rig:\(r.id.uuidString)"),
+                    "title": .string("Rig: \(r.currentName)"),
+                    "text": .string("\(r.mountClassRaw) · imaging \(r.imagingFocalLengthMm)mm"),
+                    "url": .null,
+                ]))
+            }
+
+            let nights = (try? context.fetch(FetchDescriptor<NightRecordEntity>(
+                sortBy: [SortDescriptor(\.nightDate, order: .reverse)]
+            ))) ?? []
+            for n in nights where results.count < cap {
+                let dateString = iso.string(from: n.nightDate)
+                let fields = [dateString, n.catalogIdentifier ?? "", n.catalogCommonName ?? "", n.sourceFilePath]
+                guard matches(fields.joined(separator: " ")) else { continue }
+                let target = n.catalogCommonName ?? n.catalogIdentifier ?? "untargeted"
+                results.append(.object([
+                    "id": .string("night:\(n.id.uuidString)"),
+                    "title": .string("Night \(dateString.prefix(10)) — \(target)"),
+                    "text": .string(String(format: "%d sessions · %.0f min · night RMS %.2f\"", n.sessionsCount, n.totalIntegrationMinutes, n.medianRMSArcsec)),
+                    "url": .null,
+                ]))
+            }
+
+            let observations = (try? context.fetch(FetchDescriptor<ObservationEntity>(
+                sortBy: [SortDescriptor(\.severityRaw, order: .reverse)]
+            ))) ?? []
+            for o in observations where results.count < cap {
+                guard matches([o.title, o.summary].joined(separator: " ")) else { continue }
+                results.append(.object([
+                    "id": .string("obs:\(o.id.uuidString)"),
+                    "title": .string(o.title),
+                    "text": .string(String(o.summary.prefix(200))),
+                    "url": .null,
+                ]))
+            }
+
+            return .object(["results": .array(Array(results.prefix(cap)))])
+        }
+    )
+
+    static let fetch = MCPTool(
+        name: "fetch",
+        description: "Fetch the full record for a search result id (rig:<uuid>, night:<uuid>, or obs:<uuid>). Returns the complete entity as JSON text.",
+        inputSchema: .object([
+            "type": .string("object"),
+            "properties": .object([
+                "id": .object(["type": .string("string"), "description": .string("An id returned by search")]),
+            ]),
+            "required": .array([.string("id")]),
+        ]),
+        invoke: { args, container in
+            guard let id = args["id"]?.stringValue else {
+                return .object(["error": .string("missing id")])
+            }
+            let parts = id.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2, let uuid = UUID(uuidString: parts[1]) else {
+                return .object(["error": .string("invalid id — expected rig:<uuid>, night:<uuid>, or obs:<uuid>")])
+            }
+            let context = ModelContext(container)
+            let iso = ISO8601DateFormatter()
+
+            switch parts[0] {
+            case "rig":
+                let found = (try? context.fetch(FetchDescriptor<RigProfileEntity>(
+                    predicate: #Predicate { $0.id == uuid }
+                )))?.first
+                guard let r = found else { return .object(["error": .string("rig not found")]) }
+                return .object([
+                    "id": .string(id),
+                    "title": .string("Rig: \(r.currentName)"),
+                    "text": MCPJSONValue.string(MCPJSONFormatter.toPrettyString(.object([
+                        "name": .string(r.currentName),
+                        "mount_class": .string(r.mountClassRaw),
+                        "mount_model": r.mountModel.map { .string($0) } ?? .null,
+                        "has_high_precision_encoders": .bool(r.hasHighPrecisionEncoders),
+                        "imaging_focal_length_mm": .number(r.imagingFocalLengthMm),
+                        "imaging_pixel_size_microns": .number(r.imagingPixelSizeMicrons),
+                        "imaging_binning": .integer(r.imagingBinning),
+                        "notes": r.notes.map { .string($0) } ?? .null,
+                    ]))),
+                    "url": .null,
+                    "metadata": .object(["type": .string("rig")]),
+                ])
+            case "night":
+                let found = (try? context.fetch(FetchDescriptor<NightRecordEntity>(
+                    predicate: #Predicate { $0.id == uuid }
+                )))?.first
+                guard let n = found else { return .object(["error": .string("night not found")]) }
+                return .object([
+                    "id": .string(id),
+                    "title": .string("Night \(iso.string(from: n.nightDate).prefix(10))"),
+                    "text": MCPJSONValue.string(MCPJSONFormatter.toPrettyString(.object([
+                        "night_date": .string(iso.string(from: n.nightDate)),
+                        "rig": .string(n.rigProfile?.currentName ?? ""),
+                        "sessions_count": .integer(n.sessionsCount),
+                        "total_integration_minutes": .number(n.totalIntegrationMinutes),
+                        "night_rms_arcsec": .number(n.medianRMSArcsec),
+                        "best_session_rms_arcsec": .number(n.bestSessionRMSArcsec),
+                        "worst_session_rms_arcsec": .number(n.worstSessionRMSArcsec),
+                        "catalog_identifier": n.catalogIdentifier.map { .string($0) } ?? .null,
+                        "catalog_common_name": n.catalogCommonName.map { .string($0) } ?? .null,
+                        "sub_quality": n.subQualityRaw.map { .string($0) } ?? .null,
+                        "source_file_path": .string(n.sourceFilePath),
+                    ]))),
+                    "url": .null,
+                    "metadata": .object(["type": .string("night")]),
+                ])
+            case "obs":
+                let found = (try? context.fetch(FetchDescriptor<ObservationEntity>(
+                    predicate: #Predicate { $0.id == uuid }
+                )))?.first
+                guard let o = found else { return .object(["error": .string("observation not found")]) }
+                return .object([
+                    "id": .string(id),
+                    "title": .string(o.title),
+                    "text": MCPJSONValue.string(MCPJSONFormatter.toPrettyString(.object([
+                        "title": .string(o.title),
+                        "summary": .string(o.summary),
+                        "suggested_response": .string(o.suggestedResponse),
+                        "category": .string(categoryName(o.categoryRaw)),
+                        "severity": .string(severityName(o.severityRaw)),
+                        "source_authority": .string(o.sourceAuthorityRaw),
+                        "confidence": .string(o.confidenceRaw),
+                        "session_started_at": o.sessionStartedAt.map { .string(iso.string(from: $0)) } ?? .null,
+                        "generated_at": .string(iso.string(from: o.generatedAt)),
+                    ]))),
+                    "url": .null,
+                    "metadata": .object(["type": .string("observation")]),
+                ])
+            default:
+                return .object(["error": .string("unknown id prefix — expected rig:, night:, or obs:")])
+            }
         }
     )
 

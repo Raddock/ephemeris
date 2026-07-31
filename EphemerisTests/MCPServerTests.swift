@@ -127,6 +127,18 @@ struct MCPContentGateTests {
         #expect(MCPConnectionHandler.isLoopbackHost("localhost."))
         #expect(!MCPConnectionHandler.isLoopbackHost("localhost.evil.com"))
     }
+
+    @Test func bearerAuthorization() {
+        // No token configured → open.
+        #expect(MCPConnectionHandler.isAuthorized(nil, requiredToken: nil))
+        // Token configured → exact bearer match only.
+        #expect(MCPConnectionHandler.isAuthorized("Bearer abc123", requiredToken: "abc123"))
+        #expect(MCPConnectionHandler.isAuthorized("bearer abc123", requiredToken: "abc123"))
+        #expect(!MCPConnectionHandler.isAuthorized(nil, requiredToken: "abc123"))
+        #expect(!MCPConnectionHandler.isAuthorized("Bearer wrong", requiredToken: "abc123"))
+        #expect(!MCPConnectionHandler.isAuthorized("Basic abc123", requiredToken: "abc123"))
+        #expect(!MCPConnectionHandler.isAuthorized("abc123", requiredToken: "abc123"))
+    }
 }
 
 // MARK: - Loopback Host gate (DNS-rebinding defense)
@@ -238,10 +250,10 @@ struct MCPProtocolHandlerTests {
         }
     }
 
-    /// Parity tripwire: the standalone helper pins this same five-tool subset in
+    /// Parity tripwire: the standalone helper pins the shared five-tool subset in
     /// tools/ephemeris-mcp (CatalogTests.catalogContainsTheEmbeddedServerSubset).
-    /// Changing either catalog without the other fails one of the two tests,
-    /// forcing a deliberate parity decision.
+    /// search/fetch are embedded-only by design — they exist for ChatGPT's
+    /// deep-research retrieval contract, which can't reach a stdio helper.
     @Test func toolsListReturnsFullCatalog() throws {
         let handler = try makeHandler()
         let response = try #require(try call(handler, #"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#))
@@ -249,7 +261,36 @@ struct MCPProtocolHandlerTests {
         let tools = try #require(result["tools"] as? [[String: Any]])
         let names = Set(tools.compactMap { $0["name"] as? String })
         #expect(names == ["list_rigs", "list_nights", "list_observations",
-                          "get_aggregate_stats", "get_corpus_summary"])
+                          "get_aggregate_stats", "get_corpus_summary",
+                          "search", "fetch"])
+    }
+
+    @Test func searchRequiresQueryAndFetchValidatesIds() throws {
+        let handler = try makeHandler()
+        let missing = try #require(try call(
+            handler,
+            #"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search","arguments":{}}}"#))
+        let missingResult = try #require(missing["result"] as? [String: Any])
+        let missingContent = try #require(missingResult["content"] as? [[String: Any]])
+        #expect((missingContent.first?["text"] as? String)?.contains("missing query") == true)
+
+        let badID = try #require(try call(
+            handler,
+            #"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"fetch","arguments":{"id":"bogus"}}}"#))
+        let badIDResult = try #require(badID["result"] as? [String: Any])
+        let badIDContent = try #require(badIDResult["content"] as? [[String: Any]])
+        #expect((badIDContent.first?["text"] as? String)?.contains("invalid id") == true)
+    }
+
+    @Test func searchOnEmptyLibraryReturnsEmptyResults() throws {
+        let handler = try makeHandler()
+        let response = try #require(try call(
+            handler,
+            #"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search","arguments":{"query":"anything"}}}"#))
+        let result = try #require(response["result"] as? [String: Any])
+        let content = try #require(result["content"] as? [[String: Any]])
+        let text = try #require(content.first?["text"] as? String)
+        #expect(text.contains("\"results\""))
     }
 
     /// The embedded catalog is read-only by design; see the helper-side

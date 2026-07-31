@@ -234,7 +234,7 @@ struct MCPServerWindow: View {
     private var toolsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             sectionTitle("Available tools")
-            Text("Five read-only tools. Every observation carries a `source_authority` so Claude can distinguish PHD2-canon advice from heuristics.")
+            Text("Seven read-only tools. Every observation carries a `source_authority` so Claude can distinguish PHD2-canon advice from heuristics.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 3) {
@@ -243,6 +243,8 @@ struct MCPServerWindow: View {
                 toolRow("list_nights", "Per-night rollups (RMS, integration, target, sub-quality)")
                 toolRow("list_observations", "Recommender output with severity + source authority")
                 toolRow("get_aggregate_stats", "Median / p75 / p90 RMS across a rig's nights")
+                toolRow("search", "Free-text retrieval (ChatGPT deep-research contract)")
+                toolRow("fetch", "Full record for a search result id")
             }
             .font(.caption)
         }
@@ -251,7 +253,8 @@ struct MCPServerWindow: View {
     // MARK: - Advanced
 
     private func advancedDisclosure(_ server: MCPEmbeddedServer) -> some View {
-        DisclosureGroup {
+        @Bindable var server = server
+        return DisclosureGroup {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Privacy: localhost (127.0.0.1) only. No outbound network. No telemetry.")
                 Text("Helper binary: \(bundledBinary?.path ?? "(not located)")")
@@ -262,6 +265,30 @@ struct MCPServerWindow: View {
                         .font(.caption2.monospaced())
                         .foregroundStyle(.tertiary)
                         .textSelection(.enabled)
+                }
+
+                Toggle("Require access token on HTTP requests", isOn: $server.requireAuth)
+                    .font(.caption)
+                    .padding(.top, 4)
+                if server.requireAuth {
+                    HStack(spacing: 8) {
+                        Text("Token: \(String(server.accessToken.prefix(8)))…")
+                            .font(.caption2.monospaced())
+                            .foregroundStyle(.tertiary)
+                        Button("Copy token") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(server.accessToken, forType: .string)
+                        }
+                        .controlSize(.small)
+                        Button("Regenerate") {
+                            server.regenerateToken()
+                        }
+                        .controlSize(.small)
+                    }
+                    Text("HTTP clients must send it as `Authorization: Bearer <token>`. Required for exposing the server through a tunnel (e.g. as a ChatGPT connector) — see docs/chatgpt-connector.md.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Text("Server controls:")
                     .font(.caption)

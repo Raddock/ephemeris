@@ -44,8 +44,42 @@ final class MCPEmbeddedServer {
     @UserDefault("mcp.serverEnabled", defaultValue: false)
     private(set) var isEnabled: Bool
 
+    /// Whether /mcp requests must present the bearer token. On by default: a
+    /// local tunnel (the only way ChatGPT can reach this server) makes remote
+    /// traffic arrive as loopback connections, so the token is the only gate
+    /// between the internet and the library. Observable so the window's toggle
+    /// updates live; persisted alongside the other server settings.
+    var requireAuth: Bool {
+        didSet { UserDefaults.standard.set(requireAuth, forKey: "mcp.requireAuth") }
+    }
+
+    @ObservationIgnored
+    @UserDefault("mcp.accessToken", defaultValue: "")
+    private var storedAccessToken: String
+
+    /// Bearer token for /mcp requests, generated on first read and persisted.
+    /// The threat model is remote traffic through a tunnel — local processes
+    /// can already read the SwiftData store directly, so UserDefaults suffices.
+    var accessToken: String {
+        if storedAccessToken.isEmpty {
+            storedAccessToken = Self.generateToken()
+        }
+        return storedAccessToken
+    }
+
+    /// Invalidate the old token (e.g. after it leaked into a pasted config).
+    func regenerateToken() {
+        storedAccessToken = Self.generateToken()
+    }
+
+    private static func generateToken() -> String {
+        // SystemRandomNumberGenerator is cryptographically secure on Apple platforms.
+        (0..<32).map { _ in String(format: "%02x", UInt8.random(in: .min ... .max)) }.joined()
+    }
+
     init(library: EphemerisLibrary) {
         self.library = library
+        self.requireAuth = UserDefaults.standard.object(forKey: "mcp.requireAuth") as? Bool ?? true
     }
 
     /// Start the server only when the user has previously enabled it.
@@ -160,7 +194,8 @@ final class MCPEmbeddedServer {
             }
         }
 
-        let handler = MCPConnectionHandler(library: library)
+        let handler = MCPConnectionHandler(library: library,
+                                           requiredToken: requireAuth ? accessToken : nil)
         connection.start(queue: .global(qos: .userInitiated))
         handler.handle(connection: connection)
 

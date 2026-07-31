@@ -21,8 +21,14 @@ final class MCPConnectionHandler: @unchecked Sendable {
     static let maxRequestBytes = 1_048_576
 
     let library: EphemerisLibrary
-    init(library: EphemerisLibrary) {
+    /// When non-nil, POST /mcp requires `Authorization: Bearer <token>`. This is
+    /// the only gate between the internet and the library once the user tunnels
+    /// the port for ChatGPT — tunneled traffic arrives as loopback connections.
+    let requiredToken: String?
+
+    init(library: EphemerisLibrary, requiredToken: String? = nil) {
         self.library = library
+        self.requiredToken = requiredToken
     }
 
     func handle(connection: NWConnection) {
@@ -138,7 +144,22 @@ final class MCPConnectionHandler: @unchecked Sendable {
         return MCPProtocolHandler.supportedProtocolVersions.contains(header.trimmingCharacters(in: .whitespaces))
     }
 
+    /// Bearer-token check. A nil requiredToken disables auth (the user turned
+    /// the toggle off). Static so tests can exercise it directly.
+    static func isAuthorized(_ authorizationHeader: String?, requiredToken: String?) -> Bool {
+        guard let requiredToken else { return true }
+        guard let authorizationHeader else { return false }
+        let parts = authorizationHeader.split(separator: " ", maxSplits: 1)
+        guard parts.count == 2, parts[0].lowercased() == "bearer" else { return false }
+        return parts[1].trimmingCharacters(in: .whitespaces) == requiredToken
+    }
+
     private func handleMCPPost(request: HTTPRequest, on connection: NWConnection) {
+        guard Self.isAuthorized(request.headers["authorization"], requiredToken: requiredToken) else {
+            send(connection: connection, statusCode: 401, body: Data("unauthorized\n".utf8),
+                 contentType: "text/plain", extraHeaders: ["WWW-Authenticate": "Bearer"])
+            return
+        }
         guard Self.isJSONContentType(request.headers["content-type"]) else {
             send(connection: connection, statusCode: 415, body: Data("unsupported media type\n".utf8), contentType: "text/plain")
             return
@@ -191,6 +212,7 @@ final class MCPConnectionHandler: @unchecked Sendable {
         case 202: return "Accepted"
         case 204: return "No Content"
         case 400: return "Bad Request"
+        case 401: return "Unauthorized"
         case 403: return "Forbidden"
         case 404: return "Not Found"
         case 405: return "Method Not Allowed"
