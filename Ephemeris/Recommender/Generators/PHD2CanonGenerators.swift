@@ -17,7 +17,8 @@ nonisolated struct GuidingAssistantRecommendationObserver: RecommenderGenerator 
         for session in context.sessions {
             for parsed in GAResultParser.parse(session: session) {
                 guard let observation = buildObservation(result: parsed,
-                                                         rigProfileId: context.profile.id) else { continue }
+                                                         rigProfileId: context.profile.id,
+                                                         sessionStartedAt: session.startedAt) else { continue }
                 observations.append(observation)
             }
         }
@@ -25,7 +26,8 @@ nonisolated struct GuidingAssistantRecommendationObserver: RecommenderGenerator 
     }
 
     private func buildObservation(result: GAResultParser.Parsed,
-                                  rigProfileId: UUID) -> RecommenderObservation? {
+                                  rigProfileId: UUID,
+                                  sessionStartedAt: Date?) -> RecommenderObservation? {
         guard result.hasRecommendations else { return nil }
 
         var evidence: [EvidenceItem] = []
@@ -51,6 +53,7 @@ nonisolated struct GuidingAssistantRecommendationObserver: RecommenderGenerator 
             scope: .singleNight,
             rigProfileId: rigProfileId,
             nightRecordIds: [],
+            sessionStartedAt: sessionStartedAt,
             category: .phd2Hygiene,
             severity: .hygiene,
             title: "Guiding Assistant ran during this session",
@@ -93,7 +96,8 @@ nonisolated struct CalibrationSanityAlertObserver: RecommenderGenerator {
                         observations.append(makeObservation(
                             alertName: name,
                             verbatimText: text,
-                            rigProfileId: context.profile.id
+                            rigProfileId: context.profile.id,
+                            sessionStartedAt: session.startedAt
                         ))
                         // Stop after first match — don't double-fire on the same line
                         break
@@ -106,11 +110,13 @@ nonisolated struct CalibrationSanityAlertObserver: RecommenderGenerator {
 
     private func makeObservation(alertName: String,
                                  verbatimText: String,
-                                 rigProfileId: UUID) -> RecommenderObservation {
+                                 rigProfileId: UUID,
+                                 sessionStartedAt: Date?) -> RecommenderObservation {
         RecommenderObservation(
             scope: .singleNight,
             rigProfileId: rigProfileId,
             nightRecordIds: [],
+            sessionStartedAt: sessionStartedAt,
             category: .phd2Hygiene,
             severity: .pattern,
             title: "PHD2 calibration alert: \(alertName)",
@@ -178,6 +184,7 @@ nonisolated struct MaxDurationLimitObserver: RecommenderGenerator {
                 scope: .singleNight,
                 rigProfileId: context.profile.id,
                 nightRecordIds: [],
+                sessionStartedAt: session.startedAt,
                 category: .pattern,
                 severity: severity,
                 title: "Pulse-rail saturation on \(axis)",

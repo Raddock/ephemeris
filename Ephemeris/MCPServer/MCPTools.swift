@@ -179,6 +179,7 @@ enum MCPTools {
                     "title": .string(o.title),
                     "summary": .string(o.summary),
                     "suggested_response": .string(o.suggestedResponse),
+                    "session_started_at": o.sessionStartedAt.map { .string(iso.string(from: $0)) } ?? .null,
                     "category": .string(categoryName(o.categoryRaw)),
                     "severity": .string(severityName(o.severityRaw)),
                     "source_authority": .string(o.sourceAuthorityRaw),

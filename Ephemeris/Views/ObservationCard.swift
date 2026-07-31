@@ -9,10 +9,14 @@ import SwiftUI
 /// when the item is a merged RA + Dec pair).
 struct ObservationCard: View {
     let item: ObservationDisplayItem
+    /// When set, the collapsed row shows which session the finding came from
+    /// (used on the Summary's night report, where cards from every session mix).
+    var sessionTimeLabel: String? = nil
     @State private var expanded: Bool = false
 
-    init(item: ObservationDisplayItem) {
+    init(item: ObservationDisplayItem, sessionTimeLabel: String? = nil) {
         self.item = item
+        self.sessionTimeLabel = sessionTimeLabel
     }
 
     /// Convenience for previews and any call site with a bare observation.
@@ -69,6 +73,11 @@ struct ObservationCard: View {
                 .lineLimit(expanded ? nil : 2)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            if let sessionTimeLabel {
+                Text(sessionTimeLabel)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
             Image(systemName: expanded ? "chevron.down" : "chevron.right")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
@@ -99,7 +108,7 @@ struct ObservationCard: View {
                 axisSection(label: "RA", observation: ra)
                 axisSection(label: "Dec", observation: dec)
             } else {
-                Text(item.primary.summary)
+                markdownText(item.primary.summary)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -126,7 +135,7 @@ struct ObservationCard: View {
     private func axisSection(label: String, observation: RecommenderObservation) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             sectionLabel(label)
-            Text(observation.summary)
+            markdownText(observation.summary)
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -176,9 +185,23 @@ struct ObservationCard: View {
     private var suggestedResponseSection: some View {
         VStack(alignment: .leading, spacing: 4) {
             sectionLabel("Suggested response")
-            Text(item.primary.suggestedResponse)
+            markdownText(item.primary.suggestedResponse)
                 .font(.caption)
         }
+    }
+
+    /// Generator strings carry inline markdown (**PHD2 control names**, *manual
+    /// quotes*). `Text(String)` never parses markdown — only literal
+    /// `LocalizedStringKey` initializers do — so without this the asterisks
+    /// render literally in the card.
+    private func markdownText(_ source: String) -> Text {
+        if let attributed = try? AttributedString(
+            markdown: source,
+            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        ) {
+            return Text(attributed)
+        }
+        return Text(source)
     }
 
     private var phd2ToolsSection: some View {
@@ -263,8 +286,14 @@ struct ObservationsPanel: View {
     /// Empty-state copy — the panel serves both the document window (per-log)
     /// and the library (per-range), and "this log" reads wrong in the latter.
     var emptyMessage: String = "Nothing to surface on this log."
+    /// Label session-anchored cards with their session start time. On by the
+    /// Summary's night report, where cards from different sessions mix; off on
+    /// a session's own inspector, where the time would be redundant.
+    var showsSessionTimes: Bool = false
 
-    @AppStorage("observations.panelCollapsed") private var panelCollapsed = false
+    // Collapsed by default: the count badge invites review without the advice
+    // stack displacing the log's data on first open.
+    @AppStorage("observations.panelCollapsed") private var panelCollapsed = true
 
     private var items: [ObservationDisplayItem] {
         ObservationPairMerger.displayItems(from: observations)
@@ -279,13 +308,25 @@ struct ObservationsPanel: View {
                 } else {
                     VStack(spacing: 6) {
                         ForEach(items) { item in
-                            ObservationCard(item: item)
+                            ObservationCard(item: item, sessionTimeLabel: timeLabel(for: item))
                         }
                     }
                 }
             }
         }
     }
+
+    private func timeLabel(for item: ObservationDisplayItem) -> String? {
+        guard showsSessionTimes, let start = item.primary.sessionStartedAt else { return nil }
+        return Self.sessionTimeFormatter.string(from: start)
+    }
+
+    private static let sessionTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .none
+        f.timeStyle = .short
+        return f
+    }()
 
     private var header: some View {
         HStack {

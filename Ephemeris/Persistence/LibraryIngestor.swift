@@ -194,6 +194,7 @@ actor LibraryIngestor {
             entity.title = obs.title
             entity.summary = obs.summary
             entity.suggestedResponse = obs.suggestedResponse
+            entity.sessionStartedAt = obs.sessionStartedAt
             entity.evidenceData = (try? JSONEncoder().encode(obs.evidence)) ?? Data()
             entity.candidateContributorsData = (try? JSONEncoder().encode(obs.candidateContributors)) ?? Data()
             entity.relatedHelpTopicIdsData = (try? JSONEncoder().encode(obs.relatedHelpTopicIds)) ?? Data()

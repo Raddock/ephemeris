@@ -56,23 +56,44 @@ struct SessionInspectorView: View {
         return RecommenderEngine.default.analyze(log: log, profile: profile)
     }
 
+    /// Observations whose evidence comes from this specific session. Night-level
+    /// findings (aggregates, configuration checks) carry no session anchor and
+    /// live on the Summary's night report instead — showing them on every
+    /// session repeats the same advice ten times and attaches whole-night
+    /// evidence to sessions it wasn't measured from.
+    private func sessionObservations(for session: GuideSession) -> [RecommenderObservation] {
+        guard let start = session.startedAt else { return [] }
+        return observations.filter { $0.sessionStartedAt == start }
+    }
+
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
-                if let profile = matchedProfile {
-                    ObservationsPanel(observations: observations,
-                                      title: "Observations · \(profile.effectiveName)")
-                } else if let name = phd2ProfileName {
-                    rigConfigurePrompt(phd2Name: name)
-                }
                 switch section {
                 case .summary:
-                    EmptyView()
+                    // The whole night's report: night-level findings plus every
+                    // session-anchored one, labeled with its session time.
+                    if let profile = matchedProfile {
+                        ObservationsPanel(observations: observations,
+                                          title: "Night report · \(profile.effectiveName)",
+                                          showsSessionTimes: true)
+                    } else if let name = phd2ProfileName {
+                        rigConfigurePrompt(phd2Name: name)
+                    }
                 case .guide(let i):
                     if log.guideSessions[i].malformedFieldCount > 0 {
                         suspectDataBanner(count: log.guideSessions[i].malformedFieldCount)
                     }
                     guideContent(log.guideSessions[i])
+                    // Data first, advice after: the log's facts are the product;
+                    // observations are the bonus and must not displace them.
+                    if let profile = matchedProfile {
+                        ObservationsPanel(observations: sessionObservations(for: log.guideSessions[i]),
+                                          title: "Observations · \(profile.effectiveName)",
+                                          emptyMessage: "Nothing to surface for this session — the night report is on the Summary.")
+                    } else if let name = phd2ProfileName {
+                        rigConfigurePrompt(phd2Name: name)
+                    }
                 case .calibration(let i):
                     calibrationContent(log.calibrations[i])
                 }

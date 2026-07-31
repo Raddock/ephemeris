@@ -255,6 +255,10 @@ final class ObservationEntity {
     var summary: String = ""
     var suggestedResponse: String = ""
 
+    /// Start time of the source guide session for session-anchored findings;
+    /// nil for night-level ones. Mirrors `RecommenderObservation.sessionStartedAt`.
+    var sessionStartedAt: Date? = nil
+
     /// JSON-encoded `[EvidenceItem]`.
     var evidenceData: Data = Data()
     /// JSON-encoded `[String]`.

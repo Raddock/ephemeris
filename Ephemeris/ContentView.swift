@@ -157,6 +157,26 @@ struct ContentView: View {
                     filename: document.filename,
                     selection: $selection
                 )
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            inspectorVisible.toggle()
+                        } label: {
+                            Label("Inspector", systemImage: "sidebar.right")
+                        }
+                        .help("Show or hide inspector")
+                        .keyboardShortcut("i", modifiers: [.command, .option])
+                    }
+                }
+                .inspector(isPresented: $inspectorVisible) {
+                    SessionInspectorView(
+                        log: document.log,
+                        section: .summary,
+                        selectedTime: $chartSelectedTime,
+                        manualExclusions: manualExclusions
+                    )
+                    .inspectorColumnWidth(min: 240, ideal: 280, max: 360)
+                }
             }
         } else {
             let guideIndices = selection.compactMap { ref -> Int? in

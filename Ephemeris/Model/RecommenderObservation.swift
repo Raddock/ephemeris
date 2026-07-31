@@ -13,6 +13,11 @@ nonisolated struct RecommenderObservation: Codable, Hashable, Identifiable, Send
     var rigProfileId: UUID
     /// Single-night observations carry one ID; cross-night carry many.
     var nightRecordIds: [UUID]
+    /// Start time of the guide session this observation was derived from, when
+    /// the generator's evidence comes from exactly one session. Nil for
+    /// night-level findings (aggregates, configuration checks) — those belong
+    /// to the whole log, not to any one session's inspector.
+    var sessionStartedAt: Date?
     var category: Category
     var severity: Severity
     /// Short, scannable. *"Most sessions exceed imaging resolution"* not *"Your guiding is bad"*.
@@ -37,6 +42,7 @@ nonisolated struct RecommenderObservation: Codable, Hashable, Identifiable, Send
         scope: Scope,
         rigProfileId: UUID,
         nightRecordIds: [UUID] = [],
+        sessionStartedAt: Date? = nil,
         category: Category,
         severity: Severity,
         title: String,
@@ -55,6 +61,7 @@ nonisolated struct RecommenderObservation: Codable, Hashable, Identifiable, Send
         self.scope = scope
         self.rigProfileId = rigProfileId
         self.nightRecordIds = nightRecordIds
+        self.sessionStartedAt = sessionStartedAt
         self.category = category
         self.severity = severity
         self.title = title

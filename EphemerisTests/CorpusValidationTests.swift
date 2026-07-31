@@ -129,6 +129,87 @@ final class CorpusValidationTests: XCTestCase {
                              "Recommender produced no observations on \(urls.count) real logs")
     }
 
+    /// Pins the session-anchoring contract: generators whose evidence comes from
+    /// one session must stamp `sessionStartedAt` with a real session start, and
+    /// night-level generators must leave it nil. The inspector's per-session
+    /// filtering depends on this — an unanchored per-session observation would
+    /// silently vanish from every session view.
+    func test_corpus_sessionScopedObservations_carrySessionAnchor() throws {
+        guard corpusAvailable else {
+            throw XCTSkip("Corpus not present — skipping.")
+        }
+        var profile = RigProfile(currentName: "Edge-10m")
+        profile.imagingFocalLength = 1960
+        profile.imagingPixelSize = 5.9
+        profile.imagingBinning = 1
+        profile.guideConfiguration = .oag
+        profile.guideFocalLength = 1960
+        profile.guideCameraPixelSize = 5.9
+        profile.mountClass = .encoderBasedPremium
+        profile.hasHighPrecisionEncoders = true
+
+        let perSessionGenerators: [any RecommenderGenerator] = [
+            GuidingAssistantRecommendationObserver(),
+            CalibrationSanityAlertObserver(),
+            MaxDurationLimitObserver(),
+            DecPolarityBiasObserver(),
+            AtmosphericConditionsProxy(),
+        ]
+        let nightLevelGenerators: [any RecommenderGenerator] = [
+            CalibrationStalenessObserver(),
+            CalibrationOrthogonalityObserver(),
+            StarShapePredictionObserver(),
+            DataDrivenAlgorithmHintObserver(),
+            MinMoveValidationObserver(),
+            GuideRateValidationObserver(),
+            AggressivenessObserver(),
+            PierSideBiasObserver(),
+            CooldownSignatureObserver(),
+            GuideScaleMismatchObserver(),
+            StarLostObserver(),
+            VariableExposureDelaysObserver(),
+            MultiStarGuidingObserver(),
+            AlgorithmMismatchObserver(),
+        ]
+
+        // The classification above must cover the default engine exactly — a
+        // generator added to the engine without being classified here would
+        // escape the contract.
+        let classified = Set((perSessionGenerators + nightLevelGenerators).map { $0.identifier })
+        let registered = Set(RecommenderEngine.default.generators.map { $0.identifier })
+        XCTAssertEqual(classified, registered,
+                       "Generator classification is out of sync with RecommenderEngine.default — unclassified: \(registered.subtracting(classified)), stale: \(classified.subtracting(registered))")
+
+        var anchoredCount = 0
+        for url in try corpusGuideLogURLs() {
+            guard let text = try? String(contentsOf: url, encoding: .utf8) else { continue }
+            let log = GuideLogParser.parse(text)
+            guard !log.isEmpty else { continue }
+            let context = SingleNightContext(log: log, profile: profile)
+            let sessionStarts = Set(log.guideSessions.compactMap(\.startedAt))
+
+            for generator in perSessionGenerators {
+                for obs in generator.observe(context: context) {
+                    let anchor = try XCTUnwrap(
+                        obs.sessionStartedAt,
+                        "\(generator.identifier) emitted an unanchored observation (\(obs.title)) in \(url.lastPathComponent)")
+                    XCTAssertTrue(sessionStarts.contains(anchor),
+                                  "\(generator.identifier) anchored to a time that isn't a session start in \(url.lastPathComponent)")
+                    anchoredCount += 1
+                }
+            }
+            for generator in nightLevelGenerators {
+                for obs in generator.observe(context: context) {
+                    XCTAssertNil(obs.sessionStartedAt,
+                                 "\(generator.identifier) is night-level and must not claim a session (\(obs.title))")
+                }
+            }
+        }
+        XCTAssertGreaterThan(anchoredCount, 0,
+                             "Corpus produced no session-anchored observations — the anchoring path went untested")
+        print("[Corpus] Session-anchored observations verified: \(anchoredCount)")
+    }
+
     private func corpusGuideLogURLs() throws -> [URL] {
         let fm = FileManager.default
         let contents = try fm.contentsOfDirectory(at: corpusDirectory, includingPropertiesForKeys: nil)
