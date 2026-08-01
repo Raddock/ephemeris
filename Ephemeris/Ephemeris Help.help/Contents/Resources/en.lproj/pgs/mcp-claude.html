@@ -17,13 +17,15 @@
 <p class="lede">Ephemeris can expose your library to Claude over the Model Context Protocol, so you can ask "why did last Tuesday guide worse than usual?" and Claude answers from your actual data.</p>
 
 <h2>What Claude can see</h2>
-<p>Five read-only tools, surfaced from the library:</p>
+<p>Seven read-only tools, surfaced from the library:</p>
 <table class="spec">
     <tr><td><code>get_corpus_summary</code></td><td>High-level inventory of the library — a useful first call.</td></tr>
     <tr><td><code>list_rigs</code></td><td>Rig profiles with their imaging-train values.</td></tr>
     <tr><td><code>list_nights</code></td><td>Per-night rollups: night RMS, integration, target, sub-quality rating.</td></tr>
     <tr><td><code>list_observations</code></td><td>Recommender output, including severity and source authority.</td></tr>
     <tr><td><code>get_aggregate_stats</code></td><td>Median / p75 / p90 RMS across a rig's nights.</td></tr>
+    <tr><td><code>search</code></td><td>Free-text lookup across rigs, nights, and observations.</td></tr>
+    <tr><td><code>fetch</code></td><td>The full record behind a search result.</td></tr>
 </table>
 <p>Every observation carries its <code>source_authority</code>, so Claude can tell PHD2-canon advice apart from Ephemeris heuristics. All tools are strictly read-only: Claude can browse your library and statistics but never writes to it. To record equipment changes or notes, add annotations in the Log Library window.</p>
 
@@ -40,6 +42,7 @@
 
 <h2>Manual configuration</h2>
 <p>For other MCP clients, the <strong>Advanced</strong> disclosure shows the helper binary's path (use it as a stdio <code>command</code> entry) and a direct HTTP endpoint for clients that accept localhost URLs.</p>
+<p>The HTTP endpoint requires an access token by default: clients must send it as an <code>Authorization: Bearer …</code> header. The token lives in the same Advanced disclosure (copy or regenerate it there), and the requirement can be toggled off for trusted local setups. The one-click Claude installers use the stdio helper and don't need the token.</p>
 
 <h2>Privacy</h2>
 <div class="note"><strong>Note:</strong> The server listens on the loopback interface (<code>127.0.0.1</code>) only — nothing leaves your Mac, there is no outbound network traffic, and no telemetry. Every tool is read-only; the connector cannot change your library.</div>

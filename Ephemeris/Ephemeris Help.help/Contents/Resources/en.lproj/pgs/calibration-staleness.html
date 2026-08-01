@@ -33,12 +33,12 @@
 <h2>PHD2's auto-restore</h2>
 <p>With <strong>Auto restore calibration</strong> enabled (Advanced Settings &rsaquo; Guiding tab), PHD2 reloads the last good calibration when the gear connects, so guiding can start without a fresh calibration run. This is the right mode for permanent or pier-mounted rigs &mdash; but it also means a quietly invalidated calibration (a bumped guide camera, say) keeps getting restored night after night. The restored calibration's <em>date</em> is the tell: if the log shows a calibration weeks old, make sure nothing has changed since.</p>
 
-<div class="tip"><strong>Rule of thumb:</strong> permanent setup, untouched &mdash; recalibrate monthly or when results degrade. Portable setup &mdash; recalibrate every assembly. Either way, recalibrate after any hands-on change to the guide camera or its optics.</div>
+<div class="tip"><strong>Rule of thumb:</strong> permanent setup, untouched &mdash; keep reusing the calibration; recalibrate when results degrade. Portable setup &mdash; recalibrate every assembly. Either way, recalibrate after any hands-on change to the guide camera or its optics.</div>
 
 <p>See also <a href="calibration-troubleshooting.html">Calibration troubleshooting</a> and <a href="calibration-orthogonality.html">Calibration orthogonality</a>. Reference: <a href="https://openphdguiding.org/manual/Advanced_settings.htm">PHD2 manual &mdash; Advanced settings</a>.</p>
 
 <h2>Where this shows up in Ephemeris</h2>
-<p>Ephemeris compares each session's calibration timestamp against the session date and raises a <strong>calibration staleness</strong> observation card in two tiers: a <strong>pattern</strong> at <strong>21 days</strong> and an <strong>alert</strong> at <strong>30 days</strong>. A stale-but-working calibration isn't an emergency &mdash; the card is a prompt to confirm the geometry really hasn't changed.</p>
+<p>Ephemeris compares each session's calibration timestamp against the session date and raises a <strong>calibration staleness</strong> card in two gentle tiers: <strong>coaching</strong> at <strong>21 days</strong> and <strong>hygiene</strong> at <strong>30 days</strong>. It is never an alert, and the card says so explicitly: age alone doesn't invalidate a calibration &mdash; PHD2's own guidance is to reuse a good one, and permanent setups legitimately run the same calibration for months. The card is a prompt to confirm the geometry really hasn't changed, and it's safe to ignore when nothing has.</p>
 </div>
 </body>
 </html>
