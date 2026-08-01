@@ -6,13 +6,13 @@ Guidance for Claude Code working in the Ephemeris repository.
 
 ## What this is
 
-Ephemeris is a Mac-native analyzer for PHD2 guide logs: single-night review plus (in the 2.0 work) a multi-night SwiftData Log Library with a plain-language recommender. It is a Mac Observatory app, but unlike the others it is **public, open source (GPLv3)**: this is the suite's only public repo, so READMEs and top-level docs are read by strangers evaluating or contributing to the project, and everything committed here is visible to the world.
+Ephemeris is a Mac-native analyzer for PHD2 guide logs: single-night review plus (since 2.0) a multi-night SwiftData Log Library with a plain-language recommender. It is a Mac Observatory app, but unlike the others it is **public, open source (GPLv3)**: this is the suite's only public repo, so READMEs and top-level docs are read by strangers evaluating or contributing to the project, and everything committed here is visible to the world.
 
-**Branch state:** `v2` is the live, unfinished development branch and the most current code; `main` also carries unreleased post-1.0 work. The only shipped release is **v1.0** (tag `v1.0`, 2026-05-01). Releases are cut from `main` per `docs/RELEASE.md`; the v2-to-main merge happens when the work is done and is the owner's act. Never describe the 2.0 work as released.
+**Branch state:** two shipped releases: **v1.0** (tag `v1.0`, 2026-05-01) and **v2.0** (tag `v2.0`, 2026-07-31). The v2-to-main merge happened for the 2.0 ship; as of 2026-08-01 `main` and `v2` point at the same commit, and new work lands on whichever branch the owner designates next. Releases are cut from `main` per `docs/RELEASE.md`.
 
 ## Platform
 
-- macOS 15.0 deployment target (v2; 1.0 shipped on 14.0). Universal binary (Apple silicon + Intel).
+- macOS 15.0 deployment target (2.0; 1.0 shipped on 14.0). Universal binary (Apple silicon + Intel).
 - SwiftUI throughout; AppKit interop only where SwiftUI cannot express the need. SwiftData persistence. Swift Charts. Accelerate for FFT.
 - `SWIFT_VERSION = 5.0` with Swift 6 concurrency idioms: `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`; parser, model, stats, and log-value layers are explicitly `nonisolated`; the library ingestor is a `ModelActor`; recommender generators are `nonisolated struct`s.
 - Sandboxed, Developer ID distribution via GitHub Releases (`Raddock/ephemeris`); not on the Mac App Store, and never going there, by the owner's channel choice for the suite's open-source app. (Do not cite license conflict as the reason: `docs/CODE_PROVENANCE.md` records that GPLv3 is App Store compatible for the developer's own apps.) Sparkle 2 for updates.
@@ -37,7 +37,7 @@ The corpus-validation suite skips gracefully if the private log corpus folder is
 
 - **GPLv3 and provenance.** The whole app is GPLv3, matching upstream `agalasso/phdlogview`. The parser subsystem is a behavioral reimplementation of `logparser.cpp` and is the license-exposed area; keep everything GPLv3, and never attempt a permissive-license rewrite that consults `logparser.cpp`. Contributions are accepted only under GPLv3 (README § Contributing). Full analysis: `docs/CODE_PROVENANCE.md`.
 - **Schema migrations only.** SwiftData `SchemaV1` (7 entities) with `LibraryMigrationPlan` registered on the container. Any schema change ships as a staged migration, never an in-place edit. Known trap: the per-night rollup is a frame-weighted quadrature mean surfaced everywhere as "night RMS", but the stored attribute keeps its legacy median name until SchemaV2 (queued in `ROADMAP.md`); do not "fix" the attribute name without the migration.
-- **MCP stays read-only.** Both transports (the embedded loopback-only HTTP server and the stdio helper) expose read-only tools. The old `add_annotation` write tool and its `EPHEMERIS_MCP_ALLOW_WRITES` gate were deliberately removed in July 2026 (raw writes into the live store risk corruption); a test asserts the no-writes guarantee. If a write channel ever returns, it must be app-mediated (see `ROADMAP.md`), never direct database access. Known limitation, not a bug: the embedded server has no auth token.
+- **MCP stays read-only.** Both transports (the embedded loopback-only HTTP server and the stdio helper) expose read-only tools. The old `add_annotation` write tool and its `EPHEMERIS_MCP_ALLOW_WRITES` gate were deliberately removed in July 2026 (raw writes into the live store risk corruption); a test asserts the no-writes guarantee. If a write channel ever returns, it must be app-mediated (see `ROADMAP.md`), never direct database access. Since the 2026-07-31 ChatGPT-connector work the embedded server requires a bearer token on `/mcp` by default (generated on first use, persisted; the user can toggle it off); do not remove or weaken that gate.
 - **Sparkle.** `SUEnableAutomaticChecks` ships `false`; Sparkle shows its consent prompt per user. Never set it `true` globally. The updater stays dormant in test hosts and unconfigured builds. The private EdDSA key lives in the signing Mac's Keychain (see `docs/RELEASE.md`).
 - **Recommender voice.** The twelve throughlines in `docs/ephemeris-2.0-design-document.md` §2 are the design invariants; treat them as the most stable layer. In copy: coaching voice, never imperative; don't overclaim causation (what was measured / what it could mean / what would disambiguate); every observation carries its source-authority badge; Guiding Assistant results are surfaced verbatim (PHD2's numbers, not parallel computations); PHD2 tool names are proper nouns capitalized exactly as PHD2's manual.
 - **The Library window is never auto-opened.** Window-spawning is reserved for explicit user action; discovery is via TipKit.
@@ -58,8 +58,8 @@ The corpus-validation suite skips gracefully if the private log corpus folder is
 | `docs/README.md` | The Mac Observatory documentation standard: canonical doc set, Auto/Draft/Manual policies, lifecycle. Read before adding or hunting for a document |
 | `docs/PROJECT_STATE.md` | Generated current-state snapshot of the v2 build |
 | `docs/ROADMAP.md` | Decided-but-deferred work; items deleted when shipped |
-| `docs/CHANGELOG.md` | Per-version record: v1.0 shipped; everything since is [Unreleased] |
-| `docs/RELEASE_NOTES.md` | User-facing what's-new per released version (2.0 entry is an unpublished draft) |
+| `docs/CHANGELOG.md` | Per-version record: v1.0 and v2.0 shipped |
+| `docs/RELEASE_NOTES.md` | User-facing what's-new per released version |
 | `docs/RELEASE.md` | The release checklist (Sparkle keys, appcast, notarization, help index) |
 | `docs/FEEDBACK.md` | Triaged feedback ledger; intake is GitHub issues (public repo) |
 | `docs/ephemeris-2.0-design-document.md` | The v2 design spec: vision, twelve throughlines, build phases |
