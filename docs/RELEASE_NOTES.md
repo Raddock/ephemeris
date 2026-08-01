@@ -2,11 +2,11 @@
 
 > User-facing "what's new" per released version, newest first. This is the announcement copy of record (GitHub Releases; Sparkle release notes once 2.0 ships). Per the documentation standard this is a Draft doc: Sidecar drafts, the owner tone-checks before anything reaches users. Ephemeris has one release to date.
 
-## Unreleased — 2.0 (in development on branch `v2`; DRAFT, not published anywhere)
+## 2.0 — 2026-07-31
 
-*Draft announcement for whenever 2.0 actually ships; facts match the current build, but this text has not been released and the feature set is not final until the v2 work is done. Note for the eventual release: 1.0 shipped without Sparkle, so 1.0 users will not see an update prompt; the 2.0 announcement must reach them through GitHub, the website, and forums.*
+*Distribution note: 1.0 shipped without Sparkle, so 1.0 users will not see an update prompt; the 2.0 announcement must reach them through GitHub, the website, and forums.*
 
-Ephemeris 2.0 grows beyond a single-log viewer. Import your whole PHD2 log archive into a Log Library: nights are deduplicated, organized per rig, and charted across time. A recommender with 23 analysis rules turns your guiding data into plain-language observations ("calibration is 34 days old", "Dec drift at this rate would trail stars on a 5-minute sub at your imaging scale"), each labeled with whether it comes from PHD2's documentation, PHD2's own measurements, or an Ephemeris heuristic. Rig profiles anchor every verdict to your imaging scale. Record equipment changes and rate each night's stars; build a forum help-request post in one click; let Claude analyze your library through an opt-in, loopback-only, read-only MCP server. Adds Shortcuts support, a 41-page Help Book, and in-app updates via Sparkle going forward. Requires macOS 15 (Sequoia).
+Ephemeris 2.0 grows beyond a single-log viewer. Import your whole PHD2 log archive into a Log Library: nights are deduplicated, organized per rig, and charted across time. A recommender with 25 analysis rules turns your guiding data into plain-language observations ("calibration is 34 days old", "Dec drift at this rate would trail stars on a 5-minute sub at your imaging scale"), each labeled with whether it comes from PHD2's documentation, PHD2's own measurements, or an Ephemeris heuristic. Rig profiles anchor every verdict to your imaging scale. Record equipment changes and rate each night's stars; build a forum help-request post in one click; let Claude analyze your library through an opt-in, loopback-only, read-only MCP server. Adds Shortcuts support, a 39-page Help Book, and in-app updates via Sparkle going forward. Requires macOS 15 (Sequoia).
 
 ## 1.0 — 2026-05-01
 

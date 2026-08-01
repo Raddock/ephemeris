@@ -1,10 +1,10 @@
 # Changelog — Ephemeris
 
-> Per-version record, newest first. Ephemeris has shipped exactly one release: **v1.0** (tag `v1.0`). Everything since lives under **[Unreleased]**: the 2.0 work is in active development (currently on the `v2` branch, with earlier 2.0 phases on `main` after the v1.0 tag) and none of it has shipped. Created during the July 2026 documentation-standard conform pass from git history and the v1.0 tag.
+> Per-version record, newest first. Created during the July 2026 documentation-standard conform pass from git history and the v1.0 tag.
 
-## [Unreleased] — 2.0 development, 2026-05-18 to present (branch `v2`)
+## 2.0 — 2026-07-31 (tag `v2.0`)
 
-Version 2 grows the single-log viewer into a long-term guiding intelligence tool. `MARKETING_VERSION` already reads 2.0 in the project; no v2 tag or release exists.
+Version 2 grows the single-log viewer into a long-term guiding intelligence tool. Released 2026-07-31 from `main` (Developer ID signed, notarized, Sparkle appcast on the GitHub release). The recommender shipped with 21 single-night and 4 cross-night generators after the July 31 forum-triage additions.
 
 ### The Log Library and recommender (v2 Phases 0–9, on `main` after the v1.0 tag, 2026-05-18 onward)
 - Persistent SwiftData **Log Library** (SchemaV1, 7 entities): every opened log auto-ingests; bulk folder import with content-hash deduplication, organized per rig; the library is the app's home window.

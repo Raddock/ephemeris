@@ -24,20 +24,30 @@ on the new one, then delete the exported file.
    After the bump, run the Sidecar refresh (see CLAUDE.md, "After a version bump").
 3. Archive with the Release configuration (Developer ID identity). The bundling
    phase builds the MCP helper universal and signs it with a secure timestamp.
-4. Notarize and staple as usual; zip as `Ephemeris-x.y.zip`.
-5. **Generate the appcast** over a folder containing the zip:
+4. **Re-sign Sparkle's nested code before notarizing** (learned on the 2.0
+   release — notarization rejects the archive without this). With manual
+   Developer ID signing, Xcode leaves Sparkle's own distribution signature on
+   the framework's nested executables, which lacks a secure timestamp. Sign
+   inside-out with the Developer ID identity, `--options runtime --timestamp`:
+   Downloader.xpc and Installer.xpc (both with
+   `--preserve-metadata=entitlements`), then Updater.app, Autoupdate, the
+   framework itself, and finally the app (re-supplying its entitlements, which
+   can be extracted from the existing signature with
+   `codesign -d --entitlements - --xml`).
+5. Notarize and staple as usual; zip as `Ephemeris-x.y.zip`.
+6. **Generate the appcast** over a folder containing the zip:
    ```
    .../SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast /path/to/release-folder
    ```
    This signs the archive with the Keychain key and writes/updates `appcast.xml`.
-6. Create the GitHub release and attach **both** `Ephemeris-x.y.zip` and `appcast.xml`.
+7. Create the GitHub release and attach **both** `Ephemeris-x.y.zip` and `appcast.xml`.
    The feed URL baked into the app is
    `https://github.com/Raddock/ephemeris/releases/latest/download/appcast.xml`,
    which always resolves to the newest release's asset — no separate hosting needed.
    (Caveat: because the feed always points at the *latest* release's appcast, keep
    each release's appcast.xml cumulative — `generate_appcast` does this automatically
    if you keep prior zips in the folder.)
-7. Update the help book index if any help pages changed:
+8. Update the help book index if any help pages changed:
    ```
    cd "Ephemeris/Ephemeris Help.help/Contents/Resources/en.lproj"
    hiutil -C -a -f "Ephemeris Help.helpindex" .

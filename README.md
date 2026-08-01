@@ -8,8 +8,7 @@ Ephemeris is a Universal macOS app for astrophotographers who use [PHD2](https:/
 <!-- sidecar:facts:begin -->
 ## Status
 
-- **Current release: 1.0** (May 2026) — the single-log analyzer, macOS 14.0+, available from [GitHub Releases](https://github.com/Raddock/ephemeris/releases/latest).
-- **Version 2.0 is in active development on this branch (`v2`) and has not been released.** The Log Library section below describes the 2.0 work in progress; it will ship when it is finished.
+- **Current release: 2.0** (July 2026) — the Log Library, recommender, and MCP release, macOS 15.0+, available from [GitHub Releases](https://github.com/Raddock/ephemeris/releases/latest).
 <!-- sidecar:facts:end -->
 
 <!-- TODO: add screenshots -->
@@ -17,7 +16,7 @@ Ephemeris is a Universal macOS app for astrophotographers who use [PHD2](https:/
 <!-- draft:begin -->
 ## Features
 
-### The Log Library (2.0, in development — unreleased)
+### The Log Library (since 2.0)
 - **Multi-night library** — bulk-import a folder of PHD2 logs (deduplicated by content, organized per rig) or let every log you open auto-ingest. The library is the app's home window.
 - **Cross-night trend chart** — RMS per observing night, color-coded against your rig's imaging pixel scale.
 - **Recommender observations** — 23 analysis rules spanning PHD2's documented guidance (calibration sanity alerts, Guiding Assistant results surfaced verbatim, max-duration rail-rates) and data-derived patterns (pier-side bias, cooldown signatures, star-shape prediction, baseline regression). Every card carries a source-authority badge, its evidence, and links to the PHD2 tools it references.
@@ -45,15 +44,15 @@ Ephemeris is a Universal macOS app for astrophotographers who use [PHD2](https:/
 ## Requirements
 <!-- draft:begin -->
 
-- The released 1.0: macOS 14 (Sonoma) or later. The in-development 2.0: macOS 15 (Sequoia) or later (the library is built on APIs that require it).
+- 2.0 and later: macOS 15 (Sequoia) or later (the library is built on APIs that require it). The older 1.0 ran on macOS 14 (Sonoma).
 <!-- draft:end -->
 - A PHD2 `.txt` guide log to open. PHD2 typically saves logs to `~/Documents/PHD2/` on Mac, or `Documents\PHD2\` on Windows.
 
 ## Installation
 
-Download the `Ephemeris-x.y.zip` asset from the [GitHub Releases page](https://github.com/Raddock/ephemeris/releases/latest) (currently v1.0), unzip, and drag `Ephemeris.app` into your `Applications` folder. To try the in-development 2.0, build this branch from source in Xcode.
+Download the `Ephemeris-x.y.zip` asset from the [GitHub Releases page](https://github.com/Raddock/ephemeris/releases/latest), unzip, and drag `Ephemeris.app` into your `Applications` folder.
 
-The app is signed with Developer ID and notarized by Apple — no Gatekeeper warnings on first launch. Starting with 2.0, Ephemeris will offer in-app updates via Sparkle (automatic checks only with your consent); 1.0 shipped without Sparkle, so 1.0 users update manually.
+The app is signed with Developer ID and notarized by Apple — no Gatekeeper warnings on first launch. Starting with 2.0, Ephemeris offers in-app updates via Sparkle (automatic checks only with your consent); 1.0 shipped without Sparkle, so 1.0 users update manually.
 
 GitHub Releases is Ephemeris's only distribution channel: it is not sold on the Mac App Store, a deliberate choice for the suite's open-source app.
 
