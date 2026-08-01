@@ -15,7 +15,7 @@ on the new one, then delete the exported file.
 
 ## Every release
 
-> Status note (July 2026): active development lives on the `v2` branch, and `main` also carries unreleased post-1.0 work. Step 1's merge to `main` is the act that begins a release; until the v2 work is finished and merged, nothing past 1.0 is released. (`MARKETING_VERSION` already reads 2.0 with `CURRENT_PROJECT_VERSION` 1, and no v2 tag exists — the version was pre-bumped mid-development.)
+> Status note (updated 2026-07-31): 2.0 shipped — `v2` merged to `main`, tagged `v2.0`, published to GitHub Releases with the appcast. Development continues on `v2`; the next release starts again at step 1.
 
 1. Merge the working branch to `main`, confirm the full test suite passes
    (`xcodebuild test` for the app plus `swift test` in `tools/ephemeris-mcp/`),
@@ -59,10 +59,10 @@ on the new one, then delete the exported file.
   only shows its standard consent prompt (second launch, user chooses) when the
   key is absent — setting it to either value suppresses the prompt and pins the
   behavior globally. Don't add the key.
-- The end-to-end update path (appcast fetch → EdDSA verify → sandboxed install)
-  has never been exercised against a published release. After the first 2.0
-  release, verify it by publishing a trivial follow-up (or a local test
-  appcast) before relying on it for anything urgent.
+- Update-path verification status (2026-07-31): appcast fetch and parse are
+  proven against the live 2.0 release. The download → EdDSA verify → sandboxed
+  install leg is still unexercised — the first post-2.0 release proves it; do
+  that before relying on Sparkle for anything urgent.
 - v1.0 shipped without Sparkle, so 1.0 users will not auto-update — the 2.0
   announcement needs to reach them through release notes / the website.
 
