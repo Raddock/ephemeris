@@ -417,6 +417,14 @@ nonisolated struct GuideRateValidationObserver: RecommenderGenerator {
 /// Lag-1 autocorrelation of post-algorithm guide-corrected distances per axis.
 /// Strongly negative (< -0.3) = oscillation → aggressiveness too high.
 /// Strongly positive (> 0.3) with persistent drift = sluggish → too low.
+///
+/// Periodicity guard (forum-maintainer heuristic): before recommending a tuning
+/// change, check the residual for a dominant period. The maintainers' first
+/// diagnostic move on "oscillation" reports is periodicity — a ~14 min cycle
+/// means balance/mechanics, a worm-period cycle means PE — and in those threads
+/// they explicitly overrule aggressiveness changes. When the FFT finds a
+/// dominant period, this observer reframes the card as a mechanical/PE finding
+/// instead of tuning advice.
 nonisolated struct AggressivenessObserver: RecommenderGenerator {
     let identifier = "aggressivenessObserver"
     init() {}
@@ -454,31 +462,115 @@ nonisolated struct AggressivenessObserver: RecommenderGenerator {
         let raRMS = raRMSWeighted / Double(totalFrames)
         let decRMS = decRMSWeighted / Double(totalFrames)
 
+        // FFT source: the session with the most included frames (raw entry count
+        // can be inflated by excluded/sentinel rows). Computed lazily, and only
+        // for an axis whose autocorrelation actually crossed the threshold — the
+        // transform is the expensive part and the inspector re-runs the engine
+        // per render.
+        let longestSession = context.sessionStats.max {
+            $0.session.entries.count(where: \.included) < $1.session.entries.count(where: \.included)
+        }?.session
+        func prominentPeriod(_ axis: FrequencyAxis) -> Double? {
+            guard let session = longestSession else { return nil }
+            return FrequencyAnalyzer.analyze(session: session, axis: axis, driftCorrect: true)?
+                .prominentPeriod()
+        }
+
         var observations: [RecommenderObservation] = []
-        if let acRA = lagOneAutocorrelation(values: raValues),
+        if let acRA = lagOneAutocorrelation(values: raValues), abs(acRA) > 0.3,
            let obs = makeObservation(axis: "RA", autocorr: acRA,
                                      activeAggression: lastActiveRAAggro,
                                      rmsAxisArcsec: raRMS,
+                                     dominantPeriod: prominentPeriod(.ra),
+                                     mountClass: context.profile.mountClass,
                                      rigProfileId: context.profile.id) {
             observations.append(obs)
         }
-        if let acDec = lagOneAutocorrelation(values: decValues),
+        if let acDec = lagOneAutocorrelation(values: decValues), abs(acDec) > 0.3,
            let obs = makeObservation(axis: "Dec", autocorr: acDec,
                                      activeAggression: lastActiveDecAggro,
                                      rmsAxisArcsec: decRMS,
+                                     dominantPeriod: prominentPeriod(.dec),
+                                     mountClass: context.profile.mountClass,
                                      rigProfileId: context.profile.id) {
             observations.append(obs)
         }
         return observations
     }
 
+    /// Reframed card for the periodic case: the autocorrelation signal is real,
+    /// but the cause is a repeating disturbance, so tuning advice would treat
+    /// the symptom. Periods shorter than 60 s are ignored (seeing / noise floor,
+    /// not a mechanical signature).
+    private func periodicSignatureObservation(axis: String,
+                                              autocorr: Double,
+                                              period: Double,
+                                              rmsAxisArcsec: Double,
+                                              activeAggression: Double?,
+                                              mountClass: MountClass,
+                                              rigProfileId: UUID) -> RecommenderObservation {
+        let periodInt = Int(period.rounded())
+        let inWormBand = (200...600).contains(period)
+
+        var response = ""
+        if mountClass == .harmonicStrainWave {
+            response += "Harmonic strain-wave mounts carry large, fast periodic error by design — community guidance is to guide fast (short exposures, roughly 0.5–1.5 s) so corrections keep up with the error curve, and to let **PredictivePEC** (Brain → Algorithms → \(axis)) learn the cycle. "
+        } else if inWormBand {
+            response += "The period sits in the typical worm range — Brain → Algorithms → \(axis) → **PredictivePEC** can model and pre-correct it once trained (~2 worm cycles). "
+        }
+        response += "If the signature persists after that, check \(axis) balance, worm mesh, and cable routing before changing aggressiveness — a periodic disturbance is not a tuning problem."
+
+        var evidence: [EvidenceItem] = [
+            .init(label: "\(axis) lag-1 autocorr", value: String(format: "%+.2f", autocorr)),
+            .init(label: "Dominant \(axis) period", value: "\(periodInt)s"),
+            .init(label: "\(axis) RMS", value: formatArcsec(rmsAxisArcsec)),
+        ]
+        if let aggro = activeAggression {
+            evidence.append(.init(label: "Active \(axis) aggressiveness", value: "\(Int(aggro))% — leave it"))
+        }
+
+        return RecommenderObservation(
+            scope: .singleNight,
+            rigProfileId: rigProfileId,
+            nightRecordIds: [],
+            category: .pattern,
+            severity: .pattern,
+            title: "\(axis) errors repeat on a ~\(periodInt)s cycle — check mechanics before tuning",
+            summary: "Autocorrelation flagged the \(axis) corrections, but the residual carries a dominant ~\(periodInt)s period. A periodic signature usually means the disturbance is mechanical (periodic error, balance, worm mesh) rather than a tuning problem — adjusting aggressiveness would treat the symptom, not the cause.",
+            evidence: evidence,
+            candidateContributors: [
+                "Mount periodic error at the drive/worm period",
+                "Balance or counterweight loading on the \(axis) axis",
+                "Worm mesh, debris, or dried grease varying with rotation angle",
+            ],
+            suggestedResponse: response,
+            relatedHelpTopicIds: [HelpTopic.commonPatterns.rawValue, HelpTopic.guideAlgorithms.rawValue],
+            relatedPHD2Tools: [.guidingAssistant],
+            confidence: .medium,
+            sourceAuthority: mountClass == .harmonicStrainWave ? .communityConsensus : .ephemerisHeuristic
+        )
+    }
+
     private func makeObservation(axis: String,
                                  autocorr: Double,
                                  activeAggression: Double?,
                                  rmsAxisArcsec: Double,
+                                 dominantPeriod: Double?,
+                                 mountClass: MountClass,
                                  rigProfileId: UUID) -> RecommenderObservation? {
         // Only fire on clear signals — autocorr threshold ±0.3.
         guard abs(autocorr) > 0.3 else { return nil }
+        // Periodicity guard: a dominant residual period reroutes the advice
+        // away from aggressiveness entirely.
+        if let period = dominantPeriod, period >= 60 {
+            return periodicSignatureObservation(axis: axis,
+                                                autocorr: autocorr,
+                                                period: period,
+                                                rmsAxisArcsec: rmsAxisArcsec,
+                                                activeAggression: activeAggression,
+                                                mountClass: mountClass,
+                                                rigProfileId: rigProfileId)
+        }
         let title: String
         let summary: String
         let suggestedResponse: String
@@ -575,7 +667,9 @@ nonisolated struct DataDrivenAlgorithmHintObserver: RecommenderGenerator {
             axis: .ra,
             driftCorrect: true
         ) else { return [] }
-        guard let dominant = spectrum.dominantPeriod else { return [] }
+        // prominentPeriod, not dominantPeriod: the raw dominant bin exists for
+        // any non-flat input, which would recommend PredictivePEC off noise.
+        guard let dominant = spectrum.prominentPeriod() else { return [] }
         guard dominant >= 200, dominant <= 600 else { return [] }
 
         return [RecommenderObservation(
@@ -688,7 +782,177 @@ nonisolated struct GuideScaleMismatchObserver: RecommenderGenerator {
             }
         }
 
+        // 3. Absolute detection sanity, independent of the imaging train: coarser
+        //    than ~5″/px, star HFDs collapse toward a single pixel and PHD2's
+        //    detection starts failing ("star lost — low HFD"). The 5″/px line is
+        //    maintainer guidance from the forum's star-lost triage.
+        if headerScale > 5.0 {
+            observations.append(RecommenderObservation(
+                scope: .singleNight,
+                rigProfileId: profile.id,
+                nightRecordIds: [],
+                category: .opticalTrain,
+                severity: .equipment,
+                title: "Guide scale too coarse for reliable star detection",
+                summary: "The guide train resolves \(formatArcsec(headerScale))/px. Maintainer guidance is to stay below roughly 5″/px — coarser than that, star profiles collapse toward a pixel and PHD2's HFD-based detection becomes unreliable regardless of tuning.",
+                evidence: [
+                    .init(label: "Guide pixel scale", value: "\(formatArcsec(headerScale))/px"),
+                    .init(label: "Detection guidance", value: "< 5″/px"),
+                ],
+                candidateContributors: [
+                    "Large-pixel guide camera paired with a short focal length",
+                    "Guide-camera binning set higher than the train needs",
+                ],
+                suggestedResponse: "Reduce guide binning, or pair the camera with more focal length (OAG or a longer guide scope). If you see frequent star-lost events, this scale is the first suspect — before star-mass tolerance or search-region changes.",
+                relatedHelpTopicIds: [HelpTopic.pixelScaleAndResolution.rawValue],
+                relatedPHD2Tools: [],
+                confidence: .medium,
+                sourceAuthority: .communityConsensus
+            ))
+        }
+
         return observations
+    }
+}
+
+// MARK: - SettlingFailureObserver
+
+/// Post-dither settle failures. The forum-canonical read of this signature:
+/// steady-state guiding can look fine while dither recovery exposes polar
+/// alignment (Dec never re-converges on the lock position) or Dec backlash
+/// (the first corrections after the reversal get absorbed). Session-anchored —
+/// the evidence is one session's settle events.
+nonisolated struct SettlingFailureObserver: RecommenderGenerator {
+    let identifier = "settlingFailureObserver"
+    init() {}
+
+    func observe(context: SingleNightContext) -> [RecommenderObservation] {
+        var observations: [RecommenderObservation] = []
+        for (session, stats) in context.sessionStats {
+            let started = session.infos.filter { $0.kind == .settlingStarted }
+                .reduce(0) { $0 + max(1, $1.repeats) }
+            // Imaging apps can retry inside one settle window, producing a burst
+            // of failure events for a single attempt — cap failures at the
+            // attempt count so the ratio stays honest. (Observed in the corpus:
+            // a 10-failure storm inside one settle at the end of a bad night.)
+            let failedEvents = session.infos.filter { $0.kind == .settlingFailed }
+                .reduce(0) { $0 + max(1, $1.repeats) }
+            let failed = min(failedEvents, started)
+            guard started >= 4, failed >= 2 else { continue }
+            let ratio = Double(failed) / Double(started)
+            guard ratio >= 0.3 else { continue }
+
+            let decDriftArcsecPerMin = abs(stats.driftDec) * session.pixelScale
+            observations.append(RecommenderObservation(
+                scope: .singleNight,
+                rigProfileId: context.profile.id,
+                nightRecordIds: [],
+                sessionStartedAt: session.startedAt,
+                category: .pattern,
+                severity: .pattern,
+                title: "Settling failed on \(failed) of \(started) attempts",
+                summary: "\(Int((ratio * 100).rounded()))% of this session's settle attempts didn't converge. Guiding between dithers can look healthy while recovery is what exposes the underlying problem — the axis drifts instead of returning to the lock position.",
+                evidence: [
+                    .init(label: "Settles started", value: "\(started)"),
+                    .init(label: "Settles failed", value: "\(failed)"),
+                    .init(label: "Failure ratio", value: String(format: "%.0f%%", ratio * 100)),
+                    .init(label: "|Dec drift|", value: String(format: "%.3f″/min", decDriftArcsecPerMin)),
+                ],
+                candidateContributors: [
+                    "Polar-alignment error — Dec drifts away instead of re-converging after each dither",
+                    "Dec backlash absorbing the first corrections after the dither reversal",
+                    "Settle tolerance or timeout in the imaging app set tighter than the rig delivers",
+                ],
+                suggestedResponse: "Run Tools → **Guiding Assistant** for 5–10 minutes — it measures polar-alignment error and Dec backlash directly, which are the two usual causes. If both come back clean, relax the settle threshold or extend the settle timeout in your imaging application instead of re-tuning guiding.",
+                relatedHelpTopicIds: [HelpTopic.polarAlignmentFundamentals.rawValue, HelpTopic.guidingAssistant.rawValue],
+                relatedPHD2Tools: [.guidingAssistant],
+                confidence: .medium,
+                sourceAuthority: .ephemerisHeuristic
+            ))
+        }
+        return observations
+    }
+}
+
+// MARK: - GuideExposureClassObserver
+
+/// Guide-exposure sanity per mount class. Best Practices: 2–4 s for mounts with
+/// good RA tracking, never below 1 s (short exposures chase seeing). Encoder
+/// mounts: the manual recommends medium-long exposures (4+ s). Strain-wave
+/// mounts: community guidance runs the other way — large fast periodic error
+/// means guiding has to react quickly, so short exposures (0.5–1.5 s).
+nonisolated struct GuideExposureClassObserver: RecommenderGenerator {
+    let identifier = "guideExposureClassObserver"
+    init() {}
+
+    func observe(context: SingleNightContext) -> [RecommenderObservation] {
+        guard let session = context.sessions.last,
+              let exposureMs = session.headerProperties.exposureMs,
+              exposureMs > 0
+        else { return [] }
+        let profile = context.profile
+        let exposureText = String(format: "%.1f s", Double(exposureMs) / 1000)
+
+        switch profile.mountClass {
+        case .harmonicStrainWave where exposureMs > 2000:
+            return [makeObservation(
+                profile: profile,
+                title: "Guide exposure likely too long for a strain-wave mount",
+                summary: "This session guided at \(exposureText) exposures. Strain-wave mounts carry large, fast periodic error — the guide loop has to react quickly to stay on target, and community guidance for this class is short exposures in the 0.5–1.5 s range paired with PredictivePEC.",
+                exposureText: exposureText,
+                guidance: "0.5–1.5 s (community consensus)",
+                suggestedResponse: "Shorten the guide exposure (main window exposure dropdown) to 1 s or less, and use Brain → Algorithms → RA → **PredictivePEC** so the periodic error is pre-corrected rather than chased.",
+                authority: .communityConsensus)]
+        case .standardGearMount where exposureMs < 1000:
+            return [makeObservation(
+                profile: profile,
+                title: "Sub-second guide exposures chase seeing",
+                summary: "This session guided at \(exposureText) exposures. PHD2's Best Practices: keep the exposure short enough to react to tracking error \"but not below 1 sec\" — faster than that, corrections respond to atmospheric jitter that no mount can follow.",
+                exposureText: exposureText,
+                guidance: "1–4 s (Best Practices)",
+                suggestedResponse: "Raise the guide exposure to at least 1 s; 2–4 s suits mounts with good RA tracking. Longer exposures average out seeing and make guiding easier.",
+                authority: .phd2Manual)]
+        case .encoderBasedPremium where exposureMs < 3000:
+            return [makeObservation(
+                profile: profile,
+                title: "Guide exposure short for an encoder mount",
+                summary: "This session guided at \(exposureText) exposures on an encoder-based premium mount. PHD2's manual recommends conservative auto-guiding for this class — medium-long exposure times (4+ seconds) — so corrections don't fight the encoders over seeing.",
+                exposureText: exposureText,
+                guidance: "4+ s (PHD2 manual)",
+                suggestedResponse: "Raise the guide exposure to 4–5 s, and consider Variable Exposure Delays (Brain → Camera) so setup and settling still cycle quickly.",
+                authority: .phd2Manual)]
+        default:
+            return []
+        }
+    }
+
+    private func makeObservation(profile: RigProfile,
+                                 title: String,
+                                 summary: String,
+                                 exposureText: String,
+                                 guidance: String,
+                                 suggestedResponse: String,
+                                 authority: SourceAuthority) -> RecommenderObservation {
+        RecommenderObservation(
+            scope: .singleNight,
+            rigProfileId: profile.id,
+            nightRecordIds: [],
+            category: .suggestion,
+            severity: .suggestion,
+            title: title,
+            summary: summary,
+            evidence: [
+                .init(label: "Active guide exposure", value: exposureText),
+                .init(label: "Class guidance", value: guidance),
+                .init(label: "Mount class", value: profile.mountClass.displayName),
+            ],
+            candidateContributors: [],
+            suggestedResponse: suggestedResponse,
+            relatedHelpTopicIds: [HelpTopic.guidingAssistant.rawValue],
+            relatedPHD2Tools: [.guidingAssistant],
+            confidence: .medium,
+            sourceAuthority: authority
+        )
     }
 }
 

@@ -105,3 +105,80 @@ struct FrequencyAnalyzerTests {
         #expect(FrequencyAnalyzer.nextPowerOfTwo(257) == 512)
     }
 }
+
+// MARK: - Prominence gating (advice-quality guard)
+
+/// `prominentPeriod` gates advice generators: a genuine periodic signal passes,
+/// broadband noise and red-noise drift must not. `dominantPeriod` alone always
+/// exists for non-flat input, which is fine for chart labels but would let the
+/// periodicity guard reroute real tuning findings off noise.
+struct FrequencySpectrumProminenceTests {
+
+    /// Deterministic pseudo-noise via a linear congruential generator, so the
+    /// test can't flake on an unlucky random draw.
+    private func lcgNoise(count: Int, seed: UInt64 = 42) -> [Double] {
+        var state = seed
+        return (0..<count).map { _ in
+            state = state &* 6364136223846793005 &+ 1442695040888963407
+            return Double(state >> 33) / Double(UInt32.max) - 0.5
+        }
+    }
+
+    @Test func sineWaveIsProminent() {
+        let dt = 2.0
+        let truePeriod = 300.0
+        let times = (0..<900).map { Double($0) * dt }      // 30 min span, 6 cycles
+        let values = times.map { sin(2.0 * .pi * $0 / truePeriod) }
+        let spectrum = FrequencyAnalyzer.analyze(values: values, times: times, driftCorrect: true)
+        guard let period = spectrum?.prominentPeriod() else {
+            Issue.record("a clean 6-cycle sine must register as prominent")
+            return
+        }
+        #expect(abs(period - truePeriod) / truePeriod < 0.15)
+    }
+
+    @Test func sineInModerateNoiseIsProminent() {
+        let dt = 2.0
+        let truePeriod = 300.0
+        let noise = lcgNoise(count: 900)
+        let times = (0..<900).map { Double($0) * dt }
+        let values = times.enumerated().map { i, t in
+            sin(2.0 * .pi * t / truePeriod) + 0.3 * noise[i]
+        }
+        let spectrum = FrequencyAnalyzer.analyze(values: values, times: times, driftCorrect: true)
+        #expect(spectrum?.prominentPeriod() != nil)
+    }
+
+    @Test func whiteNoiseIsNotProminent() {
+        let dt = 2.0
+        let times = (0..<900).map { Double($0) * dt }
+        let values = lcgNoise(count: 900)
+        let spectrum = FrequencyAnalyzer.analyze(values: values, times: times, driftCorrect: true)
+        #expect(spectrum?.dominantPeriod != nil)            // raw peak always exists…
+        #expect(spectrum?.prominentPeriod() == nil)         // …but must not gate advice
+    }
+
+    @Test func randomWalkIsNotProminent() {
+        // Red noise: energy piles into the lowest bins (one or two "cycles" of
+        // drift across the span) — the minCycles requirement must reject it.
+        let dt = 2.0
+        let steps = lcgNoise(count: 900)
+        var walk: [Double] = []
+        var acc = 0.0
+        for s in steps { acc += s; walk.append(acc) }
+        let times = (0..<900).map { Double($0) * dt }
+        let spectrum = FrequencyAnalyzer.analyze(values: walk, times: times, driftCorrect: true)
+        #expect(spectrum?.prominentPeriod() == nil)
+    }
+
+    @Test func tooFewCyclesIsNotProminent() {
+        // A clean sine with under 3 cycles in the span must be rejected — at
+        // that length "periodic" and "drift" are indistinguishable.
+        let dt = 2.0
+        let truePeriod = 800.0
+        let times = (0..<900).map { Double($0) * dt }      // 1800 s span → 2.25 cycles
+        let values = times.map { sin(2.0 * .pi * $0 / truePeriod) }
+        let spectrum = FrequencyAnalyzer.analyze(values: values, times: times, driftCorrect: true)
+        #expect(spectrum?.prominentPeriod() == nil)
+    }
+}

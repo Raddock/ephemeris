@@ -31,6 +31,18 @@ recorded during the July 2026 audit.*
 - **Analysis-fingerprint skip on re-import.** Re-importing an unchanged folder
   re-runs the full parse/analysis on every dedup hit (by design, so threshold
   changes propagate). A fingerprint check would make large re-imports cheap.
+- **Mount-class RMS expectation calibration.** Forum-triage finding (July 2026):
+  a repeated maintainer move is expectation-setting — telling a budget-mount
+  owner that 50″ raw PE corrected to <2″ is a success ("stop tweaking"), and a
+  premium-mount owner that 0.38″ is excellent. The recommender could carry
+  per-mount-class RMS expectation bands and soften/celebrate observations
+  accordingly, reinforcing the anti-parameter-thrashing theme. Needs corpus
+  data per class beyond the Edge-10m to calibrate honestly.
+- **MCP server off the main actor + surfaced fetch errors.** From the July 2026
+  adversarial review: every MCP request currently serializes on the MainActor
+  (visible-stall risk under concurrent clients), and SwiftData fetch failures
+  are `try?`-coerced to empty results a client can't distinguish from an empty
+  corpus. Move tool execution to a ModelActor and return JSON-RPC errors.
 
 ## Possibly v2.x, needs its own design pass
 

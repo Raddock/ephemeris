@@ -29,13 +29,34 @@ nonisolated struct FrequencySpectrum: Sendable, Equatable {
     /// Magnitudes aligned with `periods`, normalised so peak == 1.
     var magnitudes: [Double]
     /// Period of the bin with the largest magnitude, or nil for a flat spectrum.
+    /// NOTE: this is only "which bin is biggest" — any non-flat input has one.
+    /// Fine for chart annotation; advice generators must use `prominentPeriod`.
     var dominantPeriod: Double?
     /// Effective sample interval (seconds) used for the transform.
     var sampleInterval: Double
     /// Length of the zero-padded transform input (a power of 2).
     var sampleCount: Int
+    /// Duration in seconds of the actual (pre-padding) data span.
+    var dataDuration: Double
     /// Whether linear drift was removed before transforming.
     var driftCorrected: Bool
+
+    /// The dominant period only when the peak is genuinely prominent — suitable
+    /// for gating advice, unlike `dominantPeriod`. Two requirements:
+    /// 1. Energy concentration: the normalized median magnitude must sit below
+    ///    `1/prominenceFactor`. A real periodic signal concentrates energy in a
+    ///    few bins; broadband noise keeps the median a large fraction of the peak.
+    /// 2. Enough cycles: the data must contain at least `minCycles` full cycles
+    ///    of the period, so red-noise energy piling into the lowest bins (one or
+    ///    two "cycles" of drift) can't masquerade as periodicity.
+    func prominentPeriod(prominenceFactor: Double = 5, minCycles: Double = 3) -> Double? {
+        guard let period = dominantPeriod, !magnitudes.isEmpty else { return nil }
+        let sorted = magnitudes.sorted()
+        let median = sorted[sorted.count / 2]
+        guard median <= 1.0 / prominenceFactor else { return nil }
+        guard period * minCycles <= dataDuration else { return nil }
+        return period
+    }
 }
 
 nonisolated enum FrequencyAxis: Sendable { case ra, dec }
@@ -110,6 +131,7 @@ nonisolated enum FrequencyAnalyzer {
             dominantPeriod: dominant,
             sampleInterval: dt,
             sampleCount: paddedN,
+            dataDuration: Double(windowed.count) * dt,
             driftCorrected: driftCorrect
         )
     }

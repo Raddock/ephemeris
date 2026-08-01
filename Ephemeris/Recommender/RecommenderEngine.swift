@@ -39,6 +39,10 @@ nonisolated struct RecommenderEngine: Sendable {
         DataDrivenAlgorithmHintObserver(),
         GuideScaleMismatchObserver(),
         StarLostObserver(),
+        // Forum-triage additions (July 2026): patterns the PHD2 maintainers
+        // diagnose repeatedly that the matrix didn't cover.
+        SettlingFailureObserver(),
+        GuideExposureClassObserver(),
     ])
 
     init(generators: [any RecommenderGenerator]) {

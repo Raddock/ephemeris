@@ -154,6 +154,7 @@ final class CorpusValidationTests: XCTestCase {
             MaxDurationLimitObserver(),
             DecPolarityBiasObserver(),
             AtmosphericConditionsProxy(),
+            SettlingFailureObserver(),
         ]
         let nightLevelGenerators: [any RecommenderGenerator] = [
             CalibrationStalenessObserver(),
@@ -170,6 +171,7 @@ final class CorpusValidationTests: XCTestCase {
             VariableExposureDelaysObserver(),
             MultiStarGuidingObserver(),
             AlgorithmMismatchObserver(),
+            GuideExposureClassObserver(),
         ]
 
         // The classification above must cover the default engine exactly — a
