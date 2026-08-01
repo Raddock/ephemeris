@@ -1,6 +1,6 @@
 # Ephemeris release notes
 
-> User-facing "what's new" per released version, newest first. This is the announcement copy of record (GitHub Releases; Sparkle release notes once 2.0 ships). Per the documentation standard this is a Draft doc: Sidecar drafts, the owner tone-checks before anything reaches users. Ephemeris has one release to date.
+> User-facing "what's new" per released version, newest first. This is the announcement copy of record (GitHub Releases and Sparkle release notes). Per the documentation standard this is a Draft doc: Sidecar drafts, the owner tone-checks before anything reaches users. Ephemeris has two releases to date.
 
 ## 2.0 — 2026-07-31
 
