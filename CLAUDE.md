@@ -65,7 +65,7 @@ The corpus-validation suite skips gracefully if the private log corpus folder is
 | `docs/ephemeris-2.0-design-document.md` | The v2 design spec: vision, twelve throughlines, build phases |
 | `docs/observation-gap-analysis.md` | Recommender coverage matrix (signal, PHD2 lever, coverage) |
 | `docs/CODE_PROVENANCE.md` | GPLv3 derivation analysis vs phdlogview (frozen, with dated addenda) |
-| `docs/decisions/` | Dated decision records (changelog-is-manual, number-tokenizer-gap, store-status-staleness, all 2026-07-28) |
+| `docs/decisions/` | Dated decision records (changelog-is-manual, number-tokenizer-gap, store-status-staleness, all 2026-07-28; release-staleness-key, 2026-08-01) |
 
 ## Documentation ownership (church and state)
 
