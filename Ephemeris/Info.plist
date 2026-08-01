@@ -21,8 +21,8 @@
     <!-- Required for sandboxed apps: route installs through Sparkle's XPC service. -->
     <key>SUEnableInstallerLauncherService</key>
     <true/>
-    <!-- Don't phone home until the user has consented in the first-run prompt. -->
-    <key>SUEnableAutomaticChecks</key>
-    <false/>
+    <!-- SUEnableAutomaticChecks is deliberately absent: setting it (to either
+         value) suppresses Sparkle's standard consent prompt. Leaving it unset
+         makes Sparkle ask the user on second launch and store their choice. -->
 </dict>
 </plist>

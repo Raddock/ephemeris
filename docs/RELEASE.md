@@ -45,8 +45,14 @@ on the new one, then delete the exported file.
 
 ## Notes
 
-- `SUEnableAutomaticChecks` ships as `false`; Sparkle shows its standard consent
-  prompt and flips the preference per-user. Don't set it to `true` globally.
+- `SUEnableAutomaticChecks` is deliberately **not set** in Info.plist. Sparkle
+  only shows its standard consent prompt (second launch, user chooses) when the
+  key is absent — setting it to either value suppresses the prompt and pins the
+  behavior globally. Don't add the key.
+- The end-to-end update path (appcast fetch → EdDSA verify → sandboxed install)
+  has never been exercised against a published release. After the first 2.0
+  release, verify it by publishing a trivial follow-up (or a local test
+  appcast) before relying on it for anything urgent.
 - v1.0 shipped without Sparkle, so 1.0 users will not auto-update — the 2.0
   announcement needs to reach them through release notes / the website.
 

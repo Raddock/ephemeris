@@ -14,5 +14,15 @@
 	<!-- Sparkle 2: fetch the appcast and update archive from GitHub. -->
 	<key>com.apple.security.network.client</key>
 	<true/>
+	<!-- Sparkle 2 sandboxed install: the app must be able to look up the
+	     installer's status (-spks) and progress (-spki) mach services. Required
+	     alongside SUEnableInstallerLauncherService per Sparkle's sandboxing
+	     docs — without these, checks and downloads succeed but the install
+	     itself fails. -->
+	<key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER)-spks</string>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER)-spki</string>
+	</array>
 </dict>
 </plist>
