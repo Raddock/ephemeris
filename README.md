@@ -1,4 +1,4 @@
-<!-- Generated from commit 751e29a at version 2.0 / build 1, 2026-07-19. -->
+<!-- Generated from commit 23c7a91 at version 2.0 / build 1, 2026-08-14. -->
 # Ephemeris
 
 A Mac-native analyzer for PHD2 guide logs — single-night review and a multi-night library with plain-language recommendations.
