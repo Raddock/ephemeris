@@ -67,26 +67,6 @@ The corpus-validation suite skips gracefully if the private log corpus folder is
 | `docs/CODE_PROVENANCE.md` | GPLv3 derivation analysis vs phdlogview (frozen, with dated addenda) |
 | `docs/decisions/` | Dated decision records (changelog-is-manual, number-tokenizer-gap, store-status-staleness, all 2026-07-28; release-staleness-key, 2026-08-01) |
 
-## Documentation ownership (church and state)
+@~/shared-claude-rules/doc-ownership.md
 
-Per the standard (docs/README.md): every doc has exactly one owner; owners never write into each other's files.
-
-- **Sidecar-owned**, regenerated from code: never hand-edit once the doc carries a "Generated from commit..." header: docs/CODEBASE_OVERVIEW.md, docs/PROJECT_STATE.md, docs/README.md, and docs/RELEASE_NOTES.md / docs/APP_STORE_RELEASE_NOTES.md (Draft: Sidecar proposes, Andrew approves). README.md is Sidecar-owned with marked draft:begin/end human regions, the one deliberate exception.
-- **Claude Code-owned**, derived from conversation; Sidecar never writes these: docs/CHANGELOG.md (Manual by owner decision 2026-07-28, recorded in docs/decisions/2026-07-28-changelog-is-manual.md; release sessions write it with the change, Sidecar reads and cites only), CLAUDE.md, docs/ROADMAP.md, docs/FEEDBACK.md and docs/FEEDBACK_HISTORY.md, docs/decisions/, docs/RELEASE.md.
-- **Frozen**, nobody writes: docs/archive/.
-
-Until a doc carries the header it is hand-maintained, whatever its eventual owner. Sidecar knows what the code says; Claude Code knows what the conversation said: a fact that cannot be produced by a command does not belong in a Sidecar-owned doc.
-
-
-## After a version bump
-
-When you bump `MARKETING_VERSION` or `CURRENT_PROJECT_VERSION`, run the Sidecar
-refresh afterward so the docs catch up the same day (the nightly run is the
-backstop, not the plan):
-
-```sh
-node ~/Developer/MacObservatory/Sidecar/generator/sidecar-generate.mjs refresh ephemeris
-```
-
-It reports which Sidecar-owned docs need regeneration; complete them per its
-output (or hand the report to a Sidecar session).
+@~/shared-claude-rules/after-version-bump.md

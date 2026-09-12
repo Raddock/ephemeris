@@ -20,4 +20,5 @@ Package.resolved
 .DS_Store
 
 # Claude development artifacts (kept local)
-.claude/
+.claude/*
+!.claude/settings.json

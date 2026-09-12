@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "ask": [
+      "Edit(/Ephemeris.xcodeproj/**)"
+    ],
+    "deny": [
+      "Edit(**/*.entitlements)"
+    ]
+  }
+}
