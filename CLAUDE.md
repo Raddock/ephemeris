@@ -8,13 +8,13 @@ Guidance for Claude Code working in the Ephemeris repository.
 
 Ephemeris is a Mac-native analyzer for PHD2 guide logs: single-night review plus (since 2.0) a multi-night SwiftData Log Library with a plain-language recommender. It is a Mac Observatory app, but unlike the others it is **public, open source (GPLv3)**: this is the suite's only public repo, so READMEs and top-level docs are read by strangers evaluating or contributing to the project, and everything committed here is visible to the world.
 
-**Branch state:** two shipped releases: **v1.0** (tag `v1.0`, 2026-05-01) and **v2.0** (tag `v2.0`, 2026-07-31). The v2-to-main merge happened for the 2.0 ship; as of 2026-08-01 `main` and `v2` point at the same commit, and new work lands on whichever branch the owner designates next. Releases are cut from `main` per `docs/RELEASE.md`.
+**Branch state:** two shipped releases: **v1.0** (tag `v1.0`, 2026-05-01) and **v2.0** (tag `v2.0`, 2026-07-31). The v2-to-main merge happened for the 2.0 ship. Check `git log main..v2` for current branch state rather than trusting a note here. Releases are cut from `main` per `docs/RELEASE.md`.
 
 ## Platform
 
 - macOS 15.0 deployment target (2.0; 1.0 shipped on 14.0). Universal binary (Apple silicon + Intel).
 - SwiftUI throughout; AppKit interop only where SwiftUI cannot express the need. SwiftData persistence. Swift Charts. Accelerate for FFT.
-- `SWIFT_VERSION = 5.0` with Swift 6 concurrency idioms: `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`; parser, model, stats, and log-value layers are explicitly `nonisolated`; the library ingestor is a `ModelActor`; recommender generators are `nonisolated struct`s.
+- **Build posture:** Swift 5 language mode (`SWIFT_VERSION = 5.0`, all 6 configs), `SWIFT_APPROACHABLE_CONCURRENCY = YES`, strict concurrency not set; Xcode 27 / Swift 6.4 toolchain. Data-race mistakes surface at runtime here, not as build errors. (verify: `grep -o 'SWIFT_[A-Z_]* = [A-Za-z0-9.]*' *.xcodeproj/project.pbxproj | sort -u`) Swift 6 concurrency idioms throughout: `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`; parser, model, stats, and log-value layers are explicitly `nonisolated`; the library ingestor is a `ModelActor`; recommender generators are `nonisolated struct`s.
 - Sandboxed, Developer ID distribution via GitHub Releases (`Raddock/ephemeris`); not on the Mac App Store, and never going there, by the owner's channel choice for the suite's open-source app. (Do not cite license conflict as the reason: `docs/CODE_PROVENANCE.md` records that GPLv3 is App Store compatible for the developer's own apps.) Sparkle 2 for updates.
 - **Ephemeris does not use the Mac Observatory suite design system** (`~/Developer/MacObservatory/DESIGN_SYSTEM.md` is not referenced here, and no suite accent is defined). Follow this app's own established look and the HIG; do not import suite tokens without the owner's direction.
 
