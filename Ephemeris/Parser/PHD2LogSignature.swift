@@ -56,14 +56,14 @@ nonisolated enum PHD2LogSignature {
                 ?? String(data: head, encoding: .isoLatin1) else { return .binary }
 
         // 4. Banner is the strongest signal.
-        if text.hasPrefix("PHD2 version ") { return .confirmed }
+        if isBanner(text) { return .confirmed }
 
         // Tolerate leading whitespace on the first line. (PHD2 itself never
         // writes a BOM, so we don't try to strip U+FEFF; a hypothetical
         // BOM-prefixed file would still classify as `.likely` via the
         // section-marker fallback below.)
         let firstLine = text.split(whereSeparator: { $0.isNewline }).first.map(String.init) ?? ""
-        if firstLine.trimmingCharacters(in: .whitespaces).hasPrefix("PHD2 version ") {
+        if isBanner(firstLine.trimmingCharacters(in: .whitespaces)) {
             return .confirmed
         }
 
@@ -80,6 +80,13 @@ nonisolated enum PHD2LogSignature {
         }
 
         return .notPHD2
+    }
+
+    /// True when `line` starts with the log banner. PHD2 writes
+    /// "PHD2 version 2.6.14 [Windows], Log version 2.5. ..."; ZWO's ASIAir writes
+    /// "PHD2 version, Log version 2.5. ..." with no version number.
+    static func isBanner<S: StringProtocol>(_ line: S) -> Bool {
+        line.hasPrefix("PHD2 version ") || line.hasPrefix("PHD2 version,")
     }
 
     /// Convenience for the common case: feed the whole file's `Data` and let

@@ -74,8 +74,14 @@ nonisolated struct SessionHeaderProperties: Sendable {
         var yMinMove: Double?
 
         for line in rawHeader {
-            if let m = Self.match(line, pattern: #"RA = ([\-\d.]+) hr, Dec = ([\-\d.]+) deg, Hour angle = ([\-\d.]+) hr, Pier side = (\w+)"#) {
-                ra = Double(m[0]); dec = Double(m[1]); ha = Double(m[2]); pier = m[3]
+            // Pointing line. PHD2 writes "RA = 12.64 hr, Dec = 13.0 deg, Hour angle = ...";
+            // ASIAir omits the RA field, so Dec, hour angle, and pier side are matched
+            // on their own and RA only when present.
+            if let m = Self.match(line, pattern: #"Dec = ([\-\d.]+) deg, Hour angle = ([\-\d.]+) hr, Pier side = (\w+)"#) {
+                dec = Double(m[0]); ha = Double(m[1]); pier = m[2]
+                if let r = Self.match(line, pattern: #"RA = ([\-\d.]+) hr, Dec = "#) {
+                    ra = Double(r[0])
+                }
             }
             if let m = Self.match(line, pattern: #"Alt = ([\-\d.]+) deg, Az = ([\-\d.]+) deg"#) {
                 alt = Double(m[0]); az = Double(m[1])

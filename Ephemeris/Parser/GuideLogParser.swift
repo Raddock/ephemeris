@@ -177,7 +177,11 @@ nonisolated enum GuideLogParser {
     // MARK: - Top of file / section starts
 
     private static func parseTopVersion(_ line: String) -> (phd: String, log: String)? {
-        guard line.hasPrefix("PHD2 version ") else { return nil }
+        guard PHD2LogSignature.isBanner(line) else { return nil }
+        // ASIAir writes "PHD2 version, Log version 2.5. ..." with no PHD2 version number.
+        if line.hasPrefix("PHD2 version, Log version ") {
+            return ("", String(line.dropFirst("PHD2 version, Log version ".count)))
+        }
         let rest = line.dropFirst("PHD2 version ".count)
         if let r = rest.range(of: ", Log version ") {
             let phd = String(rest[..<r.lowerBound])
