@@ -2,6 +2,15 @@
 
 > Per-version record, newest first. Created during the July 2026 documentation-standard conform pass from git history and the v1.0 tag.
 
+## 2.0.1 (unreleased, build 2)
+
+Point release for ASIAir guide logs, merged from `v2` to `main` 2026-10-23. Not yet tagged, signed, or published.
+
+- **ASIAir banner recognized.** ASIAir writes `PHD2 version, Log version 2.5` with no version number. The signature check and the version parser share a new `PHD2LogSignature.isBanner`, so these logs classify as `.confirmed` (they previously passed only as `.likely`) and keep their log version.
+- **Pointing line without RA.** ASIAir omits `RA = ` from the pointing line, and `SessionHeaderProperties` matched Dec, hour angle, and pier side in one regex anchored on RA, so all three were lost. They are now matched on their own; RA is read only when present.
+- `ASIAirFormatTests` covers both with a synthetic log in the ASIAir layout, plus regressions for full PHD2 pointing lines and for other `Dec =` fields.
+- Reported by a user whose ASIAir log would not open. That log already parsed in 2.0, so the error they saw is still unexplained.
+
 ## 2.0 — 2026-07-31 (tag `v2.0`)
 
 Version 2 grows the single-log viewer into a long-term guiding intelligence tool. Released 2026-07-31 from `main` (Developer ID signed, notarized, Sparkle appcast on the GitHub release). The recommender shipped with 21 single-night and 4 cross-night generators after the July 31 forum-triage additions.

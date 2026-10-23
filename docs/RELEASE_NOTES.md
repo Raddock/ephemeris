@@ -2,6 +2,10 @@
 
 > User-facing "what's new" per released version, newest first. This is the announcement copy of record (GitHub Releases and Sparkle release notes). Per the documentation standard this is a Draft doc: Sidecar drafts, the owner tone-checks before anything reaches users. Ephemeris has two releases to date.
 
+## 2.0.1 (unreleased)
+
+Ephemeris now reads guide logs from ZWO's ASIAir more completely. The ASIAir writes a PHD2-compatible log that leaves out the PHD2 version number and the RA position. Ephemeris now recognizes these logs as PHD2 logs straight away, and keeps each guiding session's declination, hour angle, and pier side, which it was dropping. Thanks to the ASIAir user who sent in a log. Requires macOS 15 (Sequoia).
+
 ## 2.0 — 2026-07-31
 
 *Distribution note: 1.0 shipped without Sparkle, so 1.0 users will not see an update prompt; the 2.0 announcement must reach them through GitHub, the website, and forums.*
