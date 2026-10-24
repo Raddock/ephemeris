@@ -2,9 +2,9 @@
 
 > Per-version record, newest first. Created during the July 2026 documentation-standard conform pass from git history and the v1.0 tag.
 
-## 2.0.1 (unreleased, build 2)
+## 2.0.1 — 2026-10-23 (tag `v2.0.1`, build 2)
 
-Point release for ASIAir guide logs, merged from `v2` to `main` 2026-10-23. Not yet tagged, signed, or published.
+Point release for ASIAir guide logs, merged from `v2` to `main` and released 2026-10-23 (Developer ID signed, notarized, Sparkle appcast with a 2.0 to 2.0.1 delta on the GitHub release).
 
 - **ASIAir banner recognized.** ASIAir writes `PHD2 version, Log version 2.5` with no version number. The signature check and the version parser share a new `PHD2LogSignature.isBanner`, so these logs classify as `.confirmed` (they previously passed only as `.likely`) and keep their log version.
 - **Pointing line without RA.** ASIAir omits `RA = ` from the pointing line, and `SessionHeaderProperties` matched Dec, hour angle, and pier side in one regex anchored on RA, so all three were lost. They are now matched on their own; RA is read only when present.

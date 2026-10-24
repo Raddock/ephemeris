@@ -15,7 +15,7 @@ on the new one, then delete the exported file.
 
 ## Every release
 
-> Status note (updated 2026-07-31): 2.0 shipped — `v2` merged to `main`, tagged `v2.0`, published to GitHub Releases with the appcast. Development continues on `v2`; the next release starts again at step 1.
+> Status note (updated 2026-10-23): 2.0.1 shipped: tagged `v2.0.1` on `main`, published to GitHub Releases with the cumulative appcast and a 2.0 to 2.0.1 delta. Development continues on `v2`; the next release starts again at step 1.
 
 1. Merge the working branch to `main`, confirm the full test suite passes
    (`xcodebuild test` for the app plus `swift test` in `tools/ephemeris-mcp/`),
@@ -59,10 +59,15 @@ on the new one, then delete the exported file.
   only shows its standard consent prompt (second launch, user chooses) when the
   key is absent — setting it to either value suppresses the prompt and pins the
   behavior globally. Don't add the key.
-- Update-path verification status (2026-07-31): appcast fetch and parse are
-  proven against the live 2.0 release. The download → EdDSA verify → sandboxed
-  install leg is still unexercised — the first post-2.0 release proves it; do
-  that before relying on Sparkle for anything urgent.
+- Update-path verification status (2026-10-23): appcast fetch and parse are
+  proven against the live 2.0 release. 2.0.1 is the first post-2.0 release, so
+  the download → EdDSA verify → sandboxed install leg is exercised the first
+  time a 2.0 install updates to it; confirm that before relying on Sparkle for
+  anything urgent.
+- `generate_appcast` emits a delta (`EphemerisN-M.delta`) when the prior zip is
+  in the folder; attach it to the release alongside the zip and appcast.
+- Notarization credentials on the signing Mac: keychain profile
+  `ephemeris-notary` (`xcrun notarytool submit ... --keychain-profile ephemeris-notary --wait`).
 - v1.0 shipped without Sparkle, so 1.0 users will not auto-update — the 2.0
   announcement needs to reach them through release notes / the website.
 
