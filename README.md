@@ -1,4 +1,4 @@
-<!-- Generated from commit 23c7a91 at version 2.0 / build 1, 2026-08-14. -->
+<!-- Generated from commit 27550fa at version 2.0.1 / build 2, 2026-10-23. -->
 # Ephemeris
 
 A Mac-native analyzer for PHD2 guide logs — single-night review and a multi-night library with plain-language recommendations.
@@ -8,7 +8,7 @@ Ephemeris is a Universal macOS app for astrophotographers who use [PHD2](https:/
 <!-- sidecar:facts:begin -->
 ## Status
 
-- **Current release: 2.0** (July 2026) — the Log Library, recommender, and MCP release, macOS 15.0+, available from [GitHub Releases](https://github.com/Raddock/ephemeris/releases/latest).
+- **Current release: 2.0.1** (October 2026): a point release that opens ASIAir guide logs correctly, on top of 2.0 (the Log Library, recommender, and MCP release). macOS 15.0+, available from [GitHub Releases](https://github.com/Raddock/ephemeris/releases/latest).
 <!-- sidecar:facts:end -->
 
 <!-- TODO: add screenshots -->
