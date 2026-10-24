@@ -59,11 +59,9 @@ on the new one, then delete the exported file.
   only shows its standard consent prompt (second launch, user chooses) when the
   key is absent — setting it to either value suppresses the prompt and pins the
   behavior globally. Don't add the key.
-- Update-path verification status (2026-10-23): appcast fetch and parse are
-  proven against the live 2.0 release. 2.0.1 is the first post-2.0 release, so
-  the download → EdDSA verify → sandboxed install leg is exercised the first
-  time a 2.0 install updates to it; confirm that before relying on Sparkle for
-  anything urgent.
+- Update-path verification status (2026-10-23): the full Sparkle path is
+  proven. An installed 2.0 on the Mac Studio found 2.0.1 in the live appcast,
+  downloaded it, passed EdDSA verification, and completed the sandboxed install.
 - `generate_appcast` emits a delta (`EphemerisN-M.delta`) when the prior zip is
   in the folder; attach it to the release alongside the zip and appcast.
 - Notarization credentials on the signing Mac: keychain profile
