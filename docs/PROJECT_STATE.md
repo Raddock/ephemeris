@@ -1,9 +1,9 @@
 # Ephemeris — Project State (v2)
 
-> Generated from commit 3e5dd4b at version 2.0 / build 1, 2026-08-01.
+> Generated from commit 27550fa at version 2.0.1 / build 2, 2026-10-23.
 
 <!-- sidecar:facts:begin -->
-> **Measured at `3e5dd4b` (`v2`), 2026-08-01:** 91 Swift files in the app target `Ephemeris/`; 17,840 lines of Swift; 23 test files.
+> **Measured at `27550fa` (`v2`), 2026-10-23:** 91 Swift files in the app target `Ephemeris/`; 17,857 lines of Swift; 24 test files.
 <!-- sidecar:facts:end -->
 
 *Snapshot for design / strategy reference. Generated from the codebase on the `v2` branch and not from memory. **2.0 shipped 2026-07-31**: `v2` was merged to `main`, tagged `v2.0`, and published to GitHub Releases with a Sparkle appcast; everything below describes the shipped 2.0 plus the post-release work on the branch. See `CHANGELOG.md` and `RELEASE_NOTES.md`; deferred work lives in `ROADMAP.md`. Branch topology since the ship: `main` and `v2` point at the same commit, and releases are cut from `main` (`RELEASE.md`). For an outside reader: this is an open-source (GPLv3) project, and this document plus the README are the honest picture of where it stands. Supersedes the v1 snapshot; see `docs/ephemeris-2.0-design-document.md` for the design the v2 build followed.*
