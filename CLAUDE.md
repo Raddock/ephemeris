@@ -8,7 +8,7 @@ Guidance for Claude Code working in the Ephemeris repository.
 
 Ephemeris is a Mac-native analyzer for PHD2 guide logs: single-night review plus (since 2.0) a multi-night SwiftData Log Library with a plain-language recommender. It is a Mac Observatory app, but unlike the others it is **public, open source (GPLv3)**: this is the suite's only public repo, so READMEs and top-level docs are read by strangers evaluating or contributing to the project, and everything committed here is visible to the world.
 
-**Branch state:** two shipped releases: **v1.0** (tag `v1.0`, 2026-05-01) and **v2.0** (tag `v2.0`, 2026-07-31). The v2-to-main merge happened for the 2.0 ship. Check `git log main..v2` for current branch state rather than trusting a note here. Releases are cut from `main` per `docs/RELEASE.md`.
+**Branch state:** three shipped releases: **v1.0** (tag `v1.0`, 2026-05-01), **v2.0** (tag `v2.0`, 2026-07-31), and **v2.0.1** (tag `v2.0.1`, 2026-10-23, ASIAir log fixes). The v2-to-main merge happened for the 2.0 ship. Check `git log main..v2` for current branch state rather than trusting a note here. Releases are cut from `main` per `docs/RELEASE.md`.
 
 ## Platform
 
@@ -65,7 +65,7 @@ The corpus-validation suite skips gracefully if the private log corpus folder is
 | `docs/ephemeris-2.0-design-document.md` | The v2 design spec: vision, twelve throughlines, build phases |
 | `docs/observation-gap-analysis.md` | Recommender coverage matrix (signal, PHD2 lever, coverage) |
 | `docs/CODE_PROVENANCE.md` | GPLv3 derivation analysis vs phdlogview (frozen, with dated addenda) |
-| `docs/decisions/` | Dated decision records (changelog-is-manual, number-tokenizer-gap, store-status-staleness, all 2026-07-28; release-staleness-key, 2026-08-01) |
+| `docs/decisions/` | Dated decision records (changelog-is-manual, number-tokenizer-gap, store-status-staleness, all 2026-07-28; release-staleness-key, 2026-08-01; asiair-log-support, 2026-10-23) |
 
 @~/shared-claude-rules/doc-ownership.md
 
