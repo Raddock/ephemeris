@@ -97,20 +97,9 @@ struct SettingsWindow: View {
             return
         }
         do {
-            // Delete on the container's main context — the same context the open
-            // Library window's @Query reads from — so its night/observation lists
-            // refresh after the reset instead of showing rows for deleted entities.
-            let context = library.container.mainContext
-            // SwiftData's batch-delete predicates need each model type listed
-            // explicitly. We delete child entities before parents to keep the
-            // cascade-rule timing predictable.
-            try context.delete(model: ObservationEntity.self)
-            try context.delete(model: AnnotationEntity.self)
-            try context.delete(model: GAResultEntity.self)
-            try context.delete(model: SessionRecordEntity.self)
-            try context.delete(model: TargetClusterEntity.self)
-            try context.delete(model: NightRecordEntity.self)
-            try context.save()
+            // Deletes through the main context so an open Library window drops
+            // its rows instead of reading deleted ones (see resetLibraryData).
+            try library.resetLibraryData()
             // Remove every Ephemeris donation from Spotlight so stale results stop appearing.
             CoreSpotlightIndexer.removeAll()
             // The discovery tip's counter mirrors library contents — reset it too.

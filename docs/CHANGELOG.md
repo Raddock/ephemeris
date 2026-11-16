@@ -8,6 +8,7 @@
 - **ASIAir Autorun logs named on open.** `PHD2LogSignature` returns `.asiAirAutorunLog` for the ASIAir's `Autorun_Log_*.txt` (the `[Autorun|` marker, checked only after every PHD2 marker fails), and the open error points to the `PHD2_GuideLog_` file from the same night instead of the generic "not a PHD2 guide log".
 - `ASIAirFormatTests` adds rig-key cases (blank vs named vs missing profile, mount change) and an end-to-end bulk import of two synthetic ASIAir nights into one rig. Help pages Bulk import and Rig profiles explain ASIAir rig naming.
 - Decision record: `docs/decisions/2026-11-16-asiair-rig-identity.md`.
+- **Reset Log Library no longer crashes with the Library window open** (bug present in 2.0 and 2.0.1). The reset used `ModelContext.delete(model:)`, a store-level batch delete that bypasses the context: the window's `@Query` kept its night objects, still registered and apparently live, and the next redraw trapped reading a deleted `SessionRecordEntity` (`StarShapePredictor.predict`, from the night row's predicted-shape chip). `EphemerisLibrary.resetLibraryData()` now deletes object by object on the main context, which detaches each object so the queries drop it. `LibraryResetTests` holds a night across the reset, as the open window does.
 
 ## 2.0.1 — 2026-10-23 (tag `v2.0.1`, build 2)
 

@@ -29,6 +29,34 @@ final class EphemerisLibrary {
         )
     }
 
+    /// Deletes every ingested night and everything hanging off it (observations,
+    /// annotations, GA results, session records) plus target clusters. Rig
+    /// profiles stay.
+    ///
+    /// Deletes object by object on the main context, the one the Library
+    /// window's `@Query`s read. `ModelContext.delete(model:)` is a store-level
+    /// batch delete that bypasses the context: an open Library window kept its
+    /// fetched nights, their session rows were gone from the store, and the
+    /// next redraw trapped reading `SessionRecordEntity.rmsRAArcsec`. Deleting
+    /// through the context marks each object deleted, so the queries drop them
+    /// before anything reads them. Children go first so nothing is left for a
+    /// cascade to fault in; the night's cascade rules still cover any stragglers.
+    func resetLibraryData() throws {
+        let context = container.mainContext
+        func deleteAll<T: PersistentModel>(_ type: T.Type) throws {
+            for object in try context.fetch(FetchDescriptor<T>()) {
+                context.delete(object)
+            }
+        }
+        try deleteAll(ObservationEntity.self)
+        try deleteAll(AnnotationEntity.self)
+        try deleteAll(GAResultEntity.self)
+        try deleteAll(SessionRecordEntity.self)
+        try deleteAll(TargetClusterEntity.self)
+        try deleteAll(NightRecordEntity.self)
+        try context.save()
+    }
+
     // Rig-profile reads and writes go through RigProfileStore, which owns
     // RigProfileEntity directly — the old mirror-sync helpers are gone with
     // the JSON sidecar.
