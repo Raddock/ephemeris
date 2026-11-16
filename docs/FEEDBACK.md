@@ -18,7 +18,8 @@ Format per entry, once items exist:
 - **Source:** email to the owner from an ASIAir user (not a GitHub issue), 2026-10-19, with one ASIAir log attached
 - **Report:** Ephemeris would not open the "PHD2 compatible" `.txt` guide logs the ASIAir writes, and showed an error.
 - **Triage:** accepted. The attached log opened in 2.0 without an error (1 calibration, 2 sessions, 0 malformed fields), so the reported error is not reproduced. The log did expose two parse gaps, fixed in 2.0.1: the banner has no PHD2 version number (`PHD2 version, Log version 2.5`), and the pointing line has no `RA = ` field, which dropped Dec, hour angle, and pier side. A reply asking for the exact error text, their macOS version, and how they opened the file was sent (drafted 2026-10-19; send date not recorded). Leading guesses, unconfirmed: a non-guide `.txt` from the ASIAir log folder, or macOS older than 15.
-- **Status:** open (error unexplained); parse gaps shipped in 2.0.1 (`91de94a`). The reporter's log is not in the repo; `ASIAirFormatTests` uses a synthetic log in the same layout.
+- **Follow-up (2026-11-16):** after 2.0.1, ASIAir logs were reported as still not importing. A customer's folder (11 guide logs, 8 Autorun logs) showed the cause: parsing was fine, but the blank `Equipment Profile =` line made bulk import reject every file with "no `Equipment Profile = …` line in header" (very likely the error originally reported), and single-file open never ingested. Fixed by building a rig key from the guide train (`RigIdentity`); Autorun logs now get a specific open error. All 11 logs import. Record: `decisions/2026-11-16-asiair-rig-identity.md`.
+- **Status:** fixed on `main`, unreleased; move to Resolved when it ships. Parse gaps shipped in 2.0.1 (`91de94a`). Customer logs are not in the repo; `ASIAirFormatTests` uses synthetic logs in the same layout.
 
 ## Resolved
 

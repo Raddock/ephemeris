@@ -55,6 +55,14 @@ recorded during the July 2026 audit.*
   If Claude-driven annotation writing comes back, it must route through the app
   (e.g. the embedded server brokering into the ModelContainer), never through
   direct database access.
+- **ASIAir targets from the Autorun log.** ASIAir guide logs have no RA, so
+  their nights don't cluster by target. The `Autorun_Log_*.txt` saved beside
+  each guide log names the target and its coordinates
+  (`[Autorun|Begin] NGC 7380 Start`, `Target RA:22h48m24s DEC:+58°8'53"`).
+  Pairing the two files by time could restore target clustering and Messier
+  matching. Needs a decision on how a second file enters import (bulk import
+  could pick it up from the same folder; single-file open has no grant for
+  the sibling). See `decisions/2026-11-16-asiair-rig-identity.md`.
 
 ## v3 conversations
 

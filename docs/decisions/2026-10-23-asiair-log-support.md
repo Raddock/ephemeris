@@ -35,6 +35,11 @@ the guide algorithm lines match PHD2.
   build ran on the MacBook Air because the Developer ID identity and the
   Sparkle EdDSA key are not on the Mac Studio (checked 2026-10-23).
 
+**Addendum 2026-11-16.** The "no profile name means no auto-ingest" decision
+above kept ASIAir logs out of the Library entirely, which was the real
+failure. Superseded by `2026-11-16-asiair-rig-identity.md`: a blank profile
+now gets a rig key built from the guide camera, focal length, and mount.
+
 **Not done.** RA could only be recovered from the ASIAir's own data (it
 writes none to the log), so cross-night clustering of ASIAir nights is out of
 reach unless a future ASIAir firmware adds the field.

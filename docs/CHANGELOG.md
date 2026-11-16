@@ -2,6 +2,13 @@
 
 > Per-version record, newest first. Created during the July 2026 documentation-standard conform pass from git history and the v1.0 tag.
 
+## Unreleased (on `main`)
+
+- **ASIAir logs import into the Library.** The ASIAir writes `Equipment Profile = ` with no name, and both Library paths keyed rigs on that name, so bulk import rejected every ASIAir log ("no `Equipment Profile = …` line in header") and opening one never ingested it or showed the recommender. New `RigIdentity` is the one place a log becomes a rig key: the PHD2 profile name when present, otherwise (profile line present but blank) `ASIAir · <camera> · <focal length> mm · <mount>` from the same header. The bulk importer, document window, session detail, and inspector all use it. Rig editor and inspector copy say "ASIAir guide train" for these rigs. Verified on a customer's folder: 11 of 11 guide logs imported, 0 errors, one rig per guide setup (5).
+- **ASIAir Autorun logs named on open.** `PHD2LogSignature` returns `.asiAirAutorunLog` for the ASIAir's `Autorun_Log_*.txt` (the `[Autorun|` marker, checked only after every PHD2 marker fails), and the open error points to the `PHD2_GuideLog_` file from the same night instead of the generic "not a PHD2 guide log".
+- `ASIAirFormatTests` adds rig-key cases (blank vs named vs missing profile, mount change) and an end-to-end bulk import of two synthetic ASIAir nights into one rig. Help pages Bulk import and Rig profiles explain ASIAir rig naming.
+- Decision record: `docs/decisions/2026-11-16-asiair-rig-identity.md`.
+
 ## 2.0.1 — 2026-10-23 (tag `v2.0.1`, build 2)
 
 Point release for ASIAir guide logs, merged from `v2` to `main` and released 2026-10-23 (Developer ID signed, notarized, Sparkle appcast with a 2.0 to 2.0.1 delta on the GitHub release).
