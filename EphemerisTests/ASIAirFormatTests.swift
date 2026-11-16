@@ -96,6 +96,30 @@ struct ASIAirFormatTests {
         #expect(PHD2LogSignature.classify(Data(text.utf8)) == .notPHD2)
     }
 
+    /// The ASIAir saves an Autorun log beside each guide log. Opening it should
+    /// name what it is rather than report a generic "not a PHD2 log". Line
+    /// shapes follow a real Autorun log (October 2026); values are synthetic.
+    @Test func autorunLogIsRecognized() {
+        let autorun = """
+        Log enabled at 2026/10/16 19:28:02
+        2026/10/16 19:28:02 [Autorun|Begin] M 31 Start
+        2026/10/16 19:28:03 Target RA:0h42m44s DEC:+41°16'9"
+        2026/10/16 19:28:03 Shooting 20 light frames, exposure 120.0s Bin1
+        2026/10/16 19:28:09 [Guide] Start Guiding
+        """
+        #expect(PHD2LogSignature.classify(Data(autorun.utf8)) == .asiAirAutorunLog)
+    }
+
+    @Test func guideLogMentioningAutorunIsStillAGuideLog() {
+        // PHD2 markers win: a bannerless guide-log fragment whose INFO text
+        // happens to contain the Autorun marker is still a likely guide log.
+        let text = """
+        Guiding Begins at 2026-10-16 19:32:59
+        INFO: [Autorun|Begin] noted
+        """
+        #expect(PHD2LogSignature.classify(Data(text.utf8)) == .likely)
+    }
+
     // MARK: - Parser
 
     @Test func parsesBannerWithEmptyPHD2Version() {
@@ -151,5 +175,92 @@ struct ASIAirFormatTests {
         #expect(props.decDegrees == nil)
         #expect(props.raHours == nil)
         #expect(props.pierSide == nil)
+    }
+
+    // MARK: - Rig identity
+
+    /// The ASIAir leaves `Equipment Profile =` blank, so the rig key comes from
+    /// the guide train. The synthetic log's last session has no Camera line, so
+    /// this also covers falling back to an earlier session.
+    @Test func blankProfileBuildsKeyFromGuideTrain() throws {
+        let log = GuideLogParser.parse(Self.log)
+        let key = try #require(RigIdentity.key(for: log))
+        #expect(key == "ASIAir · ZWO ASI120MC-S · 120 mm · EQMod Mount")
+        #expect(RigIdentity.isASIAirKey(key))
+        #expect(RigIdentity.key(for: log.guideSessions[1]) == nil)
+    }
+
+    @Test func namedProfileIsTheKey() {
+        var session = GuideSession()
+        session.rawHeader = [
+            "Equipment Profile = Edge-10m",
+            "Camera = ZWO ASI174MM Mini, gain = 400, pixel size = 5.9 um",
+            "Pixel scale = 0.62 arc-sec/px, Binning = 1, Focal length = 1960 mm",
+        ]
+        session.mount.name = "10Micron"
+        #expect(RigIdentity.key(for: session) == "Edge-10m")
+        #expect(!RigIdentity.isASIAirKey("Edge-10m"))
+    }
+
+    @Test func blankProfileWithoutGuideTrainHasNoKey() {
+        var session = GuideSession()
+        session.rawHeader = ["Equipment Profile =", "Exposure = 1500 ms"]
+        #expect(RigIdentity.key(for: session) == nil)
+    }
+
+    @Test func missingProfileLineHasNoKey() {
+        // Only the blank line ASIAir writes triggers the guide-train key; a
+        // header with no profile line at all stays unmatched, as before.
+        var session = GuideSession()
+        session.rawHeader = [
+            "Camera = ZWO ASI120MC-S, pixel size = 3.8 um",
+            "Pixel scale = 6.45 arc-sec/px, Binning = 1, Focal length = 120 mm",
+        ]
+        #expect(RigIdentity.key(for: session) == nil)
+    }
+
+    @Test func differentMountIsADifferentRig() throws {
+        let iOptron = Self.log.replacingOccurrences(of: "EQMod Mount", with: "iOptron CEM26/GEM28/HEM27")
+        let a = try #require(RigIdentity.key(for: GuideLogParser.parse(Self.log)))
+        let b = try #require(RigIdentity.key(for: GuideLogParser.parse(iOptron)))
+        #expect(a != b)
+        #expect(b == "ASIAir · ZWO ASI120MC-S · 120 mm · iOptron CEM26/GEM28/HEM27")
+    }
+
+    // MARK: - Bulk import
+
+    /// The reported bug: every ASIAir log failed bulk import with "no Equipment
+    /// Profile line". Two nights from one guide train should import into one
+    /// auto-created rig.
+    @MainActor
+    @Test func bulkImportIngestsASIAirLogsIntoOneRig() async throws {
+        let fm = FileManager.default
+        let folder = fm.temporaryDirectory.appendingPathComponent("ASIAirImport-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: folder) }
+
+        let secondNight = Self.log.replacingOccurrences(of: "2026-10-16", with: "2026-10-17")
+        try Self.log.write(to: folder.appendingPathComponent("PHD2_GuideLog_2026-10-16_193046.txt"),
+                           atomically: true, encoding: .utf8)
+        try secondNight.write(to: folder.appendingPathComponent("PHD2_GuideLog_2026-10-17_193046.txt"),
+                              atomically: true, encoding: .utf8)
+
+        let library = try EphemerisLibrary(inMemory: true)
+        let rigStore = RigProfileStore(container: library.container,
+                                       legacyJSONDirectory: folder.appendingPathComponent("Profiles", isDirectory: true))
+        let importer = LibraryBulkImporter(library: library, rigStore: rigStore)
+        importer.importFolder(folder)
+
+        var summary: LibraryBulkImporter.Summary?
+        for _ in 0..<200 {
+            if case .completed(let s) = importer.status { summary = s; break }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        let result = try #require(summary, "Bulk import did not finish")
+        #expect(result.errors.isEmpty, "\(result.errors)")
+        #expect(result.imported == 2)
+        #expect(result.autoCreatedRigs == ["ASIAir · ZWO ASI120MC-S · 120 mm · EQMod Mount"])
+        #expect(rigStore.profiles.count == 1)
+        #expect(rigStore.profiles.first?.guideFocalLength == 120)
     }
 }

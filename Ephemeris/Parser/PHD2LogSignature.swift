@@ -30,6 +30,10 @@ nonisolated enum PHD2LogSignature {
         /// No banner, but at least one PHD2 section delimiter or column header
         /// is recognized. Probably a PHD2 log fragment or a log with a stripped header.
         case likely
+        /// An ASIAir Autorun log: the imaging-sequence log the ASIAir saves next
+        /// to its guide log. Not parseable, but worth naming so the user can
+        /// find the guide log instead.
+        case asiAirAutorunLog
         /// Text content with no PHD2 markers.
         case notPHD2
         /// Contains NUL bytes in the inspected window — almost certainly a binary file.
@@ -77,6 +81,12 @@ nonisolated enum PHD2LogSignature {
         ]
         for marker in markers where text.contains(marker) {
             return .likely
+        }
+
+        // 6. Checked only after every PHD2 marker has failed, so a guide log can
+        // never land here. Autorun lines read "2026/10/30 23:13:47 [Autorun|Begin] ...".
+        if text.contains("[Autorun|") {
+            return .asiAirAutorunLog
         }
 
         return .notPHD2

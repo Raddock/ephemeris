@@ -28,6 +28,8 @@ import UniformTypeIdentifiers
 enum GuideLogLoadError: LocalizedError {
     /// File is not a recognizable PHD2 guide log (text, but wrong content).
     case notPHD2Log
+    /// File is an ASIAir Autorun log, saved alongside the ASIAir's guide log.
+    case asiAirAutorunLog
     /// File appears to be a binary blob (PNG, archive, etc.).
     case binaryFile
     /// File exceeds the hard refusal threshold.
@@ -39,6 +41,8 @@ enum GuideLogLoadError: LocalizedError {
         switch self {
         case .notPHD2Log:
             return "This file isn't a PHD2 guide log."
+        case .asiAirAutorunLog:
+            return "This is an ASIAir Autorun log, not a guide log."
         case .binaryFile:
             return "This file isn't a text file."
         case .fileTooLarge:
@@ -52,6 +56,8 @@ enum GuideLogLoadError: LocalizedError {
         switch self {
         case .notPHD2Log:
             return "Ephemeris reads guide log files produced by PHD2 (PHD2_GuideLog_*.txt). The file you opened doesn't appear to be one. Make sure you're opening a .txt file from PHD2's log directory."
+        case .asiAirAutorunLog:
+            return "The ASIAir saves two logs for an imaging session: an Autorun log of the imaging sequence, and a PHD2 guide log. Ephemeris reads the guide log. Look for the file named PHD2_GuideLog_ from the same night."
         case .binaryFile:
             return "Ephemeris reads PHD2 guide logs, which are plain text. The file you opened appears to be binary."
         case .fileTooLarge(let bytes):
@@ -118,6 +124,8 @@ struct GuideLogDocument: FileDocument {
             throw GuideLogLoadError.binaryFile
         case .notPHD2:
             throw GuideLogLoadError.notPHD2Log
+        case .asiAirAutorunLog:
+            throw GuideLogLoadError.asiAirAutorunLog
         case .confirmed, .likely:
             break
         }

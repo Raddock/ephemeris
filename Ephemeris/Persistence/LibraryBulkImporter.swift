@@ -165,8 +165,10 @@ final class LibraryBulkImporter {
             // Per the rig-identity-from-log design preference: the PHD2 profile name is
             // immutable identity, so we create profiles automatically rather than asking
             // the user to predeclare them.
-            guard let phd2Name = extractProfileName(from: log) else {
-                summary.errors.append("\(url.lastPathComponent): no `Equipment Profile = …` line in header")
+            // ASIAir logs leave the profile blank; RigIdentity builds their key
+            // from the guide camera, focal length, and mount instead.
+            guard let phd2Name = RigIdentity.key(for: log) else {
+                summary.errors.append("\(url.lastPathComponent): the header names no PHD2 profile and no guide camera, so it can't be matched to a rig")
                 continue
             }
             let profile: RigProfile
@@ -258,18 +260,5 @@ final class LibraryBulkImporter {
             urls.append(url)
         }
         return urls.sorted { $0.lastPathComponent < $1.lastPathComponent }
-    }
-
-    private func extractProfileName(from log: GuideLog) -> String? {
-        for session in log.guideSessions.reversed() {
-            for line in session.rawHeader {
-                if let range = line.range(of: "Equipment Profile = ") {
-                    let value = String(line[range.upperBound...])
-                        .trimmingCharacters(in: .whitespacesAndNewlines)
-                    return value.isEmpty ? nil : value
-                }
-            }
-        }
-        return nil
     }
 }

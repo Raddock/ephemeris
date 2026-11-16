@@ -165,7 +165,7 @@ private struct ImportProgressContent: View {
             if !summary.autoCreatedRigs.isEmpty {
                 disclosure(title: "Auto-created rigs",
                            items: summary.autoCreatedRigs,
-                           detail: "These PHD2 profile names had no matching rig — Ephemeris created stubs. Open Rig Profiles (Shift-⌘-,) to add imaging-train values.")
+                           detail: "These PHD2 profiles (or, for ASIAir logs, guide trains) had no matching rig, so Ephemeris created stubs. Open Rig Profiles (Shift-⌘-,) to add imaging-train values.")
             }
             if !summary.skippedEmpty.isEmpty {
                 disclosure(title: "Skipped — empty / aborted",

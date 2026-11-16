@@ -30,18 +30,11 @@ struct SessionInspectorView: View {
     @Environment(\.ephemerisLibrary) private var library
     @State private var showConfigureRigSheet = false
 
-    /// PHD2 profile name parsed from the most recent guide-session header.
-    /// Used to resolve the matching `RigProfile` (current or historical).
+    /// Rig key from the most recent guide-session header: the PHD2 profile name,
+    /// or for ASIAir logs one built from the guide train. Used to resolve the
+    /// matching `RigProfile` (current or historical).
     private var phd2ProfileName: String? {
-        for session in log.guideSessions.reversed() {
-            for line in session.rawHeader {
-                if let range = line.range(of: "Equipment Profile = ") {
-                    let value = String(line[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
-                    return value.isEmpty ? nil : value
-                }
-            }
-        }
-        return nil
+        RigIdentity.key(for: log)
     }
 
     private var matchedProfile: RigProfile? {
@@ -140,16 +133,24 @@ struct SessionInspectorView: View {
     @ViewBuilder
     private func rigConfigurePrompt(phd2Name: String) -> some View {
         InspectorCard("Rig profile", systemImage: "scope") {
-            Text("This log was produced by PHD2 profile **“\(phd2Name)”**, but no Ephemeris rig profile matches that name.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            if RigIdentity.isASIAirKey(phd2Name) {
+                Text("ASIAir logs don't name a PHD2 profile, so Ephemeris identifies the rig by its guide camera, focal length, and mount: **“\(phd2Name)”**. No Ephemeris rig profile matches it yet.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("This log was produced by PHD2 profile **“\(phd2Name)”**, but no Ephemeris rig profile matches that name.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Text("Configure a rig profile to enable imaging-scale verdicts and the full recommender.")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
             Button {
                 showConfigureRigSheet = true
             } label: {
-                Label("Configure rig for \(phd2Name)", systemImage: "scope")
+                // ASIAir keys are long; the card above already names the rig.
+                Label(RigIdentity.isASIAirKey(phd2Name) ? "Configure this rig" : "Configure rig for \(phd2Name)",
+                      systemImage: "scope")
             }
             .controlSize(.small)
             .padding(.top, 4)

@@ -67,16 +67,10 @@ struct ContentView: View {
         }
     }
 
+    /// The key that matches this log to a rig: the PHD2 profile name, or for
+    /// ASIAir logs (blank profile) one built from the guide train.
     private var phd2ProfileName: String? {
-        for session in document.log.guideSessions.reversed() {
-            for line in session.rawHeader {
-                if let range = line.range(of: "Equipment Profile = ") {
-                    let value = String(line[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
-                    return value.isEmpty ? nil : value
-                }
-            }
-        }
-        return nil
+        RigIdentity.key(for: document.log)
     }
 
     var body: some View {

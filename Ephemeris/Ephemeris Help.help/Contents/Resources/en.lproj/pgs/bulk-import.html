@@ -29,6 +29,7 @@
 
 <h2>Rigs are created automatically</h2>
 <p>Each log's <code>Equipment Profile = …</code> header line names the PHD2 profile it came from. Logs are matched to existing rigs by that name; when no match exists, a rig is created automatically with its guide-train values pre-filled from the log header. The import summary lists any rigs it created — visit <a href="rig-profiles.html">Rig profiles</a> afterwards to add each one's imaging train so verdicts light up.</p>
+<p>Guide logs from a ZWO ASIAir leave the profile name blank. For those, Ephemeris names the rig after the guide camera, guide focal length, and mount recorded in the same header, for example <code>ASIAir · ZWO ASI174MM Mini · 600 mm · ZWO000</code>, so each guide setup gets its own rig. The ASIAir's <code>Autorun_Log_*.txt</code> files describe the imaging sequence rather than guiding, and the import skips them.</p>
 
 <h2>Folder access</h2>
 <p>Ephemeris is sandboxed, so choosing the folder in the import panel is also what grants read access to it. The grant is saved as a security-scoped bookmark, which is how <strong>double-click to open the original log</strong> in the Library keeps working in later launches without asking again. If you move your archive, run one import from the new location to re-establish access.</p>

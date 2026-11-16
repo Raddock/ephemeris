@@ -271,15 +271,10 @@ private struct GuideSessionDetail: View {
         SessionStatsCalculator.calculate(session, manualExclusionRanges: manualExclusions)
     }
 
-    /// The PHD2 profile name from this session's header, used to look up a matching rig.
+    /// The rig key from this session's header (PHD2 profile name, or the ASIAir
+    /// guide-train key), used to look up a matching rig.
     private var phd2ProfileName: String? {
-        for line in session.rawHeader {
-            if let range = line.range(of: "Equipment Profile = ") {
-                let value = String(line[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
-                return value.isEmpty ? nil : value
-            }
-        }
-        return nil
+        RigIdentity.key(for: session)
     }
 
     private var matchedProfile: RigProfile? {

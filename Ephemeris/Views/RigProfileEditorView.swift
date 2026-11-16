@@ -25,7 +25,7 @@ struct RigProfileEditorView: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent("PHD2 profile") {
+                LabeledContent(RigIdentity.isASIAirKey(profile.currentName) ? "ASIAir guide train" : "PHD2 profile") {
                     HStack(spacing: 4) {
                         Image(systemName: "lock.fill")
                             .font(.caption2)
@@ -53,9 +53,15 @@ struct RigProfileEditorView: View {
             } header: {
                 Text("Identity")
             } footer: {
-                Text("The PHD2 profile name is the foreign key that matches logs to this rig. It's set when a log is first ingested and isn't editable here. The display name is just for your UI — sidebar entries, chart titles. Leave it blank to fall back to the PHD2 name.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if RigIdentity.isASIAirKey(profile.currentName) {
+                    Text("ASIAir logs don't name a PHD2 profile, so this rig matches logs by guide camera, guide focal length, and mount, as written in each log's header. It isn't editable here. The display name is just for your UI (sidebar entries, chart titles); leave it blank to show the guide train.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("The PHD2 profile name is the foreign key that matches logs to this rig. It's set when a log is first ingested and isn't editable here. The display name is just for your UI (sidebar entries, chart titles); leave it blank to fall back to the PHD2 name.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Mount") {
