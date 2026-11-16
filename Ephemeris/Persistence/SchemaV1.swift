@@ -136,10 +136,12 @@ final class NightRecordEntity {
     var sessionsCount: Int = 0
     var totalIntegrationMinutes: Double = 0
 
-    /// Frame-weighted quadrature-mean RMS for the night, NOT a median. The stored
-    /// attribute keeps its original name because renaming it is a schema change
-    /// (and the stdio helper reads the raw column); every in-memory type, UI label,
-    /// and MCP field calls this "night RMS". Rename the attribute at SchemaV2.
+    /// The night RMS (arcsec): the frame-weighted median of per-session RMS, see
+    /// `NightRMS.frameWeightedMedian`. Every in-memory type, UI label, and MCP
+    /// field calls it "night RMS". Before 2026-11-16 it held a frame-weighted
+    /// quadrature mean despite the name; nights ingested then keep that value
+    /// until re-imported. The stdio helper reads this raw column, so renaming it
+    /// would need a SchemaV2 stage and a helper update.
     var medianRMSArcsec: Double = 0
     var bestSessionRMSArcsec: Double = 0
     var worstSessionRMSArcsec: Double = 0

@@ -42,7 +42,7 @@
 <p>Each pill is a link to the relevant section of the PHD2 manual.</p>
 
 <h2>Trend chart</h2>
-<p>One point per <em>observing night</em> — nights are bucketed noon-to-noon, so a session restarted just after midnight stays with the previous evening's run. The Y axis is <strong>night RMS</strong> in arc-seconds (a frame-weighted average across the night's sessions); points are colored by verdict (green sub-pixel, amber at-resolution, coral over-resolution). A dashed orange line marks the rig's imaging pixel scale — nights below it should produce tight stars. Dashed blue vertical lines mark your <a href="annotations-and-sub-quality.html">annotations</a>, so equipment changes line up visually with any change in the trend.</p>
+<p>One point per <em>observing night</em>. Nights are bucketed noon-to-noon, so a session restarted just after midnight stays with the previous evening's run. The Y axis is <strong>night RMS</strong> in arc-seconds (the typical session: half the night's guiding time was at or below it, so a few runaway attempts don't swamp a good night); points are colored by verdict (green sub-pixel, amber at-resolution, coral over-resolution). A dashed orange line marks the rig's imaging pixel scale; nights below it should produce tight stars. Dashed blue vertical lines mark your <a href="annotations-and-sub-quality.html">annotations</a>, so equipment changes line up visually with any change in the trend.</p>
 <p><strong>Drag across the chart to zoom into that period.</strong> The dragged span becomes a custom range, and the metric cards, observations, and nights list all narrow to it (a caption under the chart is there as a reminder). Drags shorter than half a day are ignored, and choosing any preset range in the sidebar exits the zoom.</p>
 
 <h2>Cross-night observations</h2>
@@ -57,7 +57,7 @@
     <tr><td><strong>Open Log</strong></td><td>Opens the original PHD2 log in the single-night document window.</td></tr>
     <tr><td><strong>Note</strong></td><td>Adds an annotation for this night.</td></tr>
     <tr><td><strong>Integration</strong></td><td>Total guided minutes.</td></tr>
-    <tr><td><strong>RMS Error</strong></td><td>The night's RMS in arc-seconds (frame-weighted across its sessions), tinted by verdict.</td></tr>
+    <tr><td><strong>RMS Error</strong></td><td>The night's RMS in arc-seconds, tinted by verdict: half the night's guiding time was at or below it. A few runaway sessions can't swamp it; the worst session shows them.</td></tr>
     <tr><td><strong>Star Shape</strong></td><td>Predicted star shape from the data — sharp, bloated, elongated, trailed, or mixed. Hover for the full reasoning, including the RMS-to-imaging-scale ratio. Your own sub-quality rating, when you've recorded one, feeds the same engine — see <a href="annotations-and-sub-quality.html">Annotations and rating your nights</a>.</td></tr>
 </table>
 <ul>

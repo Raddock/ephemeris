@@ -13,11 +13,6 @@ recorded during the July 2026 audit.*
   streaming infrastructure for 18 MB+ files. Unlocks three deferred observers
   (gap analysis, "Debug-log only" table): capture-error spikes, mid-session
   setting changes, and saved-calibration parameter drift.
-- **SchemaV2.** First real schema change should rename the stored
-  `medianRMSArcsec` attribute to `nightRMSArcsec` (the value is a
-  frame-weighted quadrature mean; every user-facing surface already says
-  "night RMS"). The `LibraryMigrationPlan` scaffold is registered and waiting;
-  add the stage rather than retrofitting plumbing.
 - **Localization.** Deliberately deferred (July 2026 audit decision). About 120
   user-facing strings are hardcoded English and no String Catalog exists. Costs
   nothing while English-only; budget a mostly mechanical multi-day retrofit
@@ -55,6 +50,12 @@ recorded during the July 2026 audit.*
   If Claude-driven annotation writing comes back, it must route through the app
   (e.g. the embedded server brokering into the ModelContainer), never through
   direct database access.
+- **Per-night count of failed guiding attempts.** Show nights where guiding
+  wasn't holding the star (runaway sessions), alongside the median night RMS.
+  Settle status misfires on NINA-driven logs (long good sessions after a
+  settle timeout), and "star beyond the search region" mixes runaways with
+  large dithers. Needs thresholds calibrated on both corpora. Measurements in
+  `decisions/2026-11-16-night-rms-median.md`.
 - **ASIAir targets from the Autorun log.** ASIAir guide logs have no RA, so
   their nights don't cluster by target. The `Autorun_Log_*.txt` saved beside
   each guide log names the target and its coordinates

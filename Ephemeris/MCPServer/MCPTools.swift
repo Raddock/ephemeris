@@ -77,7 +77,7 @@ enum MCPTools {
 
     static let listNights = MCPTool(
         name: "list_nights",
-        description: "List nights in the library (most recent first). Optionally filter by rig UUID and a since-days window. Returns per-night rollups: night RMS (frame-weighted), integration time, session count, source file path.",
+        description: "List nights in the library (most recent first). Optionally filter by rig UUID and a since-days window. Returns per-night rollups: night RMS (frame-weighted median of session RMS), integration time, session count, source file path.",
         inputSchema: .object([
             "type": .string("object"),
             "properties": .object([

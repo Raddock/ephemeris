@@ -4,7 +4,7 @@ import Charts
 /// Multi-night trend chart per design doc §7.3.
 ///
 /// - X-axis: per-night data points
-/// - Y-axis: per-night RMS in arcseconds (frame-weighted across the night)
+/// - Y-axis: per-night RMS in arcseconds (frame-weighted median of session RMS)
 /// - Imaging-scale reference line (the rig's imaging pixel scale) when configured
 /// - Annotation markers as vertical dashed RuleMarks
 /// - Three-tier verdict colors per point (sub-pixel / at-resolution / over-resolution)

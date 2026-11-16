@@ -53,23 +53,19 @@ actor LibraryIngestor {
         record.sessionsCount = log.guideSessions.count
         record.totalIntegrationMinutes = log.guideSessions.reduce(0.0) { $0 + $1.duration / 60.0 }
 
-        // Per-session RMS in arcsec — each session is converted with its own pixel
+        // Per-session RMS in arcsec, each session converted with its own pixel
         // scale, so a log whose sessions differ in binning/scale still aggregates
-        // correctly. The night-level RMS is the frame-weighted quadrature mean of
-        // these; computing it this way (rather than from a single global pixel
-        // scale) avoids leaving RMS in pixels when a log mixes scales.
-        let perSession: [(rmsArcsec: Double, frames: Int)] = log.guideSessions.map { session in
+        // correctly. The night RMS is the frame-weighted median of these
+        // (NightRMS), so a few runaway sessions can't swamp a night of good
+        // guiding; the worst-session figure keeps them visible.
+        let perSession: [NightRMS.Session] = log.guideSessions.map { session in
             let s = SessionStatsCalculator.calculate(session, manualExclusionRanges: [])
-            return (s.rmsTotal * session.pixelScale, s.includedFrames)
+            return NightRMS.Session(rmsArcsec: s.rmsTotal * session.pixelScale, frames: s.includedFrames)
         }
         let rmsValues = perSession.map(\.rmsArcsec)
         record.bestSessionRMSArcsec = rmsValues.min() ?? 0
         record.worstSessionRMSArcsec = rmsValues.max() ?? 0
-        let totalFrames = perSession.reduce(0) { $0 + $1.frames }
-        record.medianRMSArcsec = totalFrames > 0
-            ? (perSession.reduce(0.0) { $0 + $1.rmsArcsec * $1.rmsArcsec * Double($1.frames) }
-               / Double(totalFrames)).squareRoot()
-            : 0
+        record.medianRMSArcsec = NightRMS.frameWeightedMedian(perSession)
         record.lastAnalyzedAt = .now
 
         // Phase 9: pointing context. Median RA/Dec across the sessions; galactic

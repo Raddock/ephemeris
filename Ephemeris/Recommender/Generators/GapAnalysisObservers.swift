@@ -22,15 +22,13 @@ nonisolated struct StarShapePredictionObserver: RecommenderGenerator {
         let perSession = context.sessionStats
         let totalFrames = perSession.reduce(0) { $0 + $1.stats.includedFrames }
         guard totalFrames > 0 else { return [] }
-        // Frame-weighted quadrature mean — the identical night-RMS rollup the
-        // library ingestor stores on NightRecord. Using the same statistic here
-        // means the document-window observation and the Log Library chip predict
-        // the same shape for a night (a plain weighted mean would diverge near
-        // the pixel-scale threshold).
-        let weightedRMS = (perSession.reduce(0.0) { acc, item in
-            let rmsArcsec = item.stats.rmsTotal * item.session.pixelScale
-            return acc + rmsArcsec * rmsArcsec * Double(item.stats.includedFrames)
-        } / Double(totalFrames)).squareRoot()
+        // The same night-RMS rollup the library ingestor stores on NightRecord
+        // (NightRMS), so the document-window observation and the Log Library
+        // chip predict the same shape for a night.
+        let nightRMS = NightRMS.frameWeightedMedian(perSession.map {
+            NightRMS.Session(rmsArcsec: $0.stats.rmsTotal * $0.session.pixelScale,
+                             frames: $0.stats.includedFrames)
+        })
         let perSessionRMSArcsec = perSession.map {
             $0.stats.rmsTotal * $0.session.pixelScale
         }
@@ -47,14 +45,14 @@ nonisolated struct StarShapePredictionObserver: RecommenderGenerator {
         }
         let prediction = StarShapePredictor.predict(StarShapePredictor.Input(
             imagingPixelScale: scale,
-            nightRMSArcsec: weightedRMS,
+            nightRMSArcsec: nightRMS,
             bestSessionRMSArcsec: bestRMS,
             worstSessionRMSArcsec: worstRMS,
             sessions: digests
         ))
 
         // We only surface non-sharp predictions — sharp round is the silent default.
-        let scaleRatio = weightedRMS / scale
+        let scaleRatio = nightRMS / scale
         let title: String
         let summary: String
         let suggestedResponse: String
@@ -65,7 +63,7 @@ nonisolated struct StarShapePredictionObserver: RecommenderGenerator {
         case .round(let bloated):
             guard bloated else { return [] }
             title = "Stars predicted: round but bloated"
-            summary = "RMS \(formatArcsec(weightedRMS)) is \(formatRatio(scaleRatio))× your imaging scale \(formatArcsec(scale)). Guiding is symmetric so stars stay round, but they're imaged wider than the sensor can resolve — they'll look soft."
+            summary = "RMS \(formatArcsec(nightRMS)) is \(formatRatio(scaleRatio))× your imaging scale \(formatArcsec(scale)). Guiding is symmetric so stars stay round, but they're imaged wider than the sensor can resolve, so they'll look soft."
             suggestedResponse = "There's no PHD2 lever for this — bloated round usually means the mount is at its capacity for the imaging scale you're chasing. Two paths: accept the soft floor (long focal length mounts often live here), or reduce the imaging scale with a focal reducer or 2× binning so the guide RMS fits inside one pixel."
             severity = .coaching
             topics = [HelpTopic.imageScaleRatio.rawValue, HelpTopic.opticalTrainHealth.rawValue]
@@ -118,7 +116,7 @@ nonisolated struct StarShapePredictionObserver: RecommenderGenerator {
             summary: summary,
             evidence: [
                 .init(label: "Predicted shape", value: prediction.displayName),
-                .init(label: "Weighted RMS", value: formatArcsec(weightedRMS)),
+                .init(label: "Night RMS", value: formatArcsec(nightRMS)),
                 .init(label: "Imaging scale", value: formatArcsec(scale)),
                 .init(label: "Scale ratio", value: String(format: "%.2f×", scaleRatio)),
             ],

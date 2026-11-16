@@ -10,8 +10,7 @@ import SwiftData
 /// 1. Add `SchemaV2.self` to `schemas`.
 /// 2. Add a stage: `.lightweight(fromVersion: SchemaV1.self, toVersion: SchemaV2.self)`
 ///    for additive changes, or `.custom(...)` with will/didMigrate handlers when
-///    data must be transformed (e.g. renaming `medianRMSArcsec` to
-///    `nightRMSArcsec`, which is already queued for V2 — see SchemaV1's comment).
+///    data must be transformed (e.g. renaming an attribute).
 enum LibraryMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
         [SchemaV1.self]
