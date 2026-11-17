@@ -2,6 +2,16 @@
 
 > User-facing "what's new" per released version, newest first. This is the announcement copy of record (GitHub Releases and Sparkle release notes). Per the documentation standard this is a Draft doc: Sidecar drafts, the owner tone-checks before anything reaches users. Ephemeris has three releases to date.
 
+## 2.0.2 (unreleased)
+
+Ephemeris now imports guide logs from ZWO's ASIAir into the Log Library. Ephemeris matches each log to a rig by its PHD2 profile name, and the ASIAir leaves that name blank, so ASIAir logs were turned away. Each ASIAir rig is now named after the guide camera, guide focal length, and mount recorded in the log, so every guide setup gets its own rig. Opening one of the ASIAir's Autorun logs now explains that it records the imaging sequence and points you to the guide log from the same night.
+
+A night's RMS now describes the night's typical guiding: half of the guiding time was at or below it. Before, a few minutes of runaway guiding, such as a mount that stopped tracking or a star dragged away before it was lost, could outweigh hours of good guiding. The worst-session figure still shows those stretches. Re-import your log folder to update nights already in the Library.
+
+Resetting the Log Library from Settings no longer crashes when the Library window is open.
+
+Thanks to the ASIAir user who sent in a folder of logs. Requires macOS 15 (Sequoia).
+
 ## 2.0.1 — 2026-10-23
 
 Ephemeris now reads guide logs from ZWO's ASIAir more completely. The ASIAir writes a PHD2-compatible log that leaves out the PHD2 version number and the RA position. Ephemeris now recognizes these logs as PHD2 logs straight away, and keeps each guiding session's declination, hour angle, and pier side, which it was dropping. Thanks to the ASIAir user who sent in a log. Requires macOS 15 (Sequoia).
