@@ -66,6 +66,9 @@ nonisolated enum RigIdentity {
 
     // MARK: - Internals
 
+    /// Upper bound for a plausible focal length in a header (100 m).
+    private static let maxFocalLengthMm = 100_000.0
+
     private enum ProfileLine {
         case named(String)
         /// The line is present with no value: what ASIAir writes.
@@ -96,7 +99,10 @@ nonisolated enum RigIdentity {
             }
             if focalLength == nil, let range = line.range(of: "Focal length = ") {
                 let digits = line[range.upperBound...].prefix { $0.isNumber || $0 == "." }
-                if let mm = Double(digits), mm > 0 { focalLength = mm }
+                // A corrupt header can hold a number too large for Int (or one
+                // that overflows to infinity), which would trap when formatted
+                // below. No real optic is near 100 m, so treat that as missing.
+                if let mm = Double(digits), mm > 0, mm <= maxFocalLengthMm { focalLength = mm }
             }
         }
         guard let camera, let focalLength else { return nil }

@@ -2,6 +2,10 @@
 
 > Per-version record, newest first. Created during the July 2026 documentation-standard conform pass from git history and the v1.0 tag.
 
+## Unreleased (on `main`)
+
+- **Corrupt focal length no longer crashes ASIAir rig matching** (found by the post-release Codex review of 2.0.2). `RigIdentity` formatted the guide focal length with `Int(_:)`, which traps above `Int.max`; a blank-profile header with a huge or overflowing `Focal length` value crashed the app on open or bulk import. Values outside 0 to 100,000 mm now read as missing, so the log has no rig key instead. Real ASIAir logs write ordinary focal lengths, so no shipped user is known to be affected.
+
 ## 2.0.2, 2026-11-17 (tag `v2.0.2`, build 3)
 
 Point release from `main`, released 2026-11-17 (Developer ID signed, notarized, Sparkle appcast with deltas from 2.0 and 2.0.1 on the GitHub release): ASIAir logs import into the Library, night RMS becomes a frame-weighted median, and the Library reset crash is fixed.

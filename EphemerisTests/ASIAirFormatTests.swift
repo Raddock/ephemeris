@@ -208,6 +208,24 @@ struct ASIAirFormatTests {
         #expect(RigIdentity.key(for: session) == nil)
     }
 
+    /// Codex review: a corrupt focal length too large for Int trapped when the
+    /// key was formatted. It must read as missing instead.
+    @Test(arguments: [
+        "9223372036854775808",
+        String(repeating: "9", count: 400),
+        "100001",
+    ])
+    func implausibleFocalLengthIsTreatedAsMissing(_ value: String) {
+        var session = GuideSession()
+        session.rawHeader = [
+            "Equipment Profile =",
+            "Camera = ZWO ASI120MC-S, pixel size = 3.8 um",
+            "Pixel scale = 6.45 arc-sec/px, Binning = 1, Focal length = \(value) mm",
+        ]
+        session.mount.name = "EQMod Mount"
+        #expect(RigIdentity.key(for: session) == nil)
+    }
+
     @Test func missingProfileLineHasNoKey() {
         // Only the blank line ASIAir writes triggers the guide-train key; a
         // header with no profile line at all stays unmatched, as before.
