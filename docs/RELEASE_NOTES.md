@@ -2,6 +2,10 @@
 
 > User-facing "what's new" per released version, newest first. This is the announcement copy of record (GitHub Releases and Sparkle release notes). Per the documentation standard this is a Draft doc: Sidecar drafts, the owner tone-checks before anything reaches users. Ephemeris has four releases to date.
 
+## 2.0.3 (unreleased)
+
+Ephemeris no longer quits when an ASIAir guide log's header holds a corrupted focal length. A log like that is now reported as one Ephemeris can't match to a rig, and the rest of the import carries on. Requires macOS 15 (Sequoia).
+
 ## 2.0.2, 2026-11-17
 
 Ephemeris now imports guide logs from ZWO's ASIAir into the Log Library. Ephemeris matches each log to a rig by its PHD2 profile name, and the ASIAir leaves that name blank, so ASIAir logs were turned away. Each ASIAir rig is now named after the guide camera, guide focal length, and mount recorded in the log, so every guide setup gets its own rig. Opening one of the ASIAir's Autorun logs now explains that it records the imaging sequence and points you to the guide log from the same night.
