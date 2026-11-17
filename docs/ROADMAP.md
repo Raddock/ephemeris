@@ -13,6 +13,20 @@ recorded during the July 2026 audit.*
   streaming infrastructure for 18 MB+ files. Unlocks three deferred observers
   (gap analysis, "Debug-log only" table): capture-error spikes, mid-session
   setting changes, and saved-calibration parameter drift.
+- **Recommender on runaway sessions and ASIAir logs (next, owner decision
+  2026-11-17).** Found while verifying 2.0.3 against a customer's 11 ASIAir
+  logs. Sessions where guiding wasn't holding the star (the mount stopped
+  tracking, the star ended up 300 to 700 px from the lock position) get
+  diagnosed as "Elevated RMS: likely atmospheric", and night-level
+  observations ("first session much worse: cooldown", "RA guide rate may be
+  misconfigured") are likely skewed by them; the same observation also fires
+  on ordinary 0.7″ sessions. Fix: detect runaway sessions, give them one
+  honest observation (what was measured, what it could mean) instead of
+  diagnoses, and keep them out of the other generators' inputs. Separately,
+  advice cites PHD2 settings (multi-star mode, the Brain dialog) that ASIAir
+  users can only reach through the ASIAir app; make the lever wording
+  ASIAir-aware when the log is from an ASIAir. Overlaps the failed-attempt
+  count item below.
 - **Localization.** Deliberately deferred (July 2026 audit decision). About 120
   user-facing strings are hardcoded English and no String Catalog exists. Costs
   nothing while English-only; budget a mostly mechanical multi-day retrofit

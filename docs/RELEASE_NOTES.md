@@ -1,8 +1,8 @@
 # Ephemeris release notes
 
-> User-facing "what's new" per released version, newest first. This is the announcement copy of record (GitHub Releases and Sparkle release notes). Per the documentation standard this is a Draft doc: Sidecar drafts, the owner tone-checks before anything reaches users. Ephemeris has four releases to date.
+> User-facing "what's new" per released version, newest first. This is the announcement copy of record (GitHub Releases and Sparkle release notes). Per the documentation standard this is a Draft doc: Sidecar drafts, the owner tone-checks before anything reaches users. Ephemeris has five releases to date.
 
-## 2.0.3 (unreleased)
+## 2.0.3, 2026-11-17
 
 Ephemeris no longer quits when an ASIAir guide log's header holds a corrupted focal length. A log like that is now reported as one Ephemeris can't match to a rig, and the rest of the import carries on. Requires macOS 15 (Sequoia).
 

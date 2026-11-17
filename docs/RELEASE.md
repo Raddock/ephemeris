@@ -15,7 +15,9 @@ on the new one, then delete the exported file.
 
 ## Every release
 
-> Status note (updated 2026-11-17): 2.0.2 shipped: tagged `v2.0.2` on `main` (development for it happened on `main`), published to GitHub Releases with the cumulative appcast and deltas from 2.0 and 2.0.1. Built, signed, and notarized on the MacBook Air. No prior zips were kept locally, so `Ephemeris-2.0.zip`, `Ephemeris-2.0.1.zip`, and the live `appcast.xml` were downloaded from their GitHub releases into the `generate_appcast` folder (`gh release download vX -p ...`); their sizes and signatures matched the live feed. The next release starts again at step 1.
+> Status note (updated 2026-11-17): 2.0.3 shipped the same day as 2.0.2 (tag `v2.0.3` on `a4bf137`; deltas from 2.0, 2.0.1, and 2.0.2). Before publishing, each delta was checked with Sparkle's `BinaryDelta apply` against the unzipped prior release and compared to the signed app (`diff -r`: identical), and the signed build opened a real ASIAir log and re-ingested it. `generate_appcast` drops the oldest full entry past three versions; that is harmless because clients read only the newest item, which carries the deltas.
+>
+> 2.0.2 shipped: tagged `v2.0.2` on `main` (development for it happened on `main`), published to GitHub Releases with the cumulative appcast and deltas from 2.0 and 2.0.1. Built, signed, and notarized on the MacBook Air. No prior zips were kept locally, so `Ephemeris-2.0.zip`, `Ephemeris-2.0.1.zip`, and the live `appcast.xml` were downloaded from their GitHub releases into the `generate_appcast` folder (`gh release download vX -p ...`); their sizes and signatures matched the live feed. The next release starts again at step 1.
 >
 > Lessons from 2.0.2: when help pages change, rebuild the help index (step 8) **before** archiving, or the shipped index is stale. On the MacBook Air, `EphemerisUITestsLaunchTests.testLaunch` times out in one appearance waiting on `com.adobe.AdobeCRDaemon` (an Adobe background process, unrelated to Ephemeris); the other UI tests launch the app normally.
 
