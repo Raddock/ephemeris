@@ -1,6 +1,6 @@
 # 2026-11-16: ASIAir logs get a rig key built from the guide train
 
-**Status: fixed on `main`, not yet released.** Feedback entry: FB-001.
+**Status: shipped in 2.0.2** (tag `v2.0.2`, 2026-11-17). Feedback entry: FB-001.
 Amends the "no profile name means no auto-ingest" decision in
 `2026-10-23-asiair-log-support.md`.
 

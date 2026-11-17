@@ -1,6 +1,6 @@
 # 2026-11-16: Night RMS is the frame-weighted median of session RMS
 
-**Status: on `main`, not yet released.** Owner decision, made while testing
+**Status: shipped in 2.0.2** (tag `v2.0.2`, 2026-11-17). Owner decision, made while testing
 the ASIAir import (`2026-11-16-asiair-rig-identity.md`).
 
 **What happened.** After the ASIAir logs imported, some nights showed night

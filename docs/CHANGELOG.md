@@ -2,9 +2,9 @@
 
 > Per-version record, newest first. Created during the July 2026 documentation-standard conform pass from git history and the v1.0 tag.
 
-## 2.0.2 (build 3), unreleased
+## 2.0.2, 2026-11-17 (tag `v2.0.2`, build 3)
 
-Point release from `main`: ASIAir logs import into the Library, night RMS becomes a frame-weighted median, and the Library reset crash is fixed.
+Point release from `main`, released 2026-11-17 (Developer ID signed, notarized, Sparkle appcast with deltas from 2.0 and 2.0.1 on the GitHub release): ASIAir logs import into the Library, night RMS becomes a frame-weighted median, and the Library reset crash is fixed.
 
 
 - **ASIAir logs import into the Library.** The ASIAir writes `Equipment Profile = ` with no name, and both Library paths keyed rigs on that name, so bulk import rejected every ASIAir log ("no `Equipment Profile = …` line in header") and opening one never ingested it or showed the recommender. New `RigIdentity` is the one place a log becomes a rig key: the PHD2 profile name when present, otherwise (profile line present but blank) `ASIAir · <camera> · <focal length> mm · <mount>` from the same header. The bulk importer, document window, session detail, and inspector all use it. Rig editor and inspector copy say "ASIAir guide train" for these rigs. Verified on a customer's folder: 11 of 11 guide logs imported, 0 errors, one rig per guide setup (5).
