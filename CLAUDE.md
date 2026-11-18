@@ -8,7 +8,7 @@ Guidance for Claude Code working in the Ephemeris repository.
 
 Ephemeris is a Mac-native analyzer for PHD2 guide logs: single-night review plus (since 2.0) a multi-night SwiftData Log Library with a plain-language recommender. It is a Mac Observatory app, but unlike the others it is **public, open source (GPLv3)**: this is the suite's only public repo, so READMEs and top-level docs are read by strangers evaluating or contributing to the project, and everything committed here is visible to the world.
 
-**Branch state:** five shipped releases: **v1.0** (tag `v1.0`, 2026-05-01), **v2.0** (tag `v2.0`, 2026-07-31), **v2.0.1** (tag `v2.0.1`, 2026-10-23, ASIAir log fixes), **v2.0.2** (tag `v2.0.2`, 2026-11-17, ASIAir Library import, median night RMS, Library reset crash fix), and **v2.0.3** (tag `v2.0.3`, 2026-11-17, ASIAir focal-length crash fix). The v2-to-main merge happened for the 2.0 ship. Check `git log main..v2` for current branch state rather than trusting a note here. Releases are cut from `main` per `docs/RELEASE.md`.
+**Branch state:** six shipped releases: **v1.0** (tag `v1.0`, 2026-05-01), **v2.0** (tag `v2.0`, 2026-07-31), **v2.0.1** (tag `v2.0.1`, 2026-10-23, ASIAir log fixes), **v2.0.2** (tag `v2.0.2`, 2026-11-17, ASIAir Library import, median night RMS, Library reset crash fix), **v2.0.3** (tag `v2.0.3`, 2026-11-17, ASIAir focal-length crash fix), and **v2.0.4** (tag `v2.0.4`, 2026-11-18, recommender: lost-star stretches and ASIAir-aware advice). The v2-to-main merge happened for the 2.0 ship. Check `git log main..v2` for current branch state rather than trusting a note here. Releases are cut from `main` per `docs/RELEASE.md`.
 
 ## Platform
 

@@ -1,6 +1,6 @@
 # 2026-11-17: Lost-star stretches leave the recommender's input; ASIAir-aware advice
 
-**Status: on `main`, ships in 2.0.4.** Owner decision (2026-11-17) to fix the
+**Status: shipped in 2.0.4** (tag `v2.0.4`, 2026-11-18). Owner decision (2026-11-17) to fix the
 recommender before more ASIAir users meet it.
 
 **What happened.** Verifying 2.0.3 against a customer's 11 ASIAir logs showed

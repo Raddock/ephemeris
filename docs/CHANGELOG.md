@@ -2,9 +2,9 @@
 
 > Per-version record, newest first. Created during the July 2026 documentation-standard conform pass from git history and the v1.0 tag.
 
-## 2.0.4 (build 5), unreleased
+## 2.0.4, 2026-11-18 (tag `v2.0.4`, build 5)
 
-Point release from `main`: the recommender stops misreading lost-star stretches and ASIAir logs.
+Point release from `main`, released 2026-11-18 (Developer ID signed, notarized, Sparkle appcast with deltas from 2.0, 2.0.1, 2.0.2, and 2.0.3, each verified with `BinaryDelta apply`): the recommender stops misreading lost-star stretches and ASIAir logs. Before publishing, the signed build opened a real ASIAir log and its stored advice was read back: "Guiding lost the star" ×8, "likely atmospheric" 3 to 0, multi-star gone, the ASIAir note on the 10 suggestions that name PHD2 controls.
 
 - **Recommender: lost-star stretches no longer feed diagnoses.** New `LostStar` finds sessions that end with the guide star moving steadily away from the lock position and never returning inside PHD2's search region (with guiding output on). `SingleNightContext` gives generators the night with those stretches cut (sessions with under 10 frames left are dropped); `rawLog` keeps the log as parsed for the star-shape observation (so it matches the Library chip) and the Guiding Assistant observation (PHD2's results verbatim). On a customer's ASIAir nights it finds 11 of 180 sessions, all runaways; on the owner's NINA corpus 1 of 710.
 - **New observation "Guiding lost the star"** (Ephemeris heuristic): what was measured (distance, length, unmeasured frames, corrections on each axis), what it usually means, and what would tell the causes apart.
