@@ -2,7 +2,9 @@
 
 > Per-version record, newest first. Created during the July 2026 documentation-standard conform pass from git history and the v1.0 tag.
 
-## Unreleased (on `main`)
+## 2.0.4 (build 5), unreleased
+
+Point release from `main`: the recommender stops misreading lost-star stretches and ASIAir logs.
 
 - **Recommender: lost-star stretches no longer feed diagnoses.** New `LostStar` finds sessions that end with the guide star moving steadily away from the lock position and never returning inside PHD2's search region (with guiding output on). `SingleNightContext` gives generators the night with those stretches cut (sessions with under 10 frames left are dropped); `rawLog` keeps the log as parsed for the star-shape observation (so it matches the Library chip) and the Guiding Assistant observation (PHD2's results verbatim). On a customer's ASIAir nights it finds 11 of 180 sessions, all runaways; on the owner's NINA corpus 1 of 710.
 - **New observation "Guiding lost the star"** (Ephemeris heuristic): what was measured (distance, length, unmeasured frames, corrections on each axis), what it usually means, and what would tell the causes apart.

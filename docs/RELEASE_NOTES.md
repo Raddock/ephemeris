@@ -2,6 +2,10 @@
 
 > User-facing "what's new" per released version, newest first. This is the announcement copy of record (GitHub Releases and Sparkle release notes). Per the documentation standard this is a Draft doc: Sidecar drafts, the owner tone-checks before anything reaches users. Ephemeris has five releases to date.
 
+## 2.0.4 (unreleased)
+
+Ephemeris's advice is more trustworthy, especially for ASIAir users. When a guide star runs away because the mount stopped responding, or because corrections stopped going out, a new "Guiding lost the star" observation now describes what PHD2 measured, and Ephemeris leaves that stretch out of its other advice. Before, it could blame the sky or a cooling telescope instead. The "likely atmospheric" observation no longer fires on good guiding through a short guide scope, or on errors far larger than seeing can cause. On ASIAir logs, Ephemeris no longer suggests multi-star guiding based on a setting the ASIAir doesn't record, and suggestions that name PHD2 settings note that ASIAir settings live in the ASIAir app. Requires macOS 15 (Sequoia).
+
 ## 2.0.3, 2026-11-17
 
 Ephemeris no longer quits when an ASIAir guide log's header holds a corrupted focal length. A log like that is now reported as one Ephemeris can't match to a rig, and the rest of the import carries on. Requires macOS 15 (Sequoia).
