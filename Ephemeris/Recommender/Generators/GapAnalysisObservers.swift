@@ -18,8 +18,11 @@ nonisolated struct StarShapePredictionObserver: RecommenderGenerator {
         let scale = context.profile.imagingPixelScale
         guard scale > 0 else { return [] }
 
-        // Aggregate stats across the night for the predictor's input.
-        let perSession = context.sessionStats
+        // Aggregate stats across the night for the predictor's input. Uses the
+        // sessions as logged (not the lost-star-cut analysis view) because the
+        // Library chip predicts from the stored, uncut session records, and the
+        // two must agree.
+        let perSession = context.rawSessionStats
         let totalFrames = perSession.reduce(0) { $0 + $1.stats.includedFrames }
         guard totalFrames > 0 else { return [] }
         // The same night-RMS rollup the library ingestor stores on NightRecord
@@ -209,16 +212,23 @@ nonisolated struct CooldownSignatureObserver: RecommenderGenerator {
     let identifier = "cooldownSignatureObserver"
     init() {}
 
+    /// Sessions shorter than this don't count as the night's first session or
+    /// as part of its baseline: a start that never got going (an ASIAir night
+    /// opened with a 3-frame attempt at 58″) says nothing about cooling.
+    static let minimumIncludedFrames = 30
+
     func observe(context: SingleNightContext) -> [RecommenderObservation] {
-        let sessions = context.sessionStats.sorted { (a, b) in
-            (a.session.startedAt ?? .distantPast) < (b.session.startedAt ?? .distantPast)
-        }
+        let sessions = context.sessionStats
+            .filter { $0.stats.includedFrames >= Self.minimumIncludedFrames }
+            .sorted { (a, b) in
+                (a.session.startedAt ?? .distantPast) < (b.session.startedAt ?? .distantPast)
+            }
         guard sessions.count >= 3 else { return [] }   // need a baseline of "later in the night"
 
-        let pixelScale = sessions[0].session.pixelScale
-        let firstRMS = sessions[0].stats.rmsTotal * pixelScale
+        // Each session in arcsec with its own pixel scale (a night can change binning).
+        let firstRMS = sessions[0].stats.rmsTotal * sessions[0].session.pixelScale
         // Median across sessions 2..end, ignoring the first.
-        let laterRMS = sessions.dropFirst().map { $0.stats.rmsTotal * pixelScale }.sorted()
+        let laterRMS = sessions.dropFirst().map { $0.stats.rmsTotal * $0.session.pixelScale }.sorted()
         let laterMedian = laterRMS[laterRMS.count / 2]
 
         guard firstRMS > 0, laterMedian > 0 else { return [] }

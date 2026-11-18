@@ -13,20 +13,19 @@ recorded during the July 2026 audit.*
   streaming infrastructure for 18 MB+ files. Unlocks three deferred observers
   (gap analysis, "Debug-log only" table): capture-error spikes, mid-session
   setting changes, and saved-calibration parameter drift.
-- **Recommender on runaway sessions and ASIAir logs (next, owner decision
-  2026-11-17).** Found while verifying 2.0.3 against a customer's 11 ASIAir
-  logs. Sessions where guiding wasn't holding the star (the mount stopped
-  tracking, the star ended up 300 to 700 px from the lock position) get
-  diagnosed as "Elevated RMS: likely atmospheric", and night-level
-  observations ("first session much worse: cooldown", "RA guide rate may be
-  misconfigured") are likely skewed by them; the same observation also fires
-  on ordinary 0.7″ sessions. Fix: detect runaway sessions, give them one
-  honest observation (what was measured, what it could mean) instead of
-  diagnoses, and keep them out of the other generators' inputs. Separately,
-  advice cites PHD2 settings (multi-star mode, the Brain dialog) that ASIAir
-  users can only reach through the ASIAir app; make the lever wording
-  ASIAir-aware when the log is from an ASIAir. Overlaps the failed-attempt
-  count item below.
+- **Parser traps on an Int.min guide duration with direction W.**
+  `GuideLogParser.parseGuideRow` negates W/S durations with `-raDur`; a
+  damaged row holding -9223372036854775808 overflows and crashes the parse.
+  Found by the Codex review of 2.0.4 (pre-existing, not introduced there).
+  Treat out-of-range durations as malformed fields (counted, coerced) in the
+  parser; keep the GPLv3 provenance notes in mind for that file.
+- **"RA guide rate may be misconfigured" fires on most nights.** It fires on
+  36 of the owner's 56 nights (observed/expected ratios 1.5 to 4.5×) and on 4
+  ASIAir nights at similar ratios once lost-star stretches are cut. It
+  compares each frame's distance from lock against the motion its pulse
+  should produce, which isn't a like-for-like measure; recalibrate or
+  redesign it before trusting it. Found 2026-11-17
+  (`decisions/2026-11-17-lost-star-and-asiair-advice.md`).
 - **Localization.** Deliberately deferred (July 2026 audit decision). About 120
   user-facing strings are hardcoded English and no String Catalog exists. Costs
   nothing while English-only; budget a mostly mechanical multi-day retrofit
@@ -68,7 +67,8 @@ recorded during the July 2026 audit.*
   wasn't holding the star (runaway sessions), alongside the median night RMS.
   Settle status misfires on NINA-driven logs (long good sessions after a
   settle timeout), and "star beyond the search region" mixes runaways with
-  large dithers. Needs thresholds calibrated on both corpora. Measurements in
+  large dithers. The lost-star detector shipped in 2.0.4 (`LostStar`) is a
+  natural basis: it already counts the clearest failure. Needs thresholds calibrated on both corpora. Measurements in
   `decisions/2026-11-16-night-rms-median.md`.
 - **ASIAir targets from the Autorun log.** ASIAir guide logs have no RA, so
   their nights don't cluster by target. The `Autorun_Log_*.txt` saved beside

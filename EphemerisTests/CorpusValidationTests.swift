@@ -155,6 +155,10 @@ final class CorpusValidationTests: XCTestCase {
             DecPolarityBiasObserver(),
             AtmosphericConditionsProxy(),
             SettlingFailureObserver(),
+            // Anchored to the session where guiding lost the star. That session
+            // may be dropped from the analysis view, but its start is still a
+            // session start in the log as parsed, which this test checks against.
+            LostStarObserver(),
         ]
         let nightLevelGenerators: [any RecommenderGenerator] = [
             CalibrationStalenessObserver(),

@@ -71,6 +71,12 @@
     <li>Hygiene items (stale calibration, GA never run) are cheap to clear and often resolve downstream patterns — handle them before chasing equipment theories.</li>
 </ol>
 
+<h2>When guiding lost the star</h2>
+<p>If a session ends with the guide star moving steadily away from the lock position and never coming back inside PHD2's search region, that stretch isn't guiding data: the mount stopped acting on corrections, or corrections stopped going out. The card <strong>"Guiding lost the star"</strong> reports what PHD2 measured there (how far the star went, for how long, and whether corrections were being sent), and every other observation leaves the stretch out. The session's statistics and the night RMS still include it, because they describe the log as recorded.</p>
+
+<h2>ASIAir logs</h2>
+<p>ZWO's ASIAir writes PHD2-format guide logs, but its guide settings live in the ASIAir app, not in PHD2. Where a suggestion names a PHD2 dialog or tool, a note on the card says so. Observations that would rest on a header field the ASIAir never writes, such as multi-star mode, stay silent rather than guess.</p>
+
 <h2>Making an observation go away</h2>
 <p>Observations aren't to-dos you check off — they recompute from the data, and clear when the underlying condition clears. Two ways to silence one deliberately:</p>
 <ul>

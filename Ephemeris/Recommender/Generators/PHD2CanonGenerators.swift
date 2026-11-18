@@ -14,7 +14,9 @@ nonisolated struct GuidingAssistantRecommendationObserver: RecommenderGenerator 
         // parse the ingestor persists, so the observation and the GAResultEntity can
         // never disagree about what PHD2 measured.
         var observations: [RecommenderObservation] = []
-        for session in context.sessions {
+        // PHD2's own Guiding Assistant results, surfaced verbatim: read from the
+        // log as parsed, so the lost-star cut can never remove them.
+        for session in context.rawLog.guideSessions {
             for parsed in GAResultParser.parse(session: session) {
                 guard let observation = buildObservation(result: parsed,
                                                          rigProfileId: context.profile.id,
@@ -88,7 +90,9 @@ nonisolated struct CalibrationSanityAlertObserver: RecommenderGenerator {
 
     func observe(context: SingleNightContext) -> [RecommenderObservation] {
         var observations: [RecommenderObservation] = []
-        for session in context.sessions {
+        // PHD2's own alerts, passed through verbatim: read from the log as
+        // parsed, so a session cut or dropped as lost-star never hides one.
+        for session in context.rawLog.guideSessions {
             for info in session.infos {
                 let text = info.text
                 for (name, needles) in Self.alertPatterns {
@@ -350,6 +354,11 @@ nonisolated struct MultiStarGuidingObserver: RecommenderGenerator {
     init() {}
 
     func observe(context: SingleNightContext) -> [RecommenderObservation] {
+        // PHD2 writes "Multi-star mode" into the search-region line when it is
+        // on, so its absence means off. The ASIAir never writes it, so on an
+        // ASIAir log its absence says nothing, and claiming "not enabled" on
+        // PHD2's authority would be an inference from a missing field.
+        guard !context.log.isASIAir else { return [] }
         guard let session = context.sessions.last else { return [] }
         let props = session.headerProperties
         guard !props.multiStarEnabled else { return [] }

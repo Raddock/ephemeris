@@ -74,9 +74,26 @@ nonisolated struct DecPolarityBiasObserver: RecommenderGenerator {
 ///
 /// Without cross-night rig baselines (added in Phase 7), this generator uses absolute thresholds:
 /// star mass CV > 15% + altitude < 50° + RMS > 0.7″ together.
+///
+/// Two bounds keep it honest on rigs unlike the one it was calibrated on:
+/// - "Elevated" also needs half a guide pixel. The 0.7″ bar was set on a
+///   0.62″/px guide train, where it is about 1.1 px; on a 3 to 7″/px guide
+///   scope 0.7″ is a tenth of a pixel, which is excellent guiding, and the
+///   observation fired on ordinary ASIAir sessions.
+/// - Above `maximumAtmosphericRMSArcsec` it stays silent. Seeing moves a
+///   guide star's centroid by a few arcseconds at most; an ASIAir session
+///   whose star ran hundreds of pixels off the lock position was being
+///   called "likely atmospheric".
 nonisolated struct AtmosphericConditionsProxy: RecommenderGenerator {
     let identifier = "atmosphericConditionsProxy"
     init() {}
+
+    /// RMS beyond this can't be put down to the atmosphere.
+    static let maximumAtmosphericRMSArcsec = 5.0
+    /// The absolute "elevated" bar, calibrated on a premium 0.62″/px rig.
+    static let elevatedRMSArcsec = 0.7
+    /// "Elevated" also requires at least this much of a guide pixel.
+    static let elevatedRMSGuidePixels = 0.5
 
     func observe(context: SingleNightContext) -> [RecommenderObservation] {
         var observations: [RecommenderObservation] = []
@@ -92,12 +109,14 @@ nonisolated struct AtmosphericConditionsProxy: RecommenderGenerator {
             let cv = sqrt(variance) / mean
 
             let rmsArcsec = stats.rmsTotal * session.pixelScale
+            guard rmsArcsec <= Self.maximumAtmosphericRMSArcsec else { continue }
             let props = session.headerProperties
             let altitude = props.altitudeDegrees ?? 90  // assume high if unknown
 
             let highCv = cv > 0.15
             let lowAlt = altitude < 50
-            let elevatedRms = rmsArcsec > 0.7
+            let elevatedRms = rmsArcsec > Self.elevatedRMSArcsec
+                && stats.rmsTotal >= Self.elevatedRMSGuidePixels
 
             // Need at least two of three to fire — single signal is too noisy
             let signals = [highCv, lowAlt, elevatedRms].filter { $0 }.count

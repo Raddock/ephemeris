@@ -121,6 +121,8 @@ enum GuideSessionMerger {
     /// 5. `SessionInspectorView.time(forInfoFrame:in:)` (click-to-jump)
     /// 6. `DiagnosticGraphView.realEntries` (line marks + active-entry hover)
     /// 7. `CSVExporter.frameDataCSV` (frame data export)
+    /// 8. `LostStar.detect` (declines any session holding a sentinel: a
+    ///    merged session keeps only its first source session's header)
     ///
     /// `ScatterInsetView` is implicitly safe — it filters by `entry.included`
     /// before plotting and a sentinel's `included` is false; if scatter ever

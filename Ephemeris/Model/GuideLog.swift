@@ -34,6 +34,11 @@ nonisolated struct GuideLog: Sendable {
     }
 
     var isEmpty: Bool { sections.isEmpty }
+
+    /// True for a guide log written by ZWO's ASIAir: it has the log banner but
+    /// no PHD2 version number ("PHD2 version, Log version 2.5"). PHD2 itself
+    /// always writes its version, and a bannerless fragment leaves both empty.
+    var isASIAir: Bool { phdVersion.isEmpty && !logVersion.isEmpty }
 }
 
 struct GuideDevice: Sendable {

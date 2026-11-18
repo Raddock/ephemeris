@@ -2,6 +2,15 @@
 
 > Per-version record, newest first. Created during the July 2026 documentation-standard conform pass from git history and the v1.0 tag.
 
+## Unreleased (on `main`)
+
+- **Recommender: lost-star stretches no longer feed diagnoses.** New `LostStar` finds sessions that end with the guide star moving steadily away from the lock position and never returning inside PHD2's search region (with guiding output on). `SingleNightContext` gives generators the night with those stretches cut (sessions with under 10 frames left are dropped); `rawLog` keeps the log as parsed for the star-shape observation (so it matches the Library chip) and the Guiding Assistant observation (PHD2's results verbatim). On a customer's ASIAir nights it finds 11 of 180 sessions, all runaways; on the owner's NINA corpus 1 of 710.
+- **New observation "Guiding lost the star"** (Ephemeris heuristic): what was measured (distance, length, unmeasured frames, corrections on each axis), what it usually means, and what would tell the causes apart.
+- **"Elevated RMS, likely atmospheric"** stays silent above 5″ RMS and needs half a guide pixel to call RMS elevated (ASIAir nights: 31 to 4; owner corpus: 179 to 172).
+- **Cooldown** ignores sessions under 30 included frames (the ASIAir "81× worse" first session was 3 frames).
+- **ASIAir logs:** `GuideLog.isASIAir`; "Multi-star guiding not enabled" no longer fires on them (the ASIAir never writes the field); advice naming PHD2 dialogs or tools carries a note that ASIAir settings live in its app.
+- Codex review, four rounds: ten findings accepted (Int.min duration magnitude, Guiding Assistant stretches and results, corrections on both axes, single-spike robustness, length through unmeasured frames, non-finite distances, calibration sanity alerts from the uncut log, corrupt timestamps, merged sessions declined because they carry only the first session's header), each with a test in `LostStarTests`. Help: Observations and Seeing vs equipment pages. Record: `docs/decisions/2026-11-17-lost-star-and-asiair-advice.md`.
+
 ## 2.0.3, 2026-11-17 (tag `v2.0.3`, build 4)
 
 Point release from `main` for ASIAir users, released 2026-11-17 (Developer ID signed, notarized, Sparkle appcast with deltas from 2.0, 2.0.1, and 2.0.2, each verified with `BinaryDelta apply` to rebuild the signed app byte for byte): one crash fix found by the post-release Codex review of 2.0.2. Before shipping, the customer's 11 ASIAir logs were re-verified end to end (import, re-import, single-log open, recommender, Autorun recognition).
